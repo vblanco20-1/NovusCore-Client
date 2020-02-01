@@ -55,11 +55,6 @@ i32 main()
                 NC_LOG_MESSAGE(*message.message);
                 delete message.message;
             }
-            else if (message.code == MSG_OUT_SETUP_COMPLETE)
-            {
-                // Client is setup and is ready to start networking
-                //connection.Start();
-            }
         }
 
         if (shouldExit)
