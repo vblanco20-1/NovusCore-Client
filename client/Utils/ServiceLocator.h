@@ -1,11 +1,17 @@
 #pragma once
 #include <Utils/ConcurrentQueue.h>
 #include <Utils/Message.h>
+#include <entt.hpp>
 #include <cassert>
 
+class MessageHandler;
 class ServiceLocator
 {
 public:
+    static entt::registry* GetGameRegistry() { return _gameRegistry; }
+    static void SetGameRegistry(entt::registry* registry);
+    static MessageHandler* GetNetworkMessageHandler() { return _networkMessageHandler; }
+    static void SetNetworkMessageHandler(MessageHandler* serverMessageHandler);
     static moodycamel::ConcurrentQueue<Message>* GetMainInputQueue() 
     {
         assert(_mainInputQueue != nullptr);
@@ -19,5 +25,7 @@ public:
 
 private:
     ServiceLocator() { }
+    static entt::registry* _gameRegistry;
+    static MessageHandler* _networkMessageHandler;
     static moodycamel::ConcurrentQueue<Message>* _mainInputQueue;
 };

@@ -18,6 +18,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	network::network
 	input::input
 	glfw ${GLFW_LIBRARIES}
+	Entt::Entt
+	taskflow::taskflow
+	angelscript::angelscript
 )
 
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

@@ -34,7 +34,7 @@
 
 #include "ConsoleCommands/QuitCommand.h"
 #include "ConsoleCommands/PingCommand.h"
-#include "ClientHandler.h"
+#include "EngineLoop.h"
 
 class ConsoleCommandHandler
 {
@@ -45,7 +45,7 @@ public:
         RegisterCommand("ping"_h, &PingCommand);
     }
 
-    void HandleCommand(ClientHandler& clientHandler, std::string& command)
+    void HandleCommand(EngineLoop& engineLoop, std::string& command)
     {
         if (command.size() == 0)
             return;
@@ -57,7 +57,7 @@ public:
         if (commandHandler != commandHandlers.end())
         {
             splitCommand.erase(splitCommand.begin());
-            commandHandler->second(clientHandler, splitCommand);
+            commandHandler->second(engineLoop, splitCommand);
         }
         else
         {
@@ -66,10 +66,10 @@ public:
     }
 
 private:
-    void RegisterCommand(u32 id, const std::function<void(ClientHandler&, std::vector<std::string>)>& handler)
+    void RegisterCommand(u32 id, const std::function<void(EngineLoop&, std::vector<std::string>)>& handler)
     {
         commandHandlers.insert_or_assign(id, handler);
     }
 
-    std::map<u16, std::function<void(ClientHandler&, std::vector<std::string>)>> commandHandlers = {};
+    std::map<u16, std::function<void(EngineLoop&, std::vector<std::string>)>> commandHandlers = {};
 };

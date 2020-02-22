@@ -24,9 +24,9 @@
 #pragma once
 #include <Utils/Message.h>
 #include <vector>
-#include "../ClientHandler.h"
+#include "../EngineLoop.h"
 
-void QuitCommand(ClientHandler& clientHandler, std::vector<std::string> subCommands)
+void QuitCommand(EngineLoop& engineLoop, std::vector<std::string> subCommands)
 {
-    clientHandler.Stop();
+    engineLoop.Stop();
 }

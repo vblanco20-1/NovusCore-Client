@@ -23,19 +23,40 @@
 */
 #pragma once
 #include <NovusTypes.h>
-#include <Utils/ConcurrentQueue.h>
 #include <Utils/Message.h>
 #include <Utils/StringUtils.h>
-#include <Utils/Timer.h>
+#include <Utils/ConcurrentQueue.h>
+#include <taskflow/taskflow.hpp>
+#include <entt.hpp>
+#include <asio/io_service.hpp>
+#include "Network/NetworkClient.h"
+
+namespace tf
+{
+    class Framework;
+}
+
+struct FrameworkRegistryPair
+{
+    entt::registry gameRegistry;
+    tf::Framework framework;
+    tf::Taskflow taskflow;
+};
+
+struct NetworkPair
+{
+    std::shared_ptr<NetworkClient> client;
+    std::shared_ptr<asio::io_service> asioService;
+};
 
 class Window;
 class Renderer;
 class Camera;
-class ClientHandler
+class EngineLoop
 {
 public:
-    ClientHandler();
-    ~ClientHandler();
+    EngineLoop();
+    ~EngineLoop();
 
     void Start();
     void Stop();
@@ -57,16 +78,22 @@ public:
 
 private:
     void Run();
+    void RunIoService();
     bool Update(f32 deltaTime);
+    void UpdateSystems();
     void Render();
 
+    void SetupUpdateFramework();
+    void SetMessageHandler();
 private:
     bool _isRunning;
 
     moodycamel::ConcurrentQueue<Message> _inputQueue;
     moodycamel::ConcurrentQueue<Message> _outputQueue;
+    FrameworkRegistryPair _updateFramework;
 
     Window* _window;
     Camera* _camera;
     Renderer* _renderer;
+    NetworkPair _network;
 };

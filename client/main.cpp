@@ -1,10 +1,9 @@
 #include <Utils/DebugHandler.h>
 #include <Utils/StringUtils.h>
 
-#include "ClientHandler.h"
+#include "EngineLoop.h"
 #include "ConsoleCommands.h"
 #include <Utils/Message.h>
-#include <Networking/Connection.h>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -21,21 +20,8 @@ i32 main()
     SetConsoleTitle(WINDOWNAME);
 #endif
 
-    NC_LOG_SUCCESS("Client Started");
-
-    asio::io_service io_service(2);
-    std::thread run_thread([&]
-    {
-        asio::io_service::work work(io_service);
-        io_service.run();
-    });
-
-    ClientHandler clientHandler;
-    clientHandler.Start();
-
-    // This has to run after clientHandler.Start()
-    Connection connection(new asio::ip::tcp::socket(io_service));
-    connection.Connect("127.0.0.1", 3724);
+    EngineLoop engineLoop;
+    engineLoop.Start();
 
     ConsoleCommandHandler consoleCommandHandler;
     auto future = std::async(std::launch::async, StringUtils::GetLineFromCin);
@@ -43,7 +29,8 @@ i32 main()
     {
         Message message;
         bool shouldExit = false;
-        while (clientHandler.TryGetMessage(message))
+
+        while (engineLoop.TryGetMessage(message))
         {
             if (message.code == MSG_OUT_EXIT_CONFIRM)
             {
@@ -65,7 +52,7 @@ i32 main()
             std::string command = future.get();
             std::transform(command.begin(), command.end(), command.begin(), ::tolower); // Convert command to lowercase
 
-            consoleCommandHandler.HandleCommand(clientHandler, command);
+            consoleCommandHandler.HandleCommand(engineLoop, command);
             future = std::async(std::launch::async, StringUtils::GetLineFromCin);
         }
     }

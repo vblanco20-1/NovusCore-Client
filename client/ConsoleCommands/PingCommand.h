@@ -24,11 +24,11 @@
 #pragma once
 #include <Utils/Message.h>
 #include <vector>
-#include "../ClientHandler.h"
+#include "../EngineLoop.h"
 
-void PingCommand(ClientHandler& clientHandler, std::vector<std::string> subCommands)
+void PingCommand(EngineLoop& engineLoop, std::vector<std::string> subCommands)
 {
     Message pingMessage;
     pingMessage.code = MSG_IN_PING;
-    clientHandler.PassMessage(pingMessage);
+    engineLoop.PassMessage(pingMessage);
 }
