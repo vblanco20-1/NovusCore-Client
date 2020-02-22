@@ -4,9 +4,7 @@
 #include <tracy/Tracy.hpp>
 #include "Utils/ServiceLocator.h"
 #include "Network/MessageHandler.h"
-#include "Window.h"
-#include "Camera.h"
-#include <Renderer.h>
+#include "ClientRenderer.h"
 
 // Component Singletons
 #include "ECS/Components/Singletons/TimeSingleton.h"
@@ -29,7 +27,7 @@ EngineLoop::EngineLoop() : _isRunning(false), _inputQueue(256), _outputQueue(256
 
 EngineLoop::~EngineLoop()
 {
-    delete _renderer;
+    delete _clientRenderer;
 }
 
 void EngineLoop::Start()
@@ -75,7 +73,7 @@ void EngineLoop::Run()
     SetupUpdateFramework();
     _updateFramework.gameRegistry.create();
 
-    std::string scriptPath = "./scripts";
+    std::string scriptPath = "./Data/scripts";
     ScriptHandler::LoadScriptDirectory(scriptPath);
 
     TimeSingleton& timeSingleton = _updateFramework.gameRegistry.set<TimeSingleton>();
@@ -85,14 +83,7 @@ void EngineLoop::Run()
     Timer timer;
     f32 targetDelta = 1.0f / 30.0f;
 
-    _window = new Window();
-    _window->Init(1920, 1080);
-
-    _camera = new Camera(Vector3(0, 0, -5));
-    _camera->SetInputManager(_window->GetInputManager());
-
-    _renderer = new Renderer();
-    _renderer->Init(_window->GetWindow());
+    _clientRenderer = new ClientRenderer();
 
     _network.client->Connect("127.0.0.1", 3724);
 
@@ -110,7 +101,7 @@ void EngineLoop::Run()
 
         Render();
 
-        // Wait for tick rate, this might be an overkill implementation but it has the even tickrate I've seen - MPursche
+        // Wait for tick rate, this might be an overkill implementation but it has the most even tickrate I've seen - MPursche
         for (deltaTime = timer.GetDeltaTime(); deltaTime < targetDelta - 0.0025f; deltaTime = timer.GetDeltaTime())
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -136,7 +127,7 @@ void EngineLoop::RunIoService()
 
 bool EngineLoop::Update(f32 deltaTime)
 {
-    bool shouldExit = _window->Update(deltaTime) == false;
+    bool shouldExit = _clientRenderer->UpdateWindow(deltaTime) == false;
     if (shouldExit)
         return false;
 
@@ -163,10 +154,7 @@ bool EngineLoop::Update(f32 deltaTime)
         }
     }
 
-    _camera->Update(deltaTime);
-    _renderer->SetViewMatrix(_camera->GetViewMatrix().Inverted());
-
-    _renderer->RegisterRenderableCube(Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0.1f, 0.1f, 0.1f));
+    _clientRenderer->Update(deltaTime);
 
     UpdateSystems();
     return true;
@@ -174,9 +162,7 @@ bool EngineLoop::Update(f32 deltaTime)
 
 void EngineLoop::Render()
 {
-    _renderer->Render();
-    _renderer->Present();
-    _window->Present();
+    _clientRenderer->Render();
 }
 
 void EngineLoop::SetupUpdateFramework()

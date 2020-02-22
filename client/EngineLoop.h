@@ -30,6 +30,7 @@
 #include <entt.hpp>
 #include <asio/io_service.hpp>
 #include "Network/NetworkClient.h"
+#include "ClientRenderer.h"
 
 namespace tf
 {
@@ -49,9 +50,7 @@ struct NetworkPair
     std::shared_ptr<asio::io_service> asioService;
 };
 
-class Window;
-class Renderer;
-class Camera;
+class ClientRenderer;
 class EngineLoop
 {
 public:
@@ -92,8 +91,6 @@ private:
     moodycamel::ConcurrentQueue<Message> _outputQueue;
     FrameworkRegistryPair _updateFramework;
 
-    Window* _window;
-    Camera* _camera;
-    Renderer* _renderer;
+    ClientRenderer* _clientRenderer;
     NetworkPair _network;
 };
