@@ -989,6 +989,39 @@ namespace Renderer
             EndSingleTimeCommands(commandBuffer);
         }
 
+        void RenderDeviceVK::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, u32 width, u32 height)
+        {
+            VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
+
+            VkBufferImageCopy region = {};
+            region.bufferOffset = 0;
+            region.bufferRowLength = 0;
+            region.bufferImageHeight = 0;
+
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.mipLevel = 0;
+            region.imageSubresource.baseArrayLayer = 0;
+            region.imageSubresource.layerCount = 1;
+
+            region.imageOffset = { 0, 0, 0 };
+            region.imageExtent = {
+                width,
+                height,
+                1
+            };
+
+            vkCmdCopyBufferToImage(
+                commandBuffer,
+                srcBuffer,
+                dstImage,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                1,
+                &region
+            );
+
+            EndSingleTimeCommands(commandBuffer);
+        }
+
         void RenderDeviceVK::TransitionImageLayout(VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout)
         {
             VkCommandBuffer commandBuffer = BeginSingleTimeCommands();

@@ -76,6 +76,7 @@ namespace Renderer
             void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
             u32 FindMemoryType(u32 typeFilter, VkMemoryPropertyFlags properties);
             void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+            void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, u32 width, u32 height);
             void TransitionImageLayout(VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout);
             void TransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout);
 
@@ -101,10 +102,12 @@ namespace Renderer
             friend class RendererVK;
             friend struct ConstantBufferBackendVK;
             friend class ImageHandlerVK;
+            friend class TextureHandlerVK;
             friend class ModelHandlerVK;
             friend class ShaderHandlerVK;
             friend class PipelineHandlerVK;
             friend class CommandListHandlerVK;
+            friend class SamplerHandlerVK;
         };
     }
 }

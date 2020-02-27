@@ -15,6 +15,7 @@
 #include "Commands/SetPipeline.h"
 #include "Commands/SetScissorRect.h"
 #include "Commands/SetViewport.h"
+#include "Commands/SetTextureSampler.h"
 
 namespace Renderer
 {
@@ -40,6 +41,7 @@ namespace Renderer
         void SetScissorRect(u32 left, u32 right, u32 top, u32 bottom);
         void SetViewport(f32 topLeftX, f32 topLeftY, f32 width, f32 height, f32 minDepth, f32 maxDepth);
         void SetConstantBuffer(u32 slot, void* gpuResource);
+        void SetTextureSampler(u32 slot, TextureID texture, SamplerID sampler);
 
         void Clear(ImageID imageID, Vector4 color);
         void Clear(DepthImageID imageID, f32 depth, DepthClearFlags flags = DepthClearFlags::DEPTH_CLEAR_DEPTH, u8 stencil = 0);

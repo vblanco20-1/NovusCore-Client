@@ -7,10 +7,12 @@ namespace Renderer
     {
         class RenderDeviceVK;
         class ImageHandlerVK;
+        class TextureHandlerVK;
         class ModelHandlerVK;
         class ShaderHandlerVK;
         class PipelineHandlerVK;
         class CommandListHandlerVK;
+        class SamplerHandlerVK;
     }
     
     class RendererVK : public Renderer
@@ -25,11 +27,14 @@ namespace Renderer
         ImageID CreateImage(ImageDesc& desc) override;
         DepthImageID CreateDepthImage(DepthImageDesc& desc) override;
 
+        SamplerID CreateSampler(SamplerDesc& desc) override;
+
         GraphicsPipelineID CreatePipeline(GraphicsPipelineDesc& desc) override;
         ComputePipelineID CreatePipeline(ComputePipelineDesc& desc) override;
 
         // Loading
         ModelID LoadModel(ModelDesc& desc) override;
+        TextureID LoadTexture(TextureDesc& desc) override;
 
         VertexShaderID LoadShader(VertexShaderDesc& desc) override;
         PixelShaderID LoadShader(PixelShaderDesc& desc) override;
@@ -49,6 +54,7 @@ namespace Renderer
         void SetPipeline(CommandListID commandListID, ComputePipelineID pipeline) override;
         void SetScissorRect(CommandListID commandListID, ScissorRect scissorRect) override;
         void SetViewport(CommandListID commandListID, Viewport viewport) override;
+        void SetTextureSampler(CommandListID commandListID, u32 slot, TextureID textureID, SamplerID samplerID) override;
 
         // Non-commandlist based present functions
         void Present(Window* window, ImageID image) override;
@@ -60,10 +66,12 @@ namespace Renderer
     private:
         Backend::RenderDeviceVK* _device = nullptr;
         Backend::ImageHandlerVK* _imageHandler = nullptr;
+        Backend::TextureHandlerVK* _textureHandler = nullptr;
         Backend::ModelHandlerVK* _modelHandler = nullptr;
         Backend::ShaderHandlerVK* _shaderHandler = nullptr;
         Backend::PipelineHandlerVK* _pipelineHandler = nullptr;
         Backend::CommandListHandlerVK* _commandListHandler = nullptr;
+        Backend::SamplerHandlerVK* _samplerHandler = nullptr;
 
         i8 _renderPassOpenCount = 0;
     };

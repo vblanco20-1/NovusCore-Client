@@ -7,6 +7,7 @@ namespace Renderer
     RenderGraphBuilder::RenderGraphBuilder(Memory::Allocator* allocator, Renderer* renderer)
         : _renderer(renderer)
         , _trackedImages(allocator, 32)
+        , _trackedTextures(allocator, 32)
         , _trackedDepthImages(allocator, 32)
     {
 
@@ -28,6 +29,13 @@ namespace Renderer
     }
 
     RenderPassResource RenderGraphBuilder::Read(ImageID id, ShaderStage /*shaderStage*/)
+    {
+        RenderPassResource resource = GetResource(id);
+
+        return resource;
+    }
+
+    RenderPassResource RenderGraphBuilder::Read(TextureID id, ShaderStage /*shaderStage*/)
     {
         RenderPassResource resource = GetResource(id);
 
@@ -95,6 +103,25 @@ namespace Renderer
         }
 
         _trackedImages.Insert(id);
+        return RenderPassResource(i);
+    }
+
+    RenderPassResource RenderGraphBuilder::GetResource(TextureID id)
+    {
+        using _type = type_safe::underlying_type<TextureID>;
+
+        _type i = 0;
+        for (TextureID& trackedID : _trackedTextures)
+        {
+            if (trackedID == id)
+            {
+                return RenderPassResource(i);
+            }
+
+            i++;
+        }
+
+        _trackedTextures.Insert(id);
         return RenderPassResource(i);
     }
 

@@ -16,8 +16,10 @@
 #include "Descriptors/PixelShaderDesc.h"
 #include "Descriptors/ComputeShaderDesc.h"
 #include "Descriptors/ImageDesc.h"
+#include "Descriptors/TextureDesc.h"
 #include "Descriptors/DepthImageDesc.h"
 #include "Descriptors/ModelDesc.h"
+#include "Descriptors/SamplerDesc.h"
 
 class Window;
 
@@ -38,6 +40,8 @@ namespace Renderer
         virtual ImageID CreateImage(ImageDesc& desc) = 0;
         virtual DepthImageID CreateDepthImage(DepthImageDesc& desc) = 0;
 
+        virtual SamplerID CreateSampler(SamplerDesc& sampler) = 0;
+
         virtual GraphicsPipelineID CreatePipeline(GraphicsPipelineDesc& desc) = 0;
         virtual ComputePipelineID CreatePipeline(ComputePipelineDesc& desc) = 0;
 
@@ -52,6 +56,7 @@ namespace Renderer
 
         // Loading
         virtual ModelID LoadModel(ModelDesc& desc) = 0;
+        virtual TextureID LoadTexture(TextureDesc& desc) = 0;
 
         virtual VertexShaderID LoadShader(VertexShaderDesc& desc) = 0;
         virtual PixelShaderID LoadShader(PixelShaderDesc& desc) = 0;
@@ -71,6 +76,7 @@ namespace Renderer
         virtual void SetPipeline(CommandListID commandList, ComputePipelineID pipeline) = 0;
         virtual void SetScissorRect(CommandListID commandList, ScissorRect scissorRect) = 0;
         virtual void SetViewport(CommandListID commandList, Viewport viewport) = 0;
+        virtual void SetTextureSampler(CommandListID commandList, u32 slot, TextureID texture, SamplerID sampler) = 0;
 
         // Non-commandlist based present functions
         virtual void Present(Window* window, ImageID image) = 0;

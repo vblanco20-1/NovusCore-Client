@@ -8,6 +8,7 @@
 #include "RenderStates.h"
 #include "RenderPassResources.h"
 
+#include "Descriptors/TextureDesc.h"
 #include "Descriptors/ImageDesc.h"
 #include "Descriptors/DepthImageDesc.h"
 
@@ -54,6 +55,7 @@ namespace Renderer
 
         // Reads
         RenderPassResource Read(ImageID id, ShaderStage shaderStage);
+        RenderPassResource Read(TextureID id, ShaderStage shaderStage);
         RenderPassResource Read(DepthImageID id, ShaderStage shaderStage);
 
         // Writes
@@ -73,6 +75,7 @@ namespace Renderer
         void Compile(CommandList* commandList);
         
         RenderPassResource GetResource(ImageID id);
+        RenderPassResource GetResource(TextureID id);
         RenderPassResource GetResource(DepthImageID id);
         RenderPassMutableResource GetMutableResource(ImageID id);
         RenderPassMutableResource GetMutableResource(DepthImageID id);
@@ -84,6 +87,7 @@ namespace Renderer
         Renderer* _renderer;
 
         DynamicArray<ImageID> _trackedImages;
+        DynamicArray<TextureID> _trackedTextures;
         DynamicArray<DepthImageID> _trackedDepthImages;
     };
 }

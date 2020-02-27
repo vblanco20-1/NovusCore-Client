@@ -76,6 +76,14 @@ namespace Renderer
         command->gpuResource = gpuResource;
     }
 
+    void CommandList::SetTextureSampler(u32 slot, TextureID texture, SamplerID sampler)
+    {
+        Commands::SetTextureSampler* command = AddCommand<Commands::SetTextureSampler>();
+        command->slot = slot;
+        command->texture = texture;
+        command->sampler = sampler;
+    }
+
     void CommandList::Clear(ImageID imageID, Vector4 color)
     {
         Commands::ClearImage* command = AddCommand<Commands::ClearImage>();                                                                                                       

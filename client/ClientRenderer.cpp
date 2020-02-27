@@ -57,12 +57,14 @@ void ClientRenderer::Render()
         struct MainPassData
         {
             Renderer::RenderPassMutableResource mainColor;
+            Renderer::RenderPassResource cubeTexture;
         };
 
         renderGraph.AddPass<MainPassData>("Main Pass",
             [&](MainPassData& data, Renderer::RenderGraphBuilder& builder) // Setup
             {
                 data.mainColor = builder.Write(_mainColor, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
+                data.cubeTexture = builder.Read(_cubeTexture, Renderer::RenderGraphBuilder::ShaderStage::SHADER_STAGE_PIXEL);
 
                 return true; // Return true from setup to enable this pass, return false to disable it
             },
@@ -117,7 +119,11 @@ void ClientRenderer::Render()
                 // Rasterizer state
                 pipelineDesc.states.rasterizerState.cullMode = Renderer::CullMode::CULL_MODE_BACK;
 
-                // Textures
+                // Samplers TODO: We don't care which samplers we have here, we just need the number of samplers
+                pipelineDesc.states.samplers[0].enabled = true;
+
+                // Textures TODO: We don't care which textures we have here, we just need the number of textures
+                pipelineDesc.textures[0] = data.cubeTexture;
 
                 // Render targets
                 pipelineDesc.renderTargets[0] = data.mainColor;
@@ -131,6 +137,10 @@ void ClientRenderer::Render()
 
                 // Set view constant buffer
                 commandList.SetConstantBuffer(0, _viewConstantBuffer->GetGPUResource(_frameIndex));
+
+                // Set texture-sampler pair
+                commandList.SetTextureSampler(2, _cubeTexture, _linearSampler);
+
                 // Render main layer
                 Renderer::RenderLayer& mainLayer = _renderer->GetRenderLayer(MAIN_RENDER_LAYER);
 
@@ -175,6 +185,7 @@ void ClientRenderer::CreatePermanentResources()
     mainColorDesc.format = Renderer::IMAGE_FORMAT_R16G16B16A16_FLOAT;
     mainColorDesc.sampleCount = Renderer::SAMPLE_COUNT_1;
 
+
     _mainColor = _renderer->CreateImage(mainColorDesc);
 
     // Main depth rendertarget
@@ -191,6 +202,22 @@ void ClientRenderer::CreatePermanentResources()
     modelDesc.path = "Data/models/Cube.novusmodel";
 
     _cubeModel = _renderer->LoadModel(modelDesc);
+
+    Renderer::TextureDesc textureDesc;
+    textureDesc.path = "Data/textures/debug.jpg";
+    
+    _cubeTexture = _renderer->LoadTexture(textureDesc);
+
+    // Sampler
+    Renderer::SamplerDesc samplerDesc;
+    samplerDesc.enabled = true;
+    samplerDesc.filter = Renderer::SamplerFilter::SAMPLER_FILTER_MIN_MAG_MIP_LINEAR;
+    samplerDesc.addressU = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_WRAP;
+    samplerDesc.addressV = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_WRAP;
+    samplerDesc.addressW = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_CLAMP;
+    samplerDesc.shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_PIXEL;
+
+    _linearSampler = _renderer->CreateSampler(samplerDesc);
 
     // View Constant Buffer (for camera data)
     _viewConstantBuffer = _renderer->CreateConstantBuffer<ViewConstantBuffer>();

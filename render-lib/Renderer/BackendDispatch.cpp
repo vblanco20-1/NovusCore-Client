@@ -8,6 +8,7 @@
 #include "Commands/SetPipeline.h"
 #include "Commands/SetScissorRect.h"
 #include "Commands/SetViewport.h"
+#include "Commands/SetTextureSampler.h"
 
 namespace Renderer
 {
@@ -73,5 +74,11 @@ namespace Renderer
     {
         const Commands::SetViewport* actualData = static_cast<const Commands::SetViewport*>(data);
         renderer->SetViewport(commandList, actualData->viewport);
+    }
+
+    void BackendDispatch::SetTextureSampler(Renderer* renderer, CommandListID commandList, const void* data)
+    {
+        const Commands::SetTextureSampler* actualData = static_cast<const Commands::SetTextureSampler*>(data);
+        renderer->SetTextureSampler(commandList, actualData->slot, actualData->texture, actualData->sampler);
     }
 }

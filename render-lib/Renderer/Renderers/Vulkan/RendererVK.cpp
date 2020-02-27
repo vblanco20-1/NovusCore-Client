@@ -6,10 +6,12 @@
 
 #include "Backend/RenderDeviceVK.h"
 #include "Backend/ImageHandlerVK.h"
+#include "Backend/TextureHandlerVK.h"
 #include "Backend/ModelHandlerVK.h"
 #include "Backend/ShaderHandlerVK.h"
 #include "Backend/PipelineHandlerVK.h"
 #include "Backend/CommandListHandlerVK.h"
+#include "Backend/SamplerHandlerVK.h"
 #include "Backend/SwapChainVK.h"
 #include "Backend/DebugMarkerUtilVK.h"
 #include "Backend/ConstantBufferVK.h"
@@ -21,10 +23,12 @@ namespace Renderer
     {
         _device->Init();
         _imageHandler = new Backend::ImageHandlerVK();
+        _textureHandler = new Backend::TextureHandlerVK();
         _modelHandler = new Backend::ModelHandlerVK();
         _shaderHandler = new Backend::ShaderHandlerVK();
         _pipelineHandler = new Backend::PipelineHandlerVK();
         _commandListHandler = new Backend::CommandListHandlerVK();
+        _samplerHandler = new Backend::SamplerHandlerVK();
     }
 
     void RendererVK::InitWindow(Window* window)
@@ -37,6 +41,13 @@ namespace Renderer
         _device->FlushGPU(); // Make sure it has finished rendering
 
         delete(_device);
+        delete(_imageHandler);
+        delete(_textureHandler);
+        delete(_modelHandler);
+        delete(_shaderHandler);
+        delete(_pipelineHandler);
+        delete(_commandListHandler);
+        delete(_samplerHandler);
     }
 
     ImageID RendererVK::CreateImage(ImageDesc& desc)
@@ -47,6 +58,11 @@ namespace Renderer
     DepthImageID RendererVK::CreateDepthImage(DepthImageDesc& desc)
     {
         return _imageHandler->CreateDepthImage(_device, desc);
+    }
+
+    SamplerID RendererVK::CreateSampler(SamplerDesc& desc)
+    {
+        return _samplerHandler->CreateSampler(_device, desc);
     }
 
     GraphicsPipelineID RendererVK::CreatePipeline(GraphicsPipelineDesc& desc)
@@ -63,6 +79,11 @@ namespace Renderer
     ModelID RendererVK::LoadModel(ModelDesc& desc)
     {
         return _modelHandler->LoadModel(_device, desc);
+    }
+
+    TextureID RendererVK::LoadTexture(TextureDesc& desc)
+    {
+        return _textureHandler->LoadTexture(_device, desc);
     }
 
     VertexShaderID RendererVK::LoadShader(VertexShaderDesc& desc)
@@ -282,6 +303,18 @@ namespace Renderer
     void RendererVK::SetViewport(CommandListID /*commandListID*/, Viewport /*viewport*/)
     {
         
+    }
+
+    void RendererVK::SetTextureSampler(CommandListID commandListID, u32 slot, TextureID textureID, SamplerID samplerID)
+    {
+        VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
+        GraphicsPipelineID graphicsPipelineID = _commandListHandler->GetBoundGraphicsPipeline(commandListID);
+        VkPipelineLayout pipelineLayout = _pipelineHandler->GetPipelineLayout(graphicsPipelineID);
+
+        VkDescriptorSet combinedSamplerDescriptor = _samplerHandler->GetCombinedSampler(_device, _textureHandler, _pipelineHandler, samplerID, slot, textureID, graphicsPipelineID);
+
+        // Bind descriptor set
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, slot, 1, &combinedSamplerDescriptor, 0, nullptr);
     }
 
     void RendererVK::Present(Window* window, ImageID imageID)
