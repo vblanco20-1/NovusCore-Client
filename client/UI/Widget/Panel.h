@@ -2,13 +2,14 @@
 #include "Widget.h"
 #include <Renderer/Descriptors/TextureDesc.h>
 
+class UIPanel;
+
 namespace UI
 {
-    class Panel : Widget
+    class Panel : public Widget
     {
     public:
         Panel() : Widget() { }
-
 
     private:
         Renderer::TextureID GetTexture();
@@ -20,7 +21,6 @@ namespace UI
     private:
         Renderer::TextureID _texture;
         Vector4 _color;
-
 
         friend class ::UIPanel;
     };

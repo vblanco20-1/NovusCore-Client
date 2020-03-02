@@ -10,7 +10,7 @@ public:
     static void RegisterType();
 
     std::string GetTypeName() override;
-    void asd(f32 r, f32 g, f32 b, f32 a);
+    void SetColor(f32 r, f32 g, f32 b, f32 a);
 
 private:
     static UIPanel* Create()
