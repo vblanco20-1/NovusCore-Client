@@ -13,7 +13,6 @@ private:
     void Print();
 
 private:
-    static const char* _objectName;
     f32 x;
     f32 y;
     f32 z;

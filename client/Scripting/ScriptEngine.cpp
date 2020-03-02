@@ -5,6 +5,8 @@
 #include "Addons/scriptarray/scriptarray.h"
 #include "Addons/scriptstdstring/scriptstdstring.h"
 #include "Classes/Player.h"
+#include "Classes/UI/UIWidget.h"
+#include "Classes/UI/UIPanel.h"
 
 thread_local asIScriptEngine* ScriptEngine::_scriptEngine = nullptr;
 thread_local asIScriptContext* ScriptEngine::_scriptContext = nullptr;
@@ -66,6 +68,8 @@ void ScriptEngine::RegisterFunctions()
 
     // NovusCore Types
     Player::RegisterType();
+    UIWidget::RegisterType();
+    UIPanel::RegisterType();
 
     ScriptEngine::RegisterScriptFunction("void Print(string msg)", asFUNCTION(ScriptEngine::Print));
 }
