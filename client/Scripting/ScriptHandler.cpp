@@ -34,6 +34,10 @@ void ScriptHandler::LoadScriptDirectory(std::string& scriptFolder)
 {
     _scriptFolder = scriptFolder; 
     fs::path absolutePath = fs::absolute(scriptFolder);
+    if (!fs::exists(absolutePath))
+    {
+        fs::create_directory(absolutePath);
+    }
 
     Timer timer;
     size_t count = 0;
