@@ -54,6 +54,8 @@ namespace Renderer
             return constantBuffer;
         }
 
+        virtual ModelID CreatePrimitiveModel(PrimitiveModelDesc& desc) = 0;
+
         // Loading
         virtual ModelID LoadModel(ModelDesc& desc) = 0;
         virtual TextureID LoadTexture(TextureDesc& desc) = 0;

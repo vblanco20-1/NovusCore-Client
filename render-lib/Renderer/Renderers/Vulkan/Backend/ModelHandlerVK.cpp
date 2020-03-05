@@ -20,6 +20,27 @@ namespace Renderer
 
         }
 
+        ModelID ModelHandlerVK::CreatePrimitiveModel(RenderDeviceVK* device, const PrimitiveModelDesc& desc)
+        {
+            size_t nextHandle = _models.size();
+
+            // Make sure we haven't exceeded the limit of the DepthImageID type, if this hits you need to change type of DepthImageID to something bigger
+            assert(nextHandle < ModelID::MaxValue());
+            using type = type_safe::underlying_type<ModelID>;
+
+            Model model;
+            TempModelData tempData;
+
+            tempData.indexType = 3; // Triangle list, nothing else is really used these days
+            tempData.vertices = desc.vertices;
+            tempData.indices = desc.indices;
+
+            InitializeModel(device, model, tempData);
+
+            _models.push_back(model);
+            return ModelID(static_cast<type>(nextHandle));
+        }
+
         ModelID ModelHandlerVK::LoadModel(RenderDeviceVK* device, const ModelDesc& desc)
         {
             size_t nextHandle = _models.size();

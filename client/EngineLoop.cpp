@@ -4,7 +4,7 @@
 #include <tracy/Tracy.hpp>
 #include "Utils/ServiceLocator.h"
 #include "Network/MessageHandler.h"
-#include "ClientRenderer.h"
+#include "Rendering/ClientRenderer.h"
 
 // Component Singletons
 #include "ECS/Components/Singletons/TimeSingleton.h"

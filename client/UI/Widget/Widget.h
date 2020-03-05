@@ -3,12 +3,14 @@
 #include <vector>
 #include <assert.h>
 
+class UIRenderer;
+
 namespace UI
 {
     class Widget
     {
     public:
-        Widget() : _position(0, 0, 0), _size(0, 0), _parent(nullptr), _children(16), _isDirty(false) { }
+        Widget(f32 posX, f32 posY, f32 width, f32 height);
 
         Vector3 GetPosition();
         void SetPosition(Vector3 position);
@@ -39,5 +41,7 @@ namespace UI
         Widget* _parent;
         std::vector<Widget*> _children;
         bool _isDirty;
+
+        friend class UIRenderer;
     };
 }

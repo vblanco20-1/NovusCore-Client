@@ -138,7 +138,7 @@ namespace Renderer
     struct BlendState
     {
         bool alphaToCoverageEnable = false;
-        bool independencBlendEnable = false;
+        bool independentBlendEnable = false;
         RTBlendState renderTargets[MAX_RENDER_TARGETS];
     };
 

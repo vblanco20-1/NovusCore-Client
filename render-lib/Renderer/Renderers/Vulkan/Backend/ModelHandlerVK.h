@@ -20,6 +20,7 @@ namespace Renderer
             ModelHandlerVK();
             ~ModelHandlerVK();
 
+            ModelID CreatePrimitiveModel(RenderDeviceVK* device, const PrimitiveModelDesc& desc);
             ModelID LoadModel(RenderDeviceVK* device, const ModelDesc& desc);
 
             VkBuffer GetVertexBuffer(ModelID modelID);
@@ -38,13 +39,6 @@ namespace Renderer
                 u32 numIndices;
 
                 std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-            };
-
-            struct Vertex
-            {
-                Vector3 pos;
-                Vector3 normal;
-                Vector2 texCoord;
             };
 
             struct TempModelData

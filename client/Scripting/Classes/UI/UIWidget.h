@@ -6,7 +6,7 @@
 class UIWidget
 {
 public:
-    UIWidget() : _widget() {}
+    UIWidget() : _widget(0,0,0,0) {}
     static void RegisterType();
 
     template <class T>

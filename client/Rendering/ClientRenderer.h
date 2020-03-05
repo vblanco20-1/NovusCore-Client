@@ -37,6 +37,8 @@ struct ModelConstantBuffer
 
 class Window;
 class Camera;
+class UIRenderer;
+
 class ClientRenderer
 {
 public:
@@ -68,4 +70,7 @@ private:
 
     Renderer::ConstantBuffer<ViewConstantBuffer>* _viewConstantBuffer;
     Renderer::ConstantBuffer<ModelConstantBuffer>* _modelConstantBuffer;
+
+    // Sub renderers
+    UIRenderer* _uiRenderer;
 };

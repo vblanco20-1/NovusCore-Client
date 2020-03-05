@@ -1,4 +1,5 @@
 #include "ClientRenderer.h"
+#include "UIRenderer.h"
 #include <Window/Window.h>
 #include "Camera.h"
 
@@ -20,6 +21,8 @@ ClientRenderer::ClientRenderer()
     _renderer->InitWindow(_window);
 
     CreatePermanentResources();
+    _uiRenderer = new UIRenderer(_renderer);
+
 }
 
 bool ClientRenderer::UpdateWindow(f32 deltaTime)
@@ -43,6 +46,8 @@ void ClientRenderer::Update(f32 deltaTime)
     Renderer::RenderLayer& mainLayer = _renderer->GetRenderLayer(MAIN_RENDER_LAYER);
     mainLayer.Reset(); // Reset the layer first so we don't just infinitely grow our layer
     mainLayer.RegisterModel(_cubeModel, &_cubeModelInstance);
+
+    _uiRenderer->Update(deltaTime);
 }
 
 void ClientRenderer::Render()
@@ -166,6 +171,8 @@ void ClientRenderer::Render()
                 commandList.EndPipeline(pipeline);
             });
     }
+
+    _uiRenderer->AddUIPass(&renderGraph, _mainColor, _frameIndex);
 
     renderGraph.Setup();
     renderGraph.Execute();

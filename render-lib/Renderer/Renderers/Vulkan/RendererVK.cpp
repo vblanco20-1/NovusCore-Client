@@ -76,6 +76,11 @@ namespace Renderer
         return ComputePipelineID::Invalid();
     }
 
+    ModelID RendererVK::CreatePrimitiveModel(PrimitiveModelDesc& desc)
+    {
+        return _modelHandler->CreatePrimitiveModel(_device, desc);
+    }
+
     ModelID RendererVK::LoadModel(ModelDesc& desc)
     {
         return _modelHandler->LoadModel(_device, desc);

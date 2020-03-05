@@ -3,6 +3,16 @@
 namespace UI
 {
     // Public
+    Widget::Widget(f32 posX, f32 posY, f32 width, f32 height)
+        : _position(posX, posY, 0)
+        , _size(width, height)
+        , _parent(nullptr)
+        , _children(16)
+        , _isDirty(true) 
+    {
+
+    }
+
     Vector3 Widget::GetPosition() { return _position; }
     void Widget::SetPosition(Vector3 position) { _position = position; }
     Vector2 Widget::GetSize() { return _size; }
