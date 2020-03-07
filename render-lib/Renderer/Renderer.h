@@ -55,6 +55,7 @@ namespace Renderer
         }
 
         virtual ModelID CreatePrimitiveModel(PrimitiveModelDesc& desc) = 0;
+        virtual void UpdatePrimitiveModel(ModelID model, PrimitiveModelDesc& desc) = 0;
 
         // Loading
         virtual ModelID LoadModel(ModelDesc& desc) = 0;

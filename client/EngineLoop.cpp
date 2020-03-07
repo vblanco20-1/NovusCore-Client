@@ -152,6 +152,10 @@ bool EngineLoop::Update(f32 deltaTime)
             pongMessage.message = new std::string("PONG!");
             _outputQueue.enqueue(pongMessage);
         }
+        else if (message.code == MSG_IN_RELOAD)
+        {
+            ScriptHandler::ReloadScripts();
+        }
     }
 
     _clientRenderer->Update(deltaTime);

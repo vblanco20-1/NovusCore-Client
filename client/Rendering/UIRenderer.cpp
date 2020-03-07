@@ -23,65 +23,24 @@ void UIRenderer::Update(f32 deltaTime)
         if (panel->IsDirty())
         {
             // (Re)load texture
-            std::string texturePath = panel->GetTexture();
-
-            Renderer::TextureDesc textureDesc;
-            textureDesc.path = texturePath;
-
-            Renderer::TextureID textureID = _renderer->LoadTexture(textureDesc);
+            Renderer::TextureID textureID = ReloadTexture(panel->GetTexture());
             panel->SetTextureID(textureID);
 
             // Update position depending on parents etc
             // TODO
 
+            Renderer::PrimitiveModelDesc primitiveModelDesc;
+
             // Update vertex buffer
-            if (panel->GetModelID() == Renderer::ModelID::Invalid())
+            Vector3& pos = panel->GetPosition();
+            Vector2& size = panel->GetSize();
+
+            CalculateVertices(pos, size, primitiveModelDesc.vertices);
+
+            Renderer::ModelID modelID = panel->GetModelID();
+            // If the primitive model hasn't been created yet, create it
+            if (modelID == Renderer::ModelID::Invalid())
             {
-                // The modelID has not been created yet, so lets create it
-                Renderer::PrimitiveModelDesc primitiveModelDesc;
-
-                // Screen coordinate space
-                Vector3& pos = panel->GetPosition();
-                Vector2& size = panel->GetSize();
-
-                Vector3 upperLeftPos = Vector3(pos.x, pos.y, 0.0f);
-                Vector3 upperRightPos = Vector3(pos.x + size.x, pos.y, 0.0f);
-                Vector3 lowerLeftPos = Vector3(pos.x, pos.y + size.y, 0.0f);
-                Vector3 lowerRightPos = Vector3(pos.x + size.x, pos.y + size.y, 0.0f);
-
-                // UV space
-                // TODO: Do scaling depending on rendertargets actual size instead of assuming 1080p (which is our reference resolution)
-                upperLeftPos /= Vector3(1920, 1080, 1.0f);
-                upperRightPos /= Vector3(1920, 1080, 1.0f);
-                lowerLeftPos /= Vector3(1920, 1080, 1.0f);
-                lowerRightPos /= Vector3(1920, 1080, 1.0f);
-
-                // Vertices
-                Renderer::Vertex upperLeft;
-                upperLeft.pos = upperLeftPos;
-                upperLeft.normal = Vector3(0, 1, 0);
-                upperLeft.texCoord = Vector2(0, 0);
-
-                Renderer::Vertex upperRight;
-                upperRight.pos = upperRightPos;
-                upperRight.normal = Vector3(0, 1, 0);
-                upperRight.texCoord = Vector2(1, 0);
-
-                Renderer::Vertex lowerLeft;
-                lowerLeft.pos = lowerLeftPos;
-                lowerLeft.normal = Vector3(0, 1, 0);
-                lowerLeft.texCoord = Vector2(0, 1);
-
-                Renderer::Vertex lowerRight;
-                lowerRight.pos = lowerRightPos;
-                lowerRight.normal = Vector3(0, 1, 0);
-                lowerRight.texCoord = Vector2(1, 1);
-
-                primitiveModelDesc.vertices.push_back(upperLeft);
-                primitiveModelDesc.vertices.push_back(upperRight);
-                primitiveModelDesc.vertices.push_back(lowerLeft);
-                primitiveModelDesc.vertices.push_back(lowerRight);
-
                 // Indices
                 primitiveModelDesc.indices.push_back(0);
                 primitiveModelDesc.indices.push_back(1);
@@ -93,20 +52,21 @@ void UIRenderer::Update(f32 deltaTime)
                 Renderer::ModelID modelID = _renderer->CreatePrimitiveModel(primitiveModelDesc);
                 panel->SetModelID(modelID);
             }
-            else
+            else // Otherwise we just update the already existing primitive model
             {
-                // TODO: We need to update our vertex buffer
+                _renderer->UpdatePrimitiveModel(modelID, primitiveModelDesc);
             }
 
             // Create constant buffer if necessary
-            if (panel->GetConstantBuffer() == nullptr)
+            auto constantBuffer = panel->GetConstantBuffer();
+            if (constantBuffer == nullptr)
             {
-                Renderer::ConstantBuffer<UI::Panel::PanelConstantBuffer>* constantBuffer = _renderer->CreateConstantBuffer<UI::Panel::PanelConstantBuffer>();
+                constantBuffer = _renderer->CreateConstantBuffer<UI::Panel::PanelConstantBuffer>();
                 panel->SetConstantBuffer(constantBuffer);
             }
-            panel->GetConstantBuffer()->resource.color = panel->GetColor();
-            panel->GetConstantBuffer()->Apply(0);
-            panel->GetConstantBuffer()->Apply(1);
+            constantBuffer->resource.color = panel->GetColor();
+            constantBuffer->Apply(0);
+            constantBuffer->Apply(1);
 
             panel->ResetDirty();
         }
@@ -223,4 +183,53 @@ void UIRenderer::CreatePermanentResources()
     samplerDesc.shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_PIXEL;
 
     _linearSampler = _renderer->CreateSampler(samplerDesc);
+}
+
+Renderer::TextureID UIRenderer::ReloadTexture(std::string& texturePath)
+{
+    Renderer::TextureDesc textureDesc;
+    textureDesc.path = texturePath;
+
+    return _renderer->LoadTexture(textureDesc);
+}
+
+void UIRenderer::CalculateVertices(Vector3 pos, Vector2 size, std::vector<Renderer::Vertex>& vertices)
+{
+    Vector3 upperLeftPos = Vector3(pos.x, pos.y, 0.0f);
+    Vector3 upperRightPos = Vector3(pos.x + size.x, pos.y, 0.0f);
+    Vector3 lowerLeftPos = Vector3(pos.x, pos.y + size.y, 0.0f);
+    Vector3 lowerRightPos = Vector3(pos.x + size.x, pos.y + size.y, 0.0f);
+
+    // UV space
+    // TODO: Do scaling depending on rendertargets actual size instead of assuming 1080p (which is our reference resolution)
+    upperLeftPos /= Vector3(1920, 1080, 1.0f);
+    upperRightPos /= Vector3(1920, 1080, 1.0f);
+    lowerLeftPos /= Vector3(1920, 1080, 1.0f);
+    lowerRightPos /= Vector3(1920, 1080, 1.0f);
+
+    // Vertices
+    Renderer::Vertex upperLeft;
+    upperLeft.pos = upperLeftPos;
+    upperLeft.normal = Vector3(0, 1, 0);
+    upperLeft.texCoord = Vector2(0, 0);
+
+    Renderer::Vertex upperRight;
+    upperRight.pos = upperRightPos;
+    upperRight.normal = Vector3(0, 1, 0);
+    upperRight.texCoord = Vector2(1, 0);
+
+    Renderer::Vertex lowerLeft;
+    lowerLeft.pos = lowerLeftPos;
+    lowerLeft.normal = Vector3(0, 1, 0);
+    lowerLeft.texCoord = Vector2(0, 1);
+
+    Renderer::Vertex lowerRight;
+    lowerRight.pos = lowerRightPos;
+    lowerRight.normal = Vector3(0, 1, 0);
+    lowerRight.texCoord = Vector2(1, 1);
+
+    vertices.push_back(upperLeft);
+    vertices.push_back(upperRight);
+    vertices.push_back(lowerLeft);
+    vertices.push_back(lowerRight);
 }

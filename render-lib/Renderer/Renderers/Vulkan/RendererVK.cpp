@@ -81,6 +81,11 @@ namespace Renderer
         return _modelHandler->CreatePrimitiveModel(_device, desc);
     }
 
+    void RendererVK::UpdatePrimitiveModel(ModelID model, PrimitiveModelDesc& desc)
+    {
+        _modelHandler->UpdatePrimitiveModel(_device, model, desc);
+    }
+
     ModelID RendererVK::LoadModel(ModelDesc& desc)
     {
         return _modelHandler->LoadModel(_device, desc);

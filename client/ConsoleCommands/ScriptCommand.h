@@ -29,5 +29,8 @@
 
 void ReloadCommand(EngineLoop& engineLoop, std::vector<std::string> subCommands)
 {
-    ScriptHandler::ReloadScripts();
+    Message reloadMessage;
+    reloadMessage.code = MSG_IN_RELOAD;
+
+    engineLoop.PassMessage(reloadMessage);
 }

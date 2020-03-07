@@ -41,6 +41,15 @@ namespace Renderer
             return ModelID(static_cast<type>(nextHandle));
         }
 
+        void ModelHandlerVK::UpdatePrimitiveModel(RenderDeviceVK* device, ModelID modelID, const PrimitiveModelDesc& desc)
+        {
+            using type = type_safe::underlying_type<ModelID>;
+
+            Model& model = _models[static_cast<type>(modelID)];
+            
+            UpdateVertices(device, model, desc.vertices);
+        }
+
         ModelID ModelHandlerVK::LoadModel(RenderDeviceVK* device, const ModelDesc& desc)
         {
             size_t nextHandle = _models.size();
@@ -175,53 +184,19 @@ namespace Renderer
 
         void ModelHandlerVK::InitializeModel(RenderDeviceVK* device, Model& model, const TempModelData& data)
         {
-            VkBuffer stagingBuffer;
-            VkDeviceMemory stagingBufferMemory;
-
             model.numIndices = static_cast<u32>(data.indices.size());
 
             // -- Create vertex buffer --
             VkDeviceSize vertexBufferSize = sizeof(data.vertices[0]) * data.vertices.size();
-
-            // Create a staging buffer
-            device->CreateBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-            // Copy our vertex data into the staging buffer
-            void* vertexData;
-            vkMapMemory(device->_device, stagingBufferMemory, 0, vertexBufferSize, 0, &vertexData);
-            memcpy(vertexData, data.vertices.data(), (size_t)vertexBufferSize);
-            vkUnmapMemory(device->_device, stagingBufferMemory);
-
-            // Create our vertex buffer
             device->CreateBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, model.vertexBuffer, model.vertexBufferMemory);
-            // Copy the vertex data from our staging buffer to our vertex buffer
-            device->CopyBuffer(stagingBuffer, model.vertexBuffer, vertexBufferSize);
 
-            // Destroy and free our staging buffer
-            vkDestroyBuffer(device->_device, stagingBuffer, nullptr);
-            vkFreeMemory(device->_device, stagingBufferMemory, nullptr);
+            UpdateVertices(device, model, data.vertices);
 
             // -- Create index buffer --
             VkDeviceSize indexBufferSize = sizeof(data.indices[0]) * data.indices.size();
-
-            // Create a staging buffer
-            device->CreateBuffer(indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-            // Copy our index data into the staging buffer
-            void* indexData;
-            vkMapMemory(device->_device, stagingBufferMemory, 0, indexBufferSize, 0, &indexData);
-            memcpy(indexData, data.indices.data(), (size_t)indexBufferSize);
-            vkUnmapMemory(device->_device, stagingBufferMemory);
-
-            // Create our index buffer
             device->CreateBuffer(indexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, model.indexBuffer, model.indexBufferMemory);
-
-            // Copy the index data from our staging buffer to our index buffer
-            device->CopyBuffer(stagingBuffer, model.indexBuffer, indexBufferSize);
-
-            // Destroy and free our staging buffer
-            vkDestroyBuffer(device->_device, stagingBuffer, nullptr);
-            vkFreeMemory(device->_device, stagingBufferMemory, nullptr);
+            
+            UpdateIndices(device, model, data.indices);
 
             // -- Create attribute descriptor --
             model.attributeDescriptions.resize(3);
@@ -243,6 +218,52 @@ namespace Renderer
             model.attributeDescriptions[2].location = 2;
             model.attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
             model.attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
+        }
+
+        void ModelHandlerVK::UpdateVertices(RenderDeviceVK* device, Model& model, const std::vector<Vertex>& vertices)
+        {
+            VkBuffer stagingBuffer;
+            VkDeviceMemory stagingBufferMemory;
+
+            // Create a staging buffer
+            VkDeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
+            device->CreateBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+            // Copy our vertex data into the staging buffer
+            void* vertexData;
+            vkMapMemory(device->_device, stagingBufferMemory, 0, vertexBufferSize, 0, &vertexData);
+            memcpy(vertexData, vertices.data(), (size_t)vertexBufferSize);
+            vkUnmapMemory(device->_device, stagingBufferMemory);
+
+            // Copy the vertex data from our staging buffer to our vertex buffer
+            device->CopyBuffer(stagingBuffer, model.vertexBuffer, vertexBufferSize);
+
+            // Destroy and free our staging buffer
+            vkDestroyBuffer(device->_device, stagingBuffer, nullptr);
+            vkFreeMemory(device->_device, stagingBufferMemory, nullptr);
+        }
+
+        void ModelHandlerVK::UpdateIndices(RenderDeviceVK* device, Model& model, const std::vector<i16>& indices)
+        {
+            VkBuffer stagingBuffer;
+            VkDeviceMemory stagingBufferMemory;
+
+            // Create a staging buffer
+            VkDeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
+            device->CreateBuffer(indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+            // Copy our index data into the staging buffer
+            void* indexData;
+            vkMapMemory(device->_device, stagingBufferMemory, 0, indexBufferSize, 0, &indexData);
+            memcpy(indexData, indices.data(), (size_t)indexBufferSize);
+            vkUnmapMemory(device->_device, stagingBufferMemory);
+
+            // Copy the index data from our staging buffer to our vertex buffer
+            device->CopyBuffer(stagingBuffer, model.indexBuffer, indexBufferSize);
+
+            // Destroy and free our staging buffer
+            vkDestroyBuffer(device->_device, stagingBuffer, nullptr);
+            vkFreeMemory(device->_device, stagingBufferMemory, nullptr);
         }
     }
 }

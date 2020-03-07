@@ -21,6 +21,8 @@ namespace Renderer
             ~ModelHandlerVK();
 
             ModelID CreatePrimitiveModel(RenderDeviceVK* device, const PrimitiveModelDesc& desc);
+            void UpdatePrimitiveModel(RenderDeviceVK* device, ModelID model, const PrimitiveModelDesc& desc);
+
             ModelID LoadModel(RenderDeviceVK* device, const ModelDesc& desc);
 
             VkBuffer GetVertexBuffer(ModelID modelID);
@@ -51,6 +53,8 @@ namespace Renderer
         private:
             void LoadFromFile(const ModelDesc& desc, TempModelData& data);
             void InitializeModel(RenderDeviceVK* device, Model& model, const TempModelData& data);
+            void UpdateVertices(RenderDeviceVK* device, Model& model, const std::vector<Vertex>& vertices);
+            void UpdateIndices(RenderDeviceVK* device, Model& model, const std::vector<i16>& indices);
 
         private:
             std::vector<Model> _models;

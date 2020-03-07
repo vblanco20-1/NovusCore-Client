@@ -33,6 +33,7 @@ namespace Renderer
         ComputePipelineID CreatePipeline(ComputePipelineDesc& desc) override;
 
         ModelID CreatePrimitiveModel(PrimitiveModelDesc& desc) override;
+        void UpdatePrimitiveModel(ModelID model, PrimitiveModelDesc& desc) override;
 
         // Loading
         ModelID LoadModel(ModelDesc& desc) override;
