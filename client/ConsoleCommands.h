@@ -34,6 +34,7 @@
 
 #include "ConsoleCommands/QuitCommand.h"
 #include "ConsoleCommands/PingCommand.h"
+#include "ConsoleCommands/ScriptCommand.h"
 #include "EngineLoop.h"
 
 class ConsoleCommandHandler
@@ -43,6 +44,7 @@ public:
     {
         RegisterCommand("quit"_h, &QuitCommand);
         RegisterCommand("ping"_h, &PingCommand);
+        RegisterCommand("reload"_h, &ReloadCommand);
     }
 
     void HandleCommand(EngineLoop& engineLoop, std::string& command)

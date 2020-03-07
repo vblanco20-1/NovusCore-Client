@@ -28,8 +28,6 @@ void ScriptHandler::ReloadScripts()
     }
 }
 
-
-
 void ScriptHandler::LoadScriptDirectory(std::string& scriptFolder)
 {
     _scriptFolder = scriptFolder; 
