@@ -8,7 +8,6 @@ void UIWidget::RegisterType()
     assert(r >= 0);
     {
         RegisterBase<UIWidget>();
-        ScriptEngine::RegisterScriptFunction("UIWidget@ CreateWidget()", asFUNCTION(UIWidget::Create));
     }
 }
 
@@ -18,9 +17,21 @@ std::string UIWidget::GetTypeName()
 }
 void UIWidget::SetPosition(f32 x, f32 y, f32 depth)
 {
-    _widget.SetPosition(Vector3(x, y, depth));
+    _widget->SetPosition(Vector3(x, y, depth));
 }
 void UIWidget::SetSize(f32 width, f32 height)
 {
-    _widget.SetSize(Vector3(width, height));
+    _widget->SetSize(Vector3(width, height));
+}
+float UIWidget::GetPositionX()
+{
+    return _widget->GetPosition().x;
+}
+float UIWidget::GetPositionY()
+{
+    return _widget->GetPosition().y;
+}
+float UIWidget::GetDepth()
+{
+    return _widget->GetPosition().z;
 }

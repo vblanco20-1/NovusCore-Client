@@ -14,9 +14,18 @@ public:
 
     void SetTexture(std::string& texture);
 
+    bool IsClickable();
+    void SetClickable(bool value);
+
+    void SetOnClick(asIScriptFunction* function);
+    void OnClick();
+
+    UI::Panel* GetInternal();
+    static std::vector<UIPanel*> _panels;
 private:
-    static UIPanel* CreatePanel(f32 posX, f32 posY, f32 width, f32 height);
+    static UIPanel* CreatePanel(f32 posX, f32 posY, f32 width, f32 height, bool clickable);
 
 private:
     UI::Panel _panel;
+    asIScriptFunction* _onClickCallback;
 };

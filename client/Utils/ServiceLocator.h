@@ -5,6 +5,7 @@
 #include <cassert>
 
 class MessageHandler;
+class Window;
 class ServiceLocator
 {
 public:
@@ -12,6 +13,8 @@ public:
     static void SetGameRegistry(entt::registry* registry);
     static MessageHandler* GetNetworkMessageHandler() { return _networkMessageHandler; }
     static void SetNetworkMessageHandler(MessageHandler* serverMessageHandler);
+    static Window* GetWindow() { return _window; }
+    static void SetWindow(Window* window);
     static moodycamel::ConcurrentQueue<Message>* GetMainInputQueue() 
     {
         assert(_mainInputQueue != nullptr);
@@ -27,5 +30,6 @@ private:
     ServiceLocator() { }
     static entt::registry* _gameRegistry;
     static MessageHandler* _networkMessageHandler;
+    static Window* _window;
     static moodycamel::ConcurrentQueue<Message>* _mainInputQueue;
 };

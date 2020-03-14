@@ -20,20 +20,23 @@ namespace UI
         };
 
     public:
-        Panel(f32 posX, f32 posY, f32 width, f32 height);
+        Panel(f32 posX, f32 posY, f32 width, f32 height, bool clickable = false);
 
     private:
+        Renderer::ModelID GetModelID();
+        void SetModelID(Renderer::ModelID modelID);
+
         std::string& GetTexture();
         void SetTexture(std::string& texture);
-
-        Vector4 GetColor();
-        void SetColor(Vector4 color);
 
         Renderer::TextureID GetTextureID();
         void SetTextureID(Renderer::TextureID textureID);
 
-        Renderer::ModelID GetModelID();
-        void SetModelID(Renderer::ModelID modelID);
+        Vector4 GetColor();
+        void SetColor(Vector4 color);
+
+        bool IsClickable();
+        void SetClickable(bool value);
 
         Renderer::ConstantBuffer<PanelConstantBuffer>* GetConstantBuffer() { return _constantBuffer; }
         void SetConstantBuffer(Renderer::ConstantBuffer<PanelConstantBuffer>* constantBuffer) { _constantBuffer = constantBuffer; }
@@ -44,10 +47,10 @@ namespace UI
         std::string _texture;
         Renderer::TextureID _textureID = Renderer::TextureID::Invalid();
         Vector4 _color;
+        bool _clickable;
+
 
         Renderer::ConstantBuffer<PanelConstantBuffer>* _constantBuffer = nullptr;
-
-        static std::vector<Panel*> _panels;
 
         friend class ::UIPanel;
         friend class UIRenderer;

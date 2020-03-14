@@ -56,6 +56,11 @@ i32 ScriptEngine::RegisterScriptFunction(std::string declaration, const asSFuncP
     return _scriptEngine->RegisterGlobalFunction(declaration.c_str(), functionPointer, asCALL_CDECL, auxiliary);
 }
 
+i32 ScriptEngine::RegisterScriptFunctionDef(std::string declaration)
+{
+    return _scriptEngine->RegisterFuncdef(declaration.c_str());
+}
+
 void ScriptEngine::RegisterFunctions()
 {
     // Defaults

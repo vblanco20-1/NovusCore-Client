@@ -1,7 +1,8 @@
 #include "ServiceLocator.h"
 
-entt::registry * ServiceLocator::_gameRegistry = nullptr;
+entt::registry* ServiceLocator::_gameRegistry = nullptr;
 MessageHandler* ServiceLocator::_networkMessageHandler = nullptr;
+Window* ServiceLocator::_window = nullptr;
 
 moodycamel::ConcurrentQueue<Message>* ServiceLocator::_mainInputQueue = nullptr;
 
@@ -14,4 +15,9 @@ void ServiceLocator::SetNetworkMessageHandler(MessageHandler* networkMessageHand
 {
     assert(_networkMessageHandler == nullptr);
     _networkMessageHandler = networkMessageHandler;
+}
+void ServiceLocator::SetWindow(Window* window)
+{
+    assert(_window == nullptr);
+    _window = window;
 }

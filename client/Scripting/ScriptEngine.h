@@ -16,6 +16,7 @@ public:
     static i32 RegisterScriptClassFunction(std::string declaration, const asSFuncPtr& functionPointer, bool isStatic = false, void* auxiliary = 0, i32 compositeOffset = 0, bool isCompositeIndirect = false);
     static i32 RegisterScriptClassProperty(std::string declaration, i32 byteOffset, i32 compositeOffset = 0, bool isCompositeIndirect = false);
     static i32 RegisterScriptFunction(std::string declaration, const asSFuncPtr& functionPointer, void* auxiliary = 0);
+    static i32 RegisterScriptFunctionDef(std::string declaration);
     
     template <class Base, class Derived>
     static i32 RegisterScriptInheritance(std::string baseClass)

@@ -1,11 +1,13 @@
 #include "UIRenderer.h"
-#include <Window/Window.h>
 #include "Camera.h"
+
+#include "../Utils/ServiceLocator.h"
+#include "../Scripting/Classes/UI/UIPanel.h"
 
 #include <Renderer/Renderer.h>
 #include <Renderer/Renderers/Vulkan/RendererVK.h>
-
-#include "../UI/Widget/Panel.h"
+#include <Window/Window.h>
+#include <GLFW/glfw3.h>
 
 const int WIDTH = 1920;
 const int HEIGHT = 1080;
@@ -14,12 +16,17 @@ UIRenderer::UIRenderer(Renderer::Renderer* renderer)
 {
     _renderer = renderer;
     CreatePermanentResources();
+
+    InputManager* inputManager = ServiceLocator::GetWindow()->GetInputManager();
+    inputManager->RegisterBinding("UI Click Checker", GLFW_MOUSE_BUTTON_LEFT, BINDING_ACTION_CLICK, BINDING_MOD_ANY, std::bind(&UIRenderer::OnMouseClick, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 void UIRenderer::Update(f32 deltaTime)
 {
-    for (auto panel : UI::Panel::_panels) // TODO: Store panels in a better manner than this
+    for (auto uiPanel : UIPanel::_panels) // TODO: Store panels in a better manner than this
     {
+        UI::Panel* panel = uiPanel->GetInternal();
+
         if (panel->IsDirty())
         {
             // (Re)load texture
@@ -155,8 +162,10 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
             commandList.BeginPipeline(pipeline);
 
             // Draw all the panels
-            for (auto panel : UI::Panel::_panels)
+            for (auto uiPanel : UIPanel::_panels) // TODO: Store panels in a better manner than this
             {
+                UI::Panel* panel = uiPanel->GetInternal();
+
                 // Set constant buffer
                 commandList.SetConstantBuffer(0, panel->GetConstantBuffer()->GetGPUResource(frameIndex));
 
@@ -168,6 +177,29 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
             }
             commandList.EndPipeline(pipeline);
         });
+    }
+}
+
+void UIRenderer::OnMouseClick(Window* window, InputBinding* binding)
+{
+    f64 mouseX = window->GetInputManager()->GetMousePositionX();
+    f64 mouseY = window->GetInputManager()->GetMousePositionY();
+
+    for (auto uiPanel : UIPanel::_panels) // TODO: Store panels in a better manner than this
+    {
+        UI::Panel* panel = uiPanel->GetInternal();
+
+        if (!panel->IsClickable())
+            continue;
+
+        Vector2 size = panel->GetSize();
+        Vector2 pos = panel->GetPosition();
+
+        if ((mouseX > pos.x&& mouseX < pos.x + size.x) &&
+            mouseY > pos.y&& mouseY < pos.y + size.y)
+        {
+            uiPanel->OnClick();
+        }
     }
 }
 

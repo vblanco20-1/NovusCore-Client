@@ -1,6 +1,7 @@
 #include "ClientRenderer.h"
 #include "UIRenderer.h"
 #include "Camera.h"
+#include "../Utils/ServiceLocator.h"
 
 #include <Renderer/Renderer.h>
 #include <Renderer/Renderers/Vulkan/RendererVK.h>
@@ -17,13 +18,13 @@ ClientRenderer::ClientRenderer()
     _camera = new Camera(Vector3(0, 0, -10));
     _window = new Window();
     _window->Init(WIDTH, HEIGHT);
+    ServiceLocator::SetWindow(_window);
 
     _renderer = new Renderer::RendererVK();
     _renderer->InitWindow(_window);
 
     CreatePermanentResources();
     _uiRenderer = new UIRenderer(_renderer);
-
 }
 
 bool ClientRenderer::UpdateWindow(f32 deltaTime)

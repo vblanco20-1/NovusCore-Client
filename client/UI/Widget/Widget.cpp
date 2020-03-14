@@ -14,7 +14,11 @@ namespace UI
     }
 
     Vector3 Widget::GetPosition() { return _position; }
-    void Widget::SetPosition(Vector3 position) { _position = position; }
+    void Widget::SetPosition(Vector3 position) 
+    { 
+        _position = position;
+        SetDirty();
+    }
     Vector2 Widget::GetSize() { return _size; }
     void Widget::SetSize(Vector2 size) { _size = size; }
     Vector2 Widget::GetAnchor() { return _anchor; }

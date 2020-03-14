@@ -1,11 +1,12 @@
 #include "UIPanel.h"
 #include "../../ScriptEngine.h"
 
-UIPanel::UIPanel(f32 posX, f32 posY, f32 width, f32 height)
-    : UIWidget()
-    , _panel(posX, posY, width, height)
-{
+std::vector<UIPanel*> UIPanel::_panels;
 
+UIPanel::UIPanel(f32 posX, f32 posY, f32 width, f32 height)
+    : _panel(posX, posY, width, height), UIWidget(&_panel), _onClickCallback(nullptr)
+{
+    _panels.push_back(this);
 }
 
 void UIPanel::RegisterType()
@@ -14,9 +15,13 @@ void UIPanel::RegisterType()
     assert(r >= 0);
     {
         r = ScriptEngine::RegisterScriptInheritance<UIWidget, UIPanel>("UIWidget");
-        r = ScriptEngine::RegisterScriptFunction("UIPanel@ CreatePanel(float xPos = 0, float yPos = 0, float width = 100, float height = 100)", asFUNCTION(UIPanel::CreatePanel)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptFunction("UIPanel@ CreatePanel(float xPos = 0, float yPos = 0, float width = 100, float height = 100, bool clickable = false)", asFUNCTION(UIPanel::CreatePanel)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetColor(float r, float g, float b, float a)", asMETHOD(UIPanel, SetColor)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetTexture(string texture)", asMETHOD(UIPanel, SetTexture)); assert(r >= 0);
+
+        // Callback
+        r = ScriptEngine::RegisterScriptFunctionDef("void OnClickCallback(UIPanel@ panel)"); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void OnClick(OnClickCallback @cb)", asMETHOD(UIPanel, SetOnClick)); assert(r >= 0);
     }
 }
 
@@ -35,9 +40,45 @@ void UIPanel::SetTexture(std::string& texture)
     _panel.SetTexture(texture);
 }
 
-UIPanel* UIPanel::CreatePanel(f32 posX, f32 posY, f32 width, f32 height)
+bool UIPanel::IsClickable()
+{
+    return _panel.IsClickable();
+}
+
+void UIPanel::SetClickable(bool value)
+{
+    _panel.SetClickable(value);
+}
+
+void UIPanel::SetOnClick(asIScriptFunction* function)
+{
+    _onClickCallback = function;
+}
+
+void UIPanel::OnClick()
+{
+    if (!_onClickCallback)
+        return;
+
+    asIScriptContext* context = ScriptEngine::GetScriptContext();
+    {
+        context->Prepare(_onClickCallback);
+        {
+            context->SetArgObject(0, this);
+        }
+        context->Execute();
+    }
+}
+
+UI::Panel* UIPanel::GetInternal()
+{
+    return &_panel;
+}
+
+UIPanel* UIPanel::CreatePanel(f32 posX, f32 posY, f32 width, f32 height, bool clickable)
 {
     UIPanel* panel = new UIPanel(posX, posY, width, height);
+    panel->SetClickable(clickable);
 
     return panel;
 }

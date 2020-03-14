@@ -5,6 +5,17 @@ void InputManager::Setup()
 {
     _inputBindingMap.clear();
 
+    // Mouse
+    _inputBindingMap[GLFW_MOUSE_BUTTON_LEFT] = std::vector<InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_RIGHT] = std::vector<InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_MIDDLE] = std::vector<InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_4] = std::vector<InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_5] = std::vector<InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_6] = std::vector<InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_7] = std::vector<InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_8] = std::vector<InputBinding>();
+
+    // Keyboard
     _inputBindingMap[GLFW_KEY_SPACE] = std::vector<InputBinding>();
     _inputBindingMap[GLFW_KEY_APOSTROPHE] = std::vector<InputBinding>();
     _inputBindingMap[GLFW_KEY_COMMA] = std::vector<InputBinding>();
@@ -138,7 +149,8 @@ void InputManager::KeyboardInputChecker(Window* window, i32 key, i32 /*scanCode*
     for (auto inputBinding : _inputBindingMap[key])
     {
         // Validate ActionMask and then check Modifier Mask
-        if ((inputBinding.actionMask == action || (inputBinding.actionMask & action)) && inputBinding.modifierMask == modifiers)
+        bool validModifier = inputBinding.modifierMask == BINDING_MOD_ANY || inputBinding.modifierMask & modifiers || inputBinding.modifierMask == 0 && modifiers == 0;
+        if ((inputBinding.actionMask & (1 << action)) && validModifier)
         {
             if (!inputBinding.callback)
                 continue;
@@ -146,6 +158,30 @@ void InputManager::KeyboardInputChecker(Window* window, i32 key, i32 /*scanCode*
             inputBinding.callback(window, &inputBinding);
         }
     }
+}
+
+void InputManager::MouseInputChecker(Window* window, i32 button, i32 action, i32 modifiers)
+{
+    // Here we add one to action and modifiers to be able to use bitmask checking
+    modifiers += 1;
+
+    for (auto inputBinding : _inputBindingMap[button])
+    {
+        bool validModifier = inputBinding.modifierMask == BINDING_MOD_ANY || inputBinding.modifierMask & modifiers || inputBinding.modifierMask == 0 && modifiers == 0;
+        if ((inputBinding.actionMask & (1 << action)) && validModifier)
+        {
+            if (!inputBinding.callback)
+                continue;
+
+            inputBinding.callback(window, &inputBinding);
+        }
+    }
+}
+
+void InputManager::MousePositionUpdate(Window* window, f64 x, f64 y)
+{
+    _mousePositionX = x;
+    _mousePositionY = y;
 }
 
 bool InputManager::RegisterBinding(std::string bindingName, i32 key, i32 actionMask, i32 modifierMask, std::function<InputBindingFunc> callback)

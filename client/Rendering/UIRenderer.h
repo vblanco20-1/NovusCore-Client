@@ -15,6 +15,8 @@ namespace Renderer
     class Renderer;
 }
 
+class Window;
+class InputBinding;
 class UIRenderer
 {
 public:
@@ -22,6 +24,7 @@ public:
 
     void Update(f32 deltaTime);
     void AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID renderTarget, u8 frameIndex);
+    void OnMouseClick(Window* window, InputBinding* binding);
 
 private:
     void CreatePermanentResources();
