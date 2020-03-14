@@ -16,7 +16,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 	asio::asio
 	common::common
 	glfw ${GLFW_LIBRARIES}
-	Vulkan::Vulkan
+    Vulkan::Vulkan
+    input::input
 )
 add_dependencies(${PROJECT_NAME} shaders)
 

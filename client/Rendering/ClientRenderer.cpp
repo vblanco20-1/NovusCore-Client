@@ -1,10 +1,11 @@
 #include "ClientRenderer.h"
 #include "UIRenderer.h"
-#include <Window/Window.h>
 #include "Camera.h"
 
 #include <Renderer/Renderer.h>
 #include <Renderer/Renderers/Vulkan/RendererVK.h>
+#include <Window/Window.h>
+#include <GLFW/glfw3.h>
 
 const int WIDTH = 1920;
 const int HEIGHT = 1080;

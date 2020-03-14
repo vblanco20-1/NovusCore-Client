@@ -7,7 +7,7 @@ class InputManager
 public:
     void Setup();
     void KeyboardInputChecker(Window* window, i32 key, i32 scancode, i32 action, i32 modifiers);
-    bool RegisterBinding(std::string bindingName, i32 key, i32 actionMask, i32 modifierMask, InputBindingFunc callback);
+    bool RegisterBinding(std::string bindingName, i32 key, i32 actionMask, i32 modifierMask, std::function<InputBindingFunc> callback);
     bool UnregisterBinding(std::string bindingName, i32 key);
 
 private:

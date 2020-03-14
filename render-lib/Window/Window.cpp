@@ -1,12 +1,12 @@
 #include "Window.h"
-#include <GLFW/glfw3.h>
 #include <cassert>
+#include <GLFW/glfw3.h>
 
 
 bool Window::_glfwInitialized = false;
 
 Window::Window()
-    : _window(nullptr)
+    : _window(nullptr), _inputManager(nullptr)
 {
     
 }
@@ -16,6 +16,10 @@ Window::~Window()
     if (_window != nullptr)
     {
         glfwDestroyWindow(_window);
+    }
+    if (_inputManager != nullptr)
+    {
+        delete _inputManager;
     }
 }
 
@@ -27,6 +31,7 @@ void error_callback(i32 error, const char* description)
 void key_callback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 modifiers)
 {
     Window* userWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+    userWindow->GetInputManager()->KeyboardInputChecker(userWindow, key, scancode, action, modifiers);
 }
 
 bool Window::Init(u32 width, u32 height)
@@ -52,6 +57,8 @@ bool Window::Init(u32 width, u32 height)
     }
     glfwSetWindowUserPointer(_window, this);
 
+    _inputManager = new InputManager();
+    _inputManager->Setup();
     glfwSetKeyCallback(_window, key_callback);
 
     return true;

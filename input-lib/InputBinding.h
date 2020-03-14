@@ -1,5 +1,5 @@
 #include <NovusTypes.h>
-#include <GLFW/glfw3.h>
+#include <functional>
 
 enum InputBindingModifier
 {
@@ -16,12 +16,12 @@ class InputBinding
 {
 public:
     InputBinding() : name("invalid"), actionMask(0), key(-1), modifierMask(0), callback(nullptr) { }
-    InputBinding(std::string inName, i32 inActionMask, i32 inKey, i32 inModifierMask, InputBindingFunc inCallback) : name(inName), actionMask(inActionMask), key(inKey), modifierMask(inModifierMask), callback(inCallback) { }
+    InputBinding(std::string inName, i32 inActionMask, i32 inKey, i32 inModifierMask, std::function<InputBindingFunc> inCallback) : name(inName), actionMask(inActionMask), key(inKey), modifierMask(inModifierMask), callback(inCallback) { }
 
 public:
     std::string name;
     i32 actionMask;
     i32 key;
     i32 modifierMask;
-    InputBindingFunc* callback;
+    std::function<InputBindingFunc> callback;
 };

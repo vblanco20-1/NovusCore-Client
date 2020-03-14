@@ -1,10 +1,10 @@
 #include "InputManager.h"
+#include <GLFW/glfw3.h>
 
 void InputManager::Setup()
 {
     _inputBindingMap.clear();
 
-    _inputBindingMap[GLFW_KEY_SPACE] = std::vector<InputBinding>();
     _inputBindingMap[GLFW_KEY_SPACE] = std::vector<InputBinding>();
     _inputBindingMap[GLFW_KEY_APOSTROPHE] = std::vector<InputBinding>();
     _inputBindingMap[GLFW_KEY_COMMA] = std::vector<InputBinding>();
@@ -133,10 +133,11 @@ void InputManager::Setup()
     }
 }
 
-void InputManager::KeyboardInputChecker(Window* window, i32 key, i32 scancode, i32 action, i32 modifiers)
+void InputManager::KeyboardInputChecker(Window* window, i32 key, i32 /*scanCode*/, i32 action, i32 modifiers)
 {
     for (auto inputBinding : _inputBindingMap[key])
     {
+        // Validate ActionMask and then check Modifier Mask
         if ((inputBinding.actionMask == action || (inputBinding.actionMask & action)) && inputBinding.modifierMask == modifiers)
         {
             if (!inputBinding.callback)
@@ -147,7 +148,7 @@ void InputManager::KeyboardInputChecker(Window* window, i32 key, i32 scancode, i
     }
 }
 
-bool InputManager::RegisterBinding(std::string bindingName, i32 key, i32 actionMask, i32 modifierMask, InputBindingFunc callback)
+bool InputManager::RegisterBinding(std::string bindingName, i32 key, i32 actionMask, i32 modifierMask, std::function<InputBindingFunc> callback)
 {
     for (auto inputBinding : _inputBindingMap[key])
     {
@@ -164,6 +165,16 @@ bool InputManager::RegisterBinding(std::string bindingName, i32 key, i32 actionM
 bool InputManager::UnregisterBinding(std::string bindingName, i32 key)
 {
     bool found = false;
-    _inputBindingMap[key].erase(std::remove_if(_inputBindingMap[key].begin(), _inputBindingMap[key].end(), [bindingName, &found](InputBinding binding) { if (binding.name == bindingName) { found = true; return true; } return false; }), _inputBindingMap[key].end());
+    _inputBindingMap[key].erase(std::remove_if(_inputBindingMap[key].begin(), _inputBindingMap[key].end(), 
+        [bindingName, &found](InputBinding binding) 
+        { 
+            if (binding.name == bindingName) 
+            { 
+                found = true; 
+                return true; 
+            } 
+            
+            return false; 
+        }), _inputBindingMap[key].end());
     return found;
 }
