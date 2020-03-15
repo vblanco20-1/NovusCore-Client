@@ -1,141 +1,140 @@
 #include "InputManager.h"
+#include <Utils/StringUtils.h>
 #include <GLFW/glfw3.h>
 
-void InputManager::Setup()
+InputManager::InputManager() : _inputBindingMap()
 {
-    _inputBindingMap.clear();
-
     // Mouse
-    _inputBindingMap[GLFW_MOUSE_BUTTON_LEFT] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_MOUSE_BUTTON_RIGHT] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_MOUSE_BUTTON_MIDDLE] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_MOUSE_BUTTON_4] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_MOUSE_BUTTON_5] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_MOUSE_BUTTON_6] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_MOUSE_BUTTON_7] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_MOUSE_BUTTON_8] = std::vector<InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_1] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_2] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_3] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_4] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_5] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_6] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_7] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_MOUSE_BUTTON_8] = robin_hood::unordered_map<u32, InputBinding>();
 
     // Keyboard
-    _inputBindingMap[GLFW_KEY_SPACE] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_APOSTROPHE] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_COMMA] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_MINUS] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_PERIOD] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_SLASH] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_0] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_1] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_2] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_3] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_4] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_5] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_6] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_7] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_8] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_9] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_SEMICOLON] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_EQUAL] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_A] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_B] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_C] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_D] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_E] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_G] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_H] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_I] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_J] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_K] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_L] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_M] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_N] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_O] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_P] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_Q] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_R] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_S] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_T] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_U] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_V] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_W] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_X] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_Y] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_Z] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_LEFT_BRACKET] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_BACKSLASH] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_RIGHT_BRACKET] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_GRAVE_ACCENT] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_WORLD_1] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_WORLD_2] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_ESCAPE] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_ENTER] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_TAB] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_BACKSPACE] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_INSERT] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_DELETE] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_RIGHT] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_LEFT] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_DOWN] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_UP] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_PAGE_UP] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_PAGE_DOWN] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_HOME] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_END] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_CAPS_LOCK] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_SCROLL_LOCK] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_NUM_LOCK] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_PRINT_SCREEN] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_PAUSE] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F1] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F2] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F3] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F4] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F5] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F6] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F7] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F8] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F9] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F10] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F11] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F12] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F13] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F14] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F15] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F16] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F17] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F18] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F19] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F20] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F21] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F22] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F23] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F24] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_F25] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_0] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_1] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_2] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_3] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_4] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_5] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_6] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_7] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_8] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_9] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_DECIMAL] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_DIVIDE] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_MULTIPLY] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_SUBTRACT] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_ADD] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_ENTER] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_KP_EQUAL] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_LEFT_SHIFT] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_LEFT_CONTROL] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_LEFT_ALT] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_LEFT_SUPER] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_RIGHT_SHIFT] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_RIGHT_CONTROL] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_RIGHT_ALT] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_RIGHT_SUPER] = std::vector<InputBinding>();
-    _inputBindingMap[GLFW_KEY_MENU] = std::vector<InputBinding>();
+    _inputBindingMap[GLFW_KEY_SPACE] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_APOSTROPHE] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_COMMA] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_MINUS] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_PERIOD] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_SLASH] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_0] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_1] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_2] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_3] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_4] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_5] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_6] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_7] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_8] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_9] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_SEMICOLON] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_EQUAL] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_A] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_B] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_C] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_D] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_E] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_G] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_H] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_I] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_J] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_K] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_L] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_M] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_N] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_O] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_P] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_Q] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_R] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_S] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_T] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_U] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_V] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_W] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_X] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_Y] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_Z] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_LEFT_BRACKET] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_BACKSLASH] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_RIGHT_BRACKET] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_GRAVE_ACCENT] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_WORLD_1] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_WORLD_2] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_ESCAPE] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_ENTER] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_TAB] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_BACKSPACE] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_INSERT] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_DELETE] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_RIGHT] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_LEFT] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_DOWN] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_UP] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_PAGE_UP] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_PAGE_DOWN] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_HOME] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_END] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_CAPS_LOCK] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_SCROLL_LOCK] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_NUM_LOCK] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_PRINT_SCREEN] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_PAUSE] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F1] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F2] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F3] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F4] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F5] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F6] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F7] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F8] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F9] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F10] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F11] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F12] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F13] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F14] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F15] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F16] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F17] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F18] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F19] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F20] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F21] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F22] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F23] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F24] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_F25] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_0] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_1] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_2] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_3] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_4] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_5] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_6] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_7] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_8] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_9] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_DECIMAL] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_DIVIDE] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_MULTIPLY] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_SUBTRACT] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_ADD] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_ENTER] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_KP_EQUAL] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_LEFT_SHIFT] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_LEFT_CONTROL] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_LEFT_ALT] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_LEFT_SUPER] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_RIGHT_SHIFT] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_RIGHT_CONTROL] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_RIGHT_ALT] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_RIGHT_SUPER] = robin_hood::unordered_map<u32, InputBinding>();
+    _inputBindingMap[GLFW_KEY_MENU] = robin_hood::unordered_map<u32, InputBinding>();
 
     // Micro Optimization (Pre Allocate Memory for 8 InputBindings)
     for (auto inputBinding : _inputBindingMap)
@@ -146,12 +145,16 @@ void InputManager::Setup()
 
 void InputManager::KeyboardInputChecker(Window* window, i32 key, i32 /*scanCode*/, i32 action, i32 modifiers)
 {
-    for (auto inputBinding : _inputBindingMap[key])
+    for (auto kv : _inputBindingMap[key])
     {
+        auto inputBinding = kv.second;
+
         // Validate ActionMask and then check Modifier Mask
         bool validModifier = inputBinding.modifierMask == BINDING_MOD_ANY || inputBinding.modifierMask & modifiers || inputBinding.modifierMask == 0 && modifiers == 0;
         if ((inputBinding.actionMask & (1 << action)) && validModifier)
         {
+            inputBinding.state = action == GLFW_RELEASE ? 0 : 1;
+
             if (!inputBinding.callback)
                 continue;
 
@@ -159,17 +162,20 @@ void InputManager::KeyboardInputChecker(Window* window, i32 key, i32 /*scanCode*
         }
     }
 }
-
 void InputManager::MouseInputChecker(Window* window, i32 button, i32 action, i32 modifiers)
 {
-    // Here we add one to action and modifiers to be able to use bitmask checking
-    modifiers += 1;
+    _mouseState = action == GLFW_RELEASE ? 0 : 1;
 
-    for (auto inputBinding : _inputBindingMap[button])
+    for (auto kv : _inputBindingMap[button])
     {
+        auto inputBinding = kv.second;
+
+        // Validate ActionMask and then check Modifier Mask
         bool validModifier = inputBinding.modifierMask == BINDING_MOD_ANY || inputBinding.modifierMask & modifiers || inputBinding.modifierMask == 0 && modifiers == 0;
         if ((inputBinding.actionMask & (1 << action)) && validModifier)
         {
+            inputBinding.state = action == GLFW_RELEASE ? 0 : 1;
+
             if (!inputBinding.callback)
                 continue;
 
@@ -177,40 +183,74 @@ void InputManager::MouseInputChecker(Window* window, i32 button, i32 action, i32
         }
     }
 }
-
-void InputManager::MousePositionUpdate(Window* window, f64 x, f64 y)
+void InputManager::MousePositionUpdate(Window* window, f32 x, f32 y)
 {
     _mousePositionX = x;
     _mousePositionY = y;
+
+    for (auto kv : _mousePositionUpdateCallbacks)
+    {
+        kv.second(window, x, y);
+    }
 }
 
 bool InputManager::RegisterBinding(std::string bindingName, i32 key, i32 actionMask, i32 modifierMask, std::function<InputBindingFunc> callback)
 {
-    for (auto inputBinding : _inputBindingMap[key])
-    {
-        if (inputBinding.name == bindingName)
-            return false;
-    }
+    u32 hashedBindingName = StringUtils::fnv1a_32(bindingName.c_str(), bindingName.length());
+
+    auto iterator = _inputBindingMap[key].find(hashedBindingName);
+    if (iterator != _inputBindingMap[key].end())
+        return false;
 
     InputBinding newBind(bindingName, actionMask, key, modifierMask, callback);
-    _inputBindingMap[key].push_back(newBind);
+    _inputBindingMap[key][hashedBindingName] = newBind;
 
     return true;
 }
 
 bool InputManager::UnregisterBinding(std::string bindingName, i32 key)
 {
-    bool found = false;
-    _inputBindingMap[key].erase(std::remove_if(_inputBindingMap[key].begin(), _inputBindingMap[key].end(), 
-        [bindingName, &found](InputBinding binding) 
-        { 
-            if (binding.name == bindingName) 
-            { 
-                found = true; 
-                return true; 
-            } 
-            
-            return false; 
-        }), _inputBindingMap[key].end());
-    return found;
+    u32 hashedBindingName = StringUtils::fnv1a_32(bindingName.c_str(), bindingName.length());
+
+    auto iterator = _inputBindingMap[key].find(hashedBindingName);
+    if (iterator == _inputBindingMap[key].end())
+        return false;
+
+    _inputBindingMap[key].erase(hashedBindingName);
+    return true;
 }
+
+bool InputManager::RegisterMouseUpdateCallback(std::string callbackName, std::function<MousePositionUpdateFunc> callback)
+{
+    u32 hashedCallbackName = StringUtils::fnv1a_32(callbackName.c_str(), callbackName.length());
+
+    auto iterator = _mousePositionUpdateCallbacks.find(hashedCallbackName);
+    if (iterator != _mousePositionUpdateCallbacks.end())
+        return false;
+
+    _mousePositionUpdateCallbacks[hashedCallbackName] = callback;
+    return true;
+}
+
+bool InputManager::UnregisterMouseUpdateCallback(std::string callbackName, std::function<MousePositionUpdateFunc> callback)
+{
+    u32 hashedCallbackName = StringUtils::fnv1a_32(callbackName.c_str(), callbackName.length());
+
+    auto iterator = _mousePositionUpdateCallbacks.find(hashedCallbackName);
+    if (iterator == _mousePositionUpdateCallbacks.end())
+        return false;
+
+    _mousePositionUpdateCallbacks.erase(hashedCallbackName);
+    return true;
+}
+
+bool InputManager::IsPressed(GLFWwindow* window, i32 key)
+{
+    return glfwGetKey(window, key) == GLFW_RELEASE ? false : true;
+}
+
+bool InputManager::IsPressed(i32 key, std::string bindingName)
+{
+    return _inputBindingMap[key][StringUtils::fnv1a_32(bindingName.c_str(), bindingName.length())].state;
+}
+

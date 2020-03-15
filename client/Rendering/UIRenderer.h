@@ -25,6 +25,7 @@ public:
     void Update(f32 deltaTime);
     void AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID renderTarget, u8 frameIndex);
     void OnMouseClick(Window* window, InputBinding* binding);
+    void OnMousePositionUpdate(Window* window, f32 x, f32 y);
 
 private:
     void CreatePermanentResources();

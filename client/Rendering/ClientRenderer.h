@@ -38,6 +38,7 @@ struct ModelConstantBuffer
 class Window;
 class Camera;
 class UIRenderer;
+class InputManager;
 
 class ClientRenderer
 {
@@ -54,6 +55,7 @@ private:
 private:
     Window* _window;
     Camera* _camera;
+    InputManager* _inputManager;
     Renderer::Renderer* _renderer;
     Memory::StackAllocator* _frameAllocator;
 

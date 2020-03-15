@@ -17,7 +17,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 	common::common
 	glfw ${GLFW_LIBRARIES}
     Vulkan::Vulkan
-    input::input
 )
 add_dependencies(${PROJECT_NAME} shaders)
 

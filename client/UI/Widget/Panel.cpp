@@ -3,9 +3,9 @@
 namespace UI
 {
     // Public
-    Panel::Panel(f32 posX, f32 posY, f32 width, f32 height, bool clickable /*= false*/)
+    Panel::Panel(f32 posX, f32 posY, f32 width, f32 height)
         : Widget(posX, posY, width, height)
-        , _color(1.0f, 1.0f, 1.0f, 1.0f), _clickable(clickable)
+        , _color(1.0f, 1.0f, 1.0f, 1.0f), _clickable(true), _dragable(false), _isDragging(false), _deltaDragPosition(0, 0), _didDrag(false)
     {
     }
 
@@ -55,5 +55,41 @@ namespace UI
     void Panel::SetClickable(bool value)
     {
         _clickable = value;
+    }
+
+    bool Panel::IsDragable()
+    {
+        return _dragable;
+    }
+    void Panel::SetDragable(bool value)
+    {
+        _dragable = value;
+    }
+    bool Panel::IsDragging()
+    {
+        return _isDragging;
+    }
+    void Panel::BeingDrag(Vector2 deltaDragPosition)
+    {
+        _deltaDragPosition = deltaDragPosition;
+        _isDragging = true;
+    }
+    Vector2 Panel::GetDeltaDragPosition()
+    {
+        return _deltaDragPosition;
+    }
+    bool Panel::DidDrag()
+    {
+        return _didDrag;
+    }
+    void Panel::SetDidDrag()
+    {
+        _didDrag = true;
+    }
+    void Panel::EndDrag()
+    {
+        _deltaDragPosition = Vector2(0, 0);
+        _didDrag = false;
+        _isDragging = false;
     }
 }

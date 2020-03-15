@@ -1,5 +1,6 @@
 #include <NovusTypes.h>
 #include <functional>
+#include <Utils/StringUtils.h>
 
 enum BindingAction
 {
@@ -28,13 +29,15 @@ typedef void InputBindingFunc(Window*, InputBinding*);
 class InputBinding
 {
 public:
-    InputBinding() : name("invalid"), actionMask(0), key(-1), modifierMask(0), callback(nullptr) { }
-    InputBinding(std::string inName, i32 inActionMask, i32 inKey, i32 inModifierMask, std::function<InputBindingFunc> inCallback) : name(inName), actionMask(inActionMask), key(inKey), modifierMask(inModifierMask), callback(inCallback) { }
+    InputBinding() : name("invalid"), hashedName(StringUtils::fnv1a_32(name.c_str(), name.length())), actionMask(0), key(-1), modifierMask(0), state(0), callback(nullptr) { }
+    InputBinding(std::string inName, i32 inActionMask, i32 inKey, i32 inModifierMask, std::function<InputBindingFunc> inCallback) : name(inName), hashedName(StringUtils::fnv1a_32(name.c_str(), name.length())), actionMask(inActionMask), key(inKey), modifierMask(inModifierMask), state(0), callback(inCallback) { }
 
 public:
     std::string name;
+    u32 hashedName;
     i32 actionMask;
     i32 key;
     i32 modifierMask;
+    i32 state;
     std::function<InputBindingFunc> callback;
 };

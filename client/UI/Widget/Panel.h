@@ -20,7 +20,7 @@ namespace UI
         };
 
     public:
-        Panel(f32 posX, f32 posY, f32 width, f32 height, bool clickable = false);
+        Panel(f32 posX, f32 posY, f32 width, f32 height);
 
     private:
         Renderer::ModelID GetModelID();
@@ -38,6 +38,10 @@ namespace UI
         bool IsClickable();
         void SetClickable(bool value);
 
+        bool IsDragable();
+        void SetDragable(bool value);
+
+
         Renderer::ConstantBuffer<PanelConstantBuffer>* GetConstantBuffer() { return _constantBuffer; }
         void SetConstantBuffer(Renderer::ConstantBuffer<PanelConstantBuffer>* constantBuffer) { _constantBuffer = constantBuffer; }
 
@@ -48,7 +52,17 @@ namespace UI
         Renderer::TextureID _textureID = Renderer::TextureID::Invalid();
         Vector4 _color;
         bool _clickable;
+        bool _dragable;
+        bool _isDragging;
+        bool _didDrag;
+        Vector2 _deltaDragPosition;
 
+        bool IsDragging();
+        void BeingDrag(Vector2 deltaDragPosition);
+        Vector2 GetDeltaDragPosition();
+        bool DidDrag();
+        void SetDidDrag();
+        void EndDrag();
 
         Renderer::ConstantBuffer<PanelConstantBuffer>* _constantBuffer = nullptr;
 

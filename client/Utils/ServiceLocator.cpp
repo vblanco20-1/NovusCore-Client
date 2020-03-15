@@ -3,6 +3,7 @@
 entt::registry* ServiceLocator::_gameRegistry = nullptr;
 MessageHandler* ServiceLocator::_networkMessageHandler = nullptr;
 Window* ServiceLocator::_window = nullptr;
+InputManager* ServiceLocator::_inputManager = nullptr;
 
 moodycamel::ConcurrentQueue<Message>* ServiceLocator::_mainInputQueue = nullptr;
 
@@ -20,4 +21,10 @@ void ServiceLocator::SetWindow(Window* window)
 {
     assert(_window == nullptr);
     _window = window;
+}
+
+void ServiceLocator::SetInputManager(InputManager* inputManager)
+{
+    assert(_inputManager == nullptr);
+    _inputManager = inputManager;
 }

@@ -1,7 +1,6 @@
 #pragma once
 #include <NovusTypes.h>
 #include "../Renderer/Swapchain.h"
-#include <InputManager.h>
 
 struct GLFWwindow;
 class Window
@@ -16,7 +15,6 @@ public:
     void Present();
 
     GLFWwindow* GetWindow() { return _window; }
-    InputManager* GetInputManager() { return _inputManager; }
 
     // The types of some of these things will depend on the rendering backend, we store them as void pointers and let the backend keep track of what it is
     void SetSwapChain(Renderer::SwapChain* swapChain) { _swapChain = swapChain; }
@@ -26,7 +24,6 @@ private:
 
 private:
     GLFWwindow* _window;
-    InputManager* _inputManager;
     Renderer::SwapChain* _swapChain;
 
     static bool _glfwInitialized;

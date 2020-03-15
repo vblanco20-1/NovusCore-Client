@@ -7,6 +7,7 @@
 #include <Renderer/Renderer.h>
 #include <Renderer/Renderers/Vulkan/RendererVK.h>
 #include <Window/Window.h>
+#include <InputManager.h>
 #include <GLFW/glfw3.h>
 
 const int WIDTH = 1920;
@@ -17,8 +18,9 @@ UIRenderer::UIRenderer(Renderer::Renderer* renderer)
     _renderer = renderer;
     CreatePermanentResources();
 
-    InputManager* inputManager = ServiceLocator::GetWindow()->GetInputManager();
+    InputManager* inputManager = ServiceLocator::GetInputManager();
     inputManager->RegisterBinding("UI Click Checker", GLFW_MOUSE_BUTTON_LEFT, BINDING_ACTION_CLICK, BINDING_MOD_ANY, std::bind(&UIRenderer::OnMouseClick, this, std::placeholders::_1, std::placeholders::_2));
+    inputManager->RegisterMouseUpdateCallback("UI Mouse Position Checker", std::bind(&UIRenderer::OnMousePositionUpdate, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
 void UIRenderer::Update(f32 deltaTime)
@@ -182,24 +184,69 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
 
 void UIRenderer::OnMouseClick(Window* window, InputBinding* binding)
 {
-    f64 mouseX = window->GetInputManager()->GetMousePositionX();
-    f64 mouseY = window->GetInputManager()->GetMousePositionY();
+    InputManager* inputManager = ServiceLocator::GetInputManager();
+    f32 mouseX = inputManager->GetMousePositionX();
+    f32 mouseY = inputManager->GetMousePositionY();
 
     for (auto uiPanel : UIPanel::_panels) // TODO: Store panels in a better manner than this
     {
         UI::Panel* panel = uiPanel->GetInternal();
 
-        if (!panel->IsClickable())
+        if (!panel->IsClickable() && !panel->IsDragable())
             continue;
 
         Vector2 size = panel->GetSize();
         Vector2 pos = panel->GetPosition();
 
-        if ((mouseX > pos.x&& mouseX < pos.x + size.x) &&
-            mouseY > pos.y&& mouseY < pos.y + size.y)
+        if ((mouseX > pos.x && mouseX < pos.x + size.x) &&
+            (mouseY > pos.y && mouseY < pos.y + size.y))
         {
-            uiPanel->OnClick();
+            if (binding->state)
+            {
+                if (panel->IsDragable())
+                    panel->BeingDrag(Vector2(mouseX - pos.x, mouseY - pos.y));
+            }
+            else
+            {
+                if (panel->IsClickable())
+                {
+                    if (!panel->DidDrag())
+                        uiPanel->OnClick();
+                }
+            }
         }
+
+        if (!binding->state)
+        {
+            if (panel->IsDragable())
+            {
+                panel->EndDrag();
+            }
+        }
+    }
+}
+
+void UIRenderer::OnMousePositionUpdate(Window* window, f32 x, f32 y)
+{
+    for (auto uiPanel : UIPanel::_panels) // TODO: Store panels in a better manner than this
+    {
+        UI::Panel* panel = uiPanel->GetInternal();
+
+        if (!panel->IsDragable())
+            continue;
+
+        if (!panel->IsDragging())
+            continue;
+
+        if (!panel->DidDrag())
+            panel->SetDidDrag();
+
+        Vector2 deltaDragPosition = panel->GetDeltaDragPosition();
+        Vector2 size = panel->GetSize();
+        Vector3 newPosition(x - deltaDragPosition.x, y - deltaDragPosition.y, 0);
+
+        panel->SetPosition(newPosition);
+        panel->SetDirty();
     }
 }
 

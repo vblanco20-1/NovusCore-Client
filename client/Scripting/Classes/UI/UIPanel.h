@@ -17,6 +17,9 @@ public:
     bool IsClickable();
     void SetClickable(bool value);
 
+    bool IsDragable();
+    void SetDragable(bool value);
+
     void SetOnClick(asIScriptFunction* function);
     void OnClick();
 

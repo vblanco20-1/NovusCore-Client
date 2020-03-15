@@ -6,6 +6,7 @@
 #include <Renderer/Renderer.h>
 #include <Renderer/Renderers/Vulkan/RendererVK.h>
 #include <Window/Window.h>
+#include <InputManager.h>
 #include <GLFW/glfw3.h>
 
 const int WIDTH = 1920;
@@ -13,12 +14,35 @@ const int HEIGHT = 1080;
 const size_t FRAME_ALLOCATOR_SIZE = 8 * 1024 * 1024; // 8 MB
 u32 MAIN_RENDER_LAYER = "MainLayer"_h; // _h will compiletime hash the string into a u32
 
+void key_callback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 modifiers)
+{
+    Window* userWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+    ServiceLocator::GetInputManager()->KeyboardInputChecker(userWindow, key, scancode, action, modifiers);
+}
+void mouse_callback(GLFWwindow* window, i32 button, i32 action, i32 modifiers)
+{
+    Window* userWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+    ServiceLocator::GetInputManager()->MouseInputChecker(userWindow, button, action, modifiers);
+}
+void cursor_position_callback(GLFWwindow* window, f64 x, f64 y)
+{
+    Window* userWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+    ServiceLocator::GetInputManager()->MousePositionUpdate(userWindow, static_cast<f32>(x), static_cast<f32>(y));
+}
+
 ClientRenderer::ClientRenderer()
 {
     _camera = new Camera(Vector3(0, 0, -10));
     _window = new Window();
     _window->Init(WIDTH, HEIGHT);
     ServiceLocator::SetWindow(_window);
+
+    _inputManager = new InputManager();
+    ServiceLocator::SetInputManager(_inputManager);
+    glfwSetKeyCallback(_window->GetWindow(), key_callback);
+    glfwSetMouseButtonCallback(_window->GetWindow(), mouse_callback);
+    glfwSetCursorPosCallback(_window->GetWindow(), cursor_position_callback);
+
 
     _renderer = new Renderer::RendererVK();
     _renderer->InitWindow(_window);
@@ -235,7 +259,7 @@ void ClientRenderer::CreatePermanentResources()
 
         const f32 fov = (68.0f) / 2.0f;
         const f32 nearClip = 0.1f;
-        const f32 farClip = 10.0f;
+        const f32 farClip = 100.0f;
         f32 aspectRatio = static_cast<f32>(WIDTH) / static_cast<f32>(HEIGHT);
 
         f32 tanFov = Math::Tan(Math::DegToRad(fov));
