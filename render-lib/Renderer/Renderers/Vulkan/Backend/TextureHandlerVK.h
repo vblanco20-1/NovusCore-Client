@@ -18,22 +18,23 @@ namespace Renderer
             ~TextureHandlerVK();
 
             TextureID LoadTexture(RenderDeviceVK* device, const TextureDesc& desc);
+            TextureID CreateDataTexture(RenderDeviceVK* device, const DataTextureDesc& desc);
 
             VkImageView GetImageView(const TextureID id);
-
-            const TextureDesc& GetDescriptor(const TextureID id);
 
         private:
             struct Texture
             {
-                TextureDesc desc;
                 i32 width;
                 i32 height;
-                i32 channels;
+                i32 pixelSize;
+                ImageFormat format;
 
                 VkDeviceMemory memory;
                 VkImage image;
                 VkImageView imageView;
+
+                std::string debugName = "";
             };
 
         private:

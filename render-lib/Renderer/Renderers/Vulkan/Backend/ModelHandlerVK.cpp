@@ -3,8 +3,8 @@
 #include <filesystem>
 #include <Utils/DebugHandler.h>
 #include <Utils/FileReader.h>
-
 #include "RenderDeviceVK.h"
+#include "DebugMarkerUtilVK.h"
 
 namespace Renderer
 {
@@ -29,6 +29,8 @@ namespace Renderer
             using type = type_safe::underlying_type<ModelID>;
 
             Model model;
+            model.debugName = desc.debugName;
+
             TempModelData tempData;
 
             tempData.indexType = 3; // Triangle list, nothing else is really used these days
@@ -59,6 +61,8 @@ namespace Renderer
             using type = type_safe::underlying_type<ModelID>;
 
             Model model;
+            model.debugName = desc.path;
+
             TempModelData tempData;
 
             LoadFromFile(desc, tempData);
@@ -190,11 +194,15 @@ namespace Renderer
             VkDeviceSize vertexBufferSize = sizeof(data.vertices[0]) * data.vertices.size();
             device->CreateBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, model.vertexBuffer, model.vertexBufferMemory);
 
+            DebugMarkerUtilVK::SetObjectName(device->_device, (u64)model.vertexBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, model.debugName.c_str());
+
             UpdateVertices(device, model, data.vertices);
 
             // -- Create index buffer --
             VkDeviceSize indexBufferSize = sizeof(data.indices[0]) * data.indices.size();
             device->CreateBuffer(indexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, model.indexBuffer, model.indexBufferMemory);
+
+            DebugMarkerUtilVK::SetObjectName(device->_device, (u64)model.vertexBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, model.debugName.c_str());
             
             UpdateIndices(device, model, data.indices);
 

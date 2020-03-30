@@ -21,6 +21,8 @@ namespace Renderer
     {
         std::vector<Vertex> vertices;
         std::vector<i16> indices;
+
+        std::string debugName;
     };
 
     // Lets strong-typedef an ID type with the underlying type of u16

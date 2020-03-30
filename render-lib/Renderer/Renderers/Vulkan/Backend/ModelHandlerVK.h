@@ -41,6 +41,7 @@ namespace Renderer
                 u32 numIndices;
 
                 std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+                std::string debugName;
             };
 
             struct TempModelData

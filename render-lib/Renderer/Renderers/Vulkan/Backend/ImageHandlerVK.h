@@ -50,12 +50,6 @@ namespace Renderer
             };
 
         private:
-            VkFormat ToVKFormat(const ImageFormat& format);
-            VkSampleCountFlagBits ToVKSampleCount(const SampleCount& sampleCount);
-
-            VkFormat ToVKFormat(const DepthImageFormat& format);
-
-        private:
             std::vector<Image> _images;
             std::vector<DepthImage> _depthImages;
         };

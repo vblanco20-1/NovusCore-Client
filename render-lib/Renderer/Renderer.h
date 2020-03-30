@@ -8,6 +8,7 @@
 #include "RenderPass.h"
 #include "ConstantBuffer.h"
 #include "RenderStates.h"
+#include "Font.h"
 
 // Descriptors
 #include "Descriptors/CommandListDesc.h"
@@ -20,6 +21,7 @@
 #include "Descriptors/DepthImageDesc.h"
 #include "Descriptors/ModelDesc.h"
 #include "Descriptors/SamplerDesc.h"
+#include "Descriptors/FontDesc.h"
 
 class Window;
 
@@ -56,6 +58,8 @@ namespace Renderer
 
         virtual ModelID CreatePrimitiveModel(PrimitiveModelDesc& desc) = 0;
         virtual void UpdatePrimitiveModel(ModelID model, PrimitiveModelDesc& desc) = 0;
+
+        virtual TextureID CreateDataTexture(DataTextureDesc& desc) = 0;
 
         // Loading
         virtual ModelID LoadModel(ModelDesc& desc) = 0;

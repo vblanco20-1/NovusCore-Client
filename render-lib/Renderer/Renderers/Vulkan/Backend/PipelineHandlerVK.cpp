@@ -1,10 +1,12 @@
 #include "PipelineHandlerVK.h"
 #include <Utils/DebugHandler.h>
 #include <Utils/XXHash64.h>
+#include "FormatConverterVK.h"
 #include "RenderDeviceVK.h"
 #include "ShaderHandlerVK.h"
 #include "ImageHandlerVK.h"
 #include "SpirvReflect.h"
+
 
 namespace Renderer
 {
@@ -69,8 +71,8 @@ namespace Renderer
             {
                 ImageID imageID = desc.MutableResourceToImageID(desc.renderTargets[i]);
                 const ImageDesc& imageDesc = imageHandler->GetDescriptor(imageID);
-                colorAttachments[i].format = ToVkFormat(imageDesc.format);
-                colorAttachments[i].samples = ToVkSampleCount(imageDesc.sampleCount);
+                colorAttachments[i].format = FormatConverterVK::ToVkFormat(imageDesc.format);
+                colorAttachments[i].samples = FormatConverterVK::ToVkSampleCount(imageDesc.sampleCount);
                 colorAttachments[i].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
                 colorAttachments[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
                 colorAttachments[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -237,7 +239,7 @@ namespace Renderer
                     break;
 
                 numAttributes++;
-                stride += ToByteSize(inputLayout.format);
+                stride += FormatConverterVK::ToByteSize(inputLayout.format);
             }
 
             // -- Create binding description --
@@ -253,10 +255,10 @@ namespace Renderer
             {
                 attributeDescriptions[i].binding = 0;
                 attributeDescriptions[i].location = i;
-                attributeDescriptions[i].format = ToVkFormat(desc.states.inputLayouts[i].format);
+                attributeDescriptions[i].format = FormatConverterVK::ToVkFormat(desc.states.inputLayouts[i].format);
                 attributeDescriptions[i].offset = offset;
 
-                offset += ToByteSize(desc.states.inputLayouts[i].format);
+                offset += FormatConverterVK::ToByteSize(desc.states.inputLayouts[i].format);
             }
 
             VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
@@ -296,10 +298,10 @@ namespace Renderer
             rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
             rasterizer.depthClampEnable = VK_FALSE;
             rasterizer.rasterizerDiscardEnable = VK_FALSE;
-            rasterizer.polygonMode = ToVkPolygonMode(desc.states.rasterizerState.fillMode);
+            rasterizer.polygonMode = FormatConverterVK::ToVkPolygonMode(desc.states.rasterizerState.fillMode);
             rasterizer.lineWidth = 1.0f;
-            rasterizer.cullMode = ToVkCullModeFlags(desc.states.rasterizerState.cullMode);
-            rasterizer.frontFace = ToVkFrontFace(desc.states.rasterizerState.frontFaceMode);
+            rasterizer.cullMode = FormatConverterVK::ToVkCullModeFlags(desc.states.rasterizerState.cullMode);
+            rasterizer.frontFace = FormatConverterVK::ToVkFrontFace(desc.states.rasterizerState.frontFaceMode);
             rasterizer.depthBiasEnable = desc.states.rasterizerState.depthBiasEnabled;
             rasterizer.depthBiasConstantFactor = static_cast<f32>(desc.states.rasterizerState.depthBias);
             rasterizer.depthBiasClamp = desc.states.rasterizerState.depthBiasClamp;
@@ -309,7 +311,7 @@ namespace Renderer
             VkPipelineMultisampleStateCreateInfo multisampling = {};
             multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
             multisampling.sampleShadingEnable = VK_FALSE;
-            multisampling.rasterizationSamples = ToVkSampleCount(desc.states.rasterizerState.sampleCount);
+            multisampling.rasterizationSamples = FormatConverterVK::ToVkSampleCount(desc.states.rasterizerState.sampleCount);
             multisampling.minSampleShading = 1.0f; // Optional
             multisampling.pSampleMask = nullptr; // Optional
             multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
@@ -321,19 +323,19 @@ namespace Renderer
             for (int i = 0; i < numRenderTargets; i++)
             {
                 colorBlendAttachments[i].blendEnable = desc.states.blendState.renderTargets[i].blendEnable;
-                colorBlendAttachments[i].srcColorBlendFactor = ToVkBlendFactor(desc.states.blendState.renderTargets[i].srcBlend);
-                colorBlendAttachments[i].dstColorBlendFactor = ToVkBlendFactor(desc.states.blendState.renderTargets[i].destBlend);
-                colorBlendAttachments[i].colorBlendOp = ToVkBlendOp(desc.states.blendState.renderTargets[i].blendOp);
-                colorBlendAttachments[i].srcAlphaBlendFactor = ToVkBlendFactor(desc.states.blendState.renderTargets[i].srcBlendAlpha);
-                colorBlendAttachments[i].dstAlphaBlendFactor = ToVkBlendFactor(desc.states.blendState.renderTargets[i].destBlendAlpha);
-                colorBlendAttachments[i].alphaBlendOp = ToVkBlendOp(desc.states.blendState.renderTargets[i].blendOpAlpha);
-                colorBlendAttachments[i].colorWriteMask = ToVkColorComponentFlags(desc.states.blendState.renderTargets[i].renderTargetWriteMask);
+                colorBlendAttachments[i].srcColorBlendFactor = FormatConverterVK::ToVkBlendFactor(desc.states.blendState.renderTargets[i].srcBlend);
+                colorBlendAttachments[i].dstColorBlendFactor = FormatConverterVK::ToVkBlendFactor(desc.states.blendState.renderTargets[i].destBlend);
+                colorBlendAttachments[i].colorBlendOp = FormatConverterVK::ToVkBlendOp(desc.states.blendState.renderTargets[i].blendOp);
+                colorBlendAttachments[i].srcAlphaBlendFactor = FormatConverterVK::ToVkBlendFactor(desc.states.blendState.renderTargets[i].srcBlendAlpha);
+                colorBlendAttachments[i].dstAlphaBlendFactor = FormatConverterVK::ToVkBlendFactor(desc.states.blendState.renderTargets[i].destBlendAlpha);
+                colorBlendAttachments[i].alphaBlendOp = FormatConverterVK::ToVkBlendOp(desc.states.blendState.renderTargets[i].blendOpAlpha);
+                colorBlendAttachments[i].colorWriteMask = FormatConverterVK::ToVkColorComponentFlags(desc.states.blendState.renderTargets[i].renderTargetWriteMask);
             }
 
             VkPipelineColorBlendStateCreateInfo colorBlending = {};
             colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
             colorBlending.logicOpEnable = desc.states.blendState.renderTargets[0].logicOpEnable;
-            colorBlending.logicOp = ToVkLogicOp(desc.states.blendState.renderTargets[0].logicOp);
+            colorBlending.logicOp = FormatConverterVK::ToVkLogicOp(desc.states.blendState.renderTargets[0].logicOp);
             colorBlending.attachmentCount = numRenderTargets;
             colorBlending.pAttachments = colorBlendAttachments.data();
             colorBlending.blendConstants[0] = 0.0f; // TODO: Blend constants
@@ -462,286 +464,5 @@ namespace Renderer
             sets.push_back(DescriptorSetLayoutData());
             return sets.back();
         }
-
-        VkFormat PipelineHandlerVK::ToVkFormat(const ImageFormat& format)
-        {
-            switch (format)
-            {
-                case ImageFormat::IMAGE_FORMAT_R32G32B32A32_FLOAT:      return VK_FORMAT_R32G32B32A32_SFLOAT;
-                case ImageFormat::IMAGE_FORMAT_R32G32B32A32_UINT:       return VK_FORMAT_R32G32B32A32_UINT;
-                case ImageFormat::IMAGE_FORMAT_R32G32B32A32_SINT:       return VK_FORMAT_R32G32B32A32_SINT;
-                case ImageFormat::IMAGE_FORMAT_R32G32B32_FLOAT:         return VK_FORMAT_R32G32B32_SFLOAT;
-                case ImageFormat::IMAGE_FORMAT_R32G32B32_UINT:          return VK_FORMAT_R32G32B32_UINT;
-                case ImageFormat::IMAGE_FORMAT_R32G32B32_SINT:          return VK_FORMAT_R32G32B32_SINT;
-                case ImageFormat::IMAGE_FORMAT_R16G16B16A16_FLOAT:      return VK_FORMAT_R16G16B16A16_SFLOAT;
-                case ImageFormat::IMAGE_FORMAT_R16G16B16A16_UNORM:      return VK_FORMAT_R16G16B16A16_UNORM;
-                case ImageFormat::IMAGE_FORMAT_R16G16B16A16_UINT:       return VK_FORMAT_R16G16B16A16_UINT;
-                case ImageFormat::IMAGE_FORMAT_R16G16B16A16_SNORM:      return VK_FORMAT_R16G16B16A16_SNORM;
-                case ImageFormat::IMAGE_FORMAT_R16G16B16A16_SINT:       return VK_FORMAT_R16G16B16A16_SINT;
-                case ImageFormat::IMAGE_FORMAT_R32G32_FLOAT:            return VK_FORMAT_R32G32_SFLOAT;
-                case ImageFormat::IMAGE_FORMAT_R32G32_UINT:             return VK_FORMAT_R32G32_UINT;
-                case ImageFormat::IMAGE_FORMAT_R32G32_SINT:             return VK_FORMAT_R32G32_SINT;
-                case ImageFormat::IMAGE_FORMAT_R10G10B10A2_UNORM:       return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
-                case ImageFormat::IMAGE_FORMAT_R10G10B10A2_UINT:        return VK_FORMAT_A2R10G10B10_UINT_PACK32;
-                case ImageFormat::IMAGE_FORMAT_R11G11B10_FLOAT:         return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
-                case ImageFormat::IMAGE_FORMAT_R8G8B8A8_UNORM:          return VK_FORMAT_R8G8B8A8_UNORM;
-                case ImageFormat::IMAGE_FORMAT_R8G8B8A8_UNORM_SRGB:     return VK_FORMAT_R8G8B8A8_SRGB;
-                case ImageFormat::IMAGE_FORMAT_R8G8B8A8_UINT:           return VK_FORMAT_R8G8B8A8_UINT;
-                case ImageFormat::IMAGE_FORMAT_R8G8B8A8_SNORM:          return VK_FORMAT_R8G8B8A8_SNORM;
-                case ImageFormat::IMAGE_FORMAT_R8G8B8A8_SINT:           return VK_FORMAT_R8G8B8A8_SINT;
-                case ImageFormat::IMAGE_FORMAT_R16G16_FLOAT:            return VK_FORMAT_R16G16_SFLOAT;
-                case ImageFormat::IMAGE_FORMAT_R16G16_UNORM:            return VK_FORMAT_R16G16_UNORM;
-                case ImageFormat::IMAGE_FORMAT_R16G16_UINT:             return VK_FORMAT_R16G16_UINT;
-                case ImageFormat::IMAGE_FORMAT_R16G16_SNORM:            return VK_FORMAT_R16G16_SNORM;
-                case ImageFormat::IMAGE_FORMAT_R16G16_SINT:             return VK_FORMAT_R16G16_SINT;
-                case ImageFormat::IMAGE_FORMAT_R32_FLOAT:               return VK_FORMAT_R32_SFLOAT;
-                case ImageFormat::IMAGE_FORMAT_R32_UINT:                return VK_FORMAT_R32_UINT;
-                case ImageFormat::IMAGE_FORMAT_R32_SINT:                return VK_FORMAT_R32_SINT;
-                case ImageFormat::IMAGE_FORMAT_R8G8_UNORM:              return VK_FORMAT_R8G8_UNORM;
-                case ImageFormat::IMAGE_FORMAT_R8G8_UINT:               return VK_FORMAT_R8G8_UINT;
-                case ImageFormat::IMAGE_FORMAT_R8G8_SNORM:              return VK_FORMAT_R8G8_SNORM;
-                case ImageFormat::IMAGE_FORMAT_R8G8_SINT:               return VK_FORMAT_R8G8_SINT;
-                case ImageFormat::IMAGE_FORMAT_R16_FLOAT:               return VK_FORMAT_R16_SFLOAT;
-                case ImageFormat::IMAGE_FORMAT_D16_UNORM:               return VK_FORMAT_D16_UNORM;
-                case ImageFormat::IMAGE_FORMAT_R16_UNORM:               return VK_FORMAT_R16_UNORM;
-                case ImageFormat::IMAGE_FORMAT_R16_UINT:                return VK_FORMAT_R16_UINT;
-                case ImageFormat::IMAGE_FORMAT_R16_SNORM:               return VK_FORMAT_R16_SNORM;
-                case ImageFormat::IMAGE_FORMAT_R16_SINT:                return VK_FORMAT_R16_SINT;
-                case ImageFormat::IMAGE_FORMAT_R8_UNORM:                return VK_FORMAT_R8_UNORM;
-                case ImageFormat::IMAGE_FORMAT_R8_UINT:                 return VK_FORMAT_R8_UINT;
-                case ImageFormat::IMAGE_FORMAT_R8_SNORM:                return VK_FORMAT_R8_SNORM;
-                case ImageFormat::IMAGE_FORMAT_R8_SINT:                 return VK_FORMAT_R8_SINT;
-                default:
-                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more formats?");
-            }
-
-            return VK_FORMAT_UNDEFINED;
-        }
-
-        u32 PipelineHandlerVK::ToByteSize(const InputFormat& format)
-        {
-            switch (format)
-            {
-                // 4 bytes per component
-                case INPUT_FORMAT_R32G32B32A32_FLOAT:   return 16;
-                case INPUT_FORMAT_R32G32B32A32_UINT:    return 16;
-                case INPUT_FORMAT_R32G32B32A32_SINT:    return 16;
-                case INPUT_FORMAT_R32G32B32_FLOAT:      return 12;
-                case INPUT_FORMAT_R32G32B32_UINT:       return 12;
-                case INPUT_FORMAT_R32G32B32_SINT:       return 12;
-                case INPUT_FORMAT_R32G32_FLOAT:         return 8;
-                case INPUT_FORMAT_R32G32_UINT:          return 8;
-                case INPUT_FORMAT_R32G32_SINT:          return 8;
-                case INPUT_FORMAT_R32_FLOAT:            return 4;
-                case INPUT_FORMAT_R32_UINT:             return 4;
-                case INPUT_FORMAT_R32_SINT:             return 4;
-                // 2 bytes per component
-                case INPUT_FORMAT_R16G16B16A16_FLOAT:   return 8;
-                case INPUT_FORMAT_R16G16B16A16_UINT:    return 8;
-                case INPUT_FORMAT_R16G16B16A16_SINT:    return 8;
-                case INPUT_FORMAT_R16G16_FLOAT:         return 4;
-                case INPUT_FORMAT_R16G16_UINT:          return 4;
-                case INPUT_FORMAT_R16G16_SINT:          return 4;
-                case INPUT_FORMAT_R16_FLOAT:            return 2;
-                case INPUT_FORMAT_R16_UINT:             return 2;
-                case INPUT_FORMAT_R16_SINT:             return 2;
-                // 1 byte per component
-                case INPUT_FORMAT_R8G8B8A8_UINT:        return 4;
-                case INPUT_FORMAT_R8G8B8A8_SINT:        return 4;
-                case INPUT_FORMAT_R8G8_UINT:            return 2;
-                case INPUT_FORMAT_R8G8_SINT:            return 2;
-                case INPUT_FORMAT_R8_UINT:              return 1;
-                case INPUT_FORMAT_R8_SINT:              return 1;
-                default:
-                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more input formats?");
-            }
-            
-            return 1;
-        }
-
-        VkFormat PipelineHandlerVK::ToVkFormat(const InputFormat& format)
-        {
-            switch (format)
-            {
-                // 4 bytes per component
-                case InputFormat::INPUT_FORMAT_R32G32B32A32_FLOAT:   return VK_FORMAT_R32G32B32A32_SFLOAT;
-                case InputFormat::INPUT_FORMAT_R32G32B32A32_UINT:    return VK_FORMAT_R32G32B32A32_UINT;
-                case InputFormat::INPUT_FORMAT_R32G32B32A32_SINT:    return VK_FORMAT_R32G32B32A32_SINT;
-                case InputFormat::INPUT_FORMAT_R32G32B32_FLOAT:      return VK_FORMAT_R32G32B32_SFLOAT;
-                case InputFormat::INPUT_FORMAT_R32G32B32_UINT:       return VK_FORMAT_R32G32B32_UINT;
-                case InputFormat::INPUT_FORMAT_R32G32B32_SINT:       return VK_FORMAT_R32G32B32_SINT;
-                case InputFormat::INPUT_FORMAT_R32G32_FLOAT:         return VK_FORMAT_R32G32_SFLOAT;
-                case InputFormat::INPUT_FORMAT_R32G32_UINT:          return VK_FORMAT_R32G32_UINT;
-                case InputFormat::INPUT_FORMAT_R32G32_SINT:          return VK_FORMAT_R32G32_SINT;
-                case InputFormat::INPUT_FORMAT_R32_FLOAT:            return VK_FORMAT_R32_SFLOAT;
-                case InputFormat::INPUT_FORMAT_R32_UINT:             return VK_FORMAT_R32_UINT;
-                case InputFormat::INPUT_FORMAT_R32_SINT:             return VK_FORMAT_R32_SINT;
-                // 2 bytes per component
-                case InputFormat::INPUT_FORMAT_R16G16B16A16_FLOAT:   return VK_FORMAT_R16G16B16A16_SFLOAT;
-                case InputFormat::INPUT_FORMAT_R16G16B16A16_UINT:    return VK_FORMAT_R16G16B16A16_UINT;
-                case InputFormat::INPUT_FORMAT_R16G16B16A16_SINT:    return VK_FORMAT_R16G16B16A16_SINT;
-                case InputFormat::INPUT_FORMAT_R16G16_FLOAT:         return VK_FORMAT_R16G16_SFLOAT;
-                case InputFormat::INPUT_FORMAT_R16G16_UINT:          return VK_FORMAT_R16G16_UINT;
-                case InputFormat::INPUT_FORMAT_R16G16_SINT:          return VK_FORMAT_R16G16_SINT;
-                case InputFormat::INPUT_FORMAT_R16_FLOAT:            return VK_FORMAT_R16_SFLOAT;
-                case InputFormat::INPUT_FORMAT_R16_UINT:             return VK_FORMAT_R16_UINT;
-                case InputFormat::INPUT_FORMAT_R16_SINT:             return VK_FORMAT_R16_SINT;
-                // 1 byte per component
-                case InputFormat::INPUT_FORMAT_R8G8B8A8_UINT:        return VK_FORMAT_R8G8B8A8_UINT;
-                case InputFormat::INPUT_FORMAT_R8G8B8A8_SINT:        return VK_FORMAT_R8G8B8A8_SINT;
-                case InputFormat::INPUT_FORMAT_R8G8_UINT:            return VK_FORMAT_R8G8_UINT;
-                case InputFormat::INPUT_FORMAT_R8G8_SINT:            return VK_FORMAT_R8G8_SINT;
-                case InputFormat::INPUT_FORMAT_R8_UINT:              return VK_FORMAT_R8_UINT;
-                case InputFormat::INPUT_FORMAT_R8_SINT:              return VK_FORMAT_R8_SINT;
-                default:
-                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more input formats?");
-            }
-
-            return VK_FORMAT_UNDEFINED;
-        }
-
-        VkPolygonMode PipelineHandlerVK::ToVkPolygonMode(const FillMode& fillMode)
-        {
-            switch (fillMode)
-            {
-                case FillMode::FILL_MODE_SOLID:     return VK_POLYGON_MODE_FILL;
-                case FillMode::FILL_MODE_WIREFRAME: return VK_POLYGON_MODE_LINE;
-                default:
-                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more fillmodes?");
-            }
-
-            return VK_POLYGON_MODE_FILL;
-        }
-
-        VkCullModeFlags PipelineHandlerVK::ToVkCullModeFlags(const CullMode& cullMode)
-        {
-            switch (cullMode)
-            {
-                case CullMode::CULL_MODE_NONE: return VK_CULL_MODE_NONE;
-                case CullMode::CULL_MODE_FRONT: return VK_CULL_MODE_FRONT_BIT;
-                case CullMode::CULL_MODE_BACK: return VK_CULL_MODE_BACK_BIT;
-                default:
-                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more cullmodes?");
-            }
-
-            return VK_CULL_MODE_NONE;
-        }
-
-        VkFrontFace PipelineHandlerVK::ToVkFrontFace(const FrontFaceState& frontFaceState)
-        {
-            switch (frontFaceState)
-            {
-                case FrontFaceState::FRONT_FACE_STATE_CLOCKWISE:        return VK_FRONT_FACE_CLOCKWISE;
-                case FrontFaceState::FRONT_FACE_STATE_COUNTERCLOCKWISE: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
-                default:
-                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more frontface states?");
-            }
-
-            return VK_FRONT_FACE_CLOCKWISE;
-        }
-
-        VkSampleCountFlagBits PipelineHandlerVK::ToVkSampleCount(const SampleCount& sampleCount)
-        {
-            switch (sampleCount)
-            {
-                case SampleCount::SAMPLE_COUNT_1: return VK_SAMPLE_COUNT_1_BIT;
-                case SampleCount::SAMPLE_COUNT_2: return VK_SAMPLE_COUNT_2_BIT;
-                case SampleCount::SAMPLE_COUNT_4: return VK_SAMPLE_COUNT_4_BIT;
-                case SampleCount::SAMPLE_COUNT_8: return VK_SAMPLE_COUNT_8_BIT;
-                default:
-                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more sample counts?");
-            }
-
-            return VK_SAMPLE_COUNT_1_BIT;
-        }
-
-        VkBlendFactor PipelineHandlerVK::ToVkBlendFactor(const BlendMode& blendMode)
-        {
-            switch (blendMode)
-            {
-                case BlendMode::BLEND_MODE_ZERO:                return VK_BLEND_FACTOR_ZERO;
-                case BlendMode::BLEND_MODE_ONE:                 return VK_BLEND_FACTOR_ONE;
-                case BlendMode::BLEND_MODE_SRC_COLOR:           return VK_BLEND_FACTOR_SRC_COLOR;
-                case BlendMode::BLEND_MODE_INV_SRC_COLOR:       return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-                case BlendMode::BLEND_MODE_SRC_ALPHA:           return VK_BLEND_FACTOR_SRC_ALPHA;
-                case BlendMode::BLEND_MODE_INV_SRC_ALPHA:       return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-                case BlendMode::BLEND_MODE_DEST_ALPHA:          return VK_BLEND_FACTOR_DST_ALPHA;
-                case BlendMode::BLEND_MODE_INV_DEST_ALPHA:      return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-                case BlendMode::BLEND_MODE_DEST_COLOR:          return VK_BLEND_FACTOR_DST_COLOR;
-                case BlendMode::BLEND_MODE_INV_DEST_COLOR:      return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-                case BlendMode::BLEND_MODE_SRC_ALPHA_SAT:       return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
-                case BlendMode::BLEND_MODE_BLEND_FACTOR:        return VK_BLEND_FACTOR_CONSTANT_COLOR;
-                case BlendMode::BLEND_MODE_INV_BLEND_FACTOR:    return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
-                case BlendMode::BLEND_MODE_SRC1_COLOR:          return VK_BLEND_FACTOR_SRC1_COLOR;
-                case BlendMode::BLEND_MODE_INV_SRC1_COLOR:      return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
-                case BlendMode::BLEND_MODE_SRC1_ALPHA:          return VK_BLEND_FACTOR_SRC1_ALPHA;
-                case BlendMode::BLEND_MODE_INV_SRC1_ALPHA:      return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
-                default:
-                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more blend modes?");
-            }
-
-            return VK_BLEND_FACTOR_ZERO;
-        }
-
-        VkBlendOp PipelineHandlerVK::ToVkBlendOp(const BlendOp& blendOp)
-        {
-            switch (blendOp)
-            {
-                case BlendOp::BLEND_OP_ADD:             return VK_BLEND_OP_ADD;
-                case BlendOp::BLEND_OP_SUBTRACT:        return VK_BLEND_OP_SUBTRACT;
-                case BlendOp::BLEND_OP_REV_SUBTRACT:    return VK_BLEND_OP_REVERSE_SUBTRACT;
-                case BlendOp::BLEND_OP_MIN:             return VK_BLEND_OP_MIN;
-                case BlendOp::BLEND_OP_MAX:             return VK_BLEND_OP_MAX;
-                default:
-                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more blend ops?");
-            }
-
-            return VK_BLEND_OP_ADD;
-        }
-
-        VkColorComponentFlags PipelineHandlerVK::ToVkColorComponentFlags(const u8& componentFlags)
-        {
-            VkColorComponentFlags flags = 0;
-
-            if (componentFlags & COLOR_WRITE_ENABLE_RED)
-                flags |= VK_COLOR_COMPONENT_R_BIT;
-            if (componentFlags & COLOR_WRITE_ENABLE_GREEN)
-                flags |= VK_COLOR_COMPONENT_G_BIT;
-            if (componentFlags & COLOR_WRITE_ENABLE_BLUE)
-                flags |= VK_COLOR_COMPONENT_B_BIT;
-            if (componentFlags & COLOR_WRITE_ENABLE_ALPHA)
-                flags |= VK_COLOR_COMPONENT_A_BIT;
-
-            return flags;
-        }
-
-        VkLogicOp PipelineHandlerVK::ToVkLogicOp(const LogicOp& logicOp)
-        {
-            switch (logicOp)
-            {
-                case LogicOp::LOGIC_OP_CLEAR:           return VK_LOGIC_OP_CLEAR;
-                case LogicOp::LOGIC_OP_SET:             return VK_LOGIC_OP_SET;
-                case LogicOp::LOGIC_OP_COPY:            return VK_LOGIC_OP_COPY;
-                case LogicOp::LOGIC_OP_COPY_INVERTED:   return VK_LOGIC_OP_COPY_INVERTED;
-                case LogicOp::LOGIC_OP_NOOP:            return VK_LOGIC_OP_NO_OP;
-                case LogicOp::LOGIC_OP_INVERT:          return VK_LOGIC_OP_INVERT;
-                case LogicOp::LOGIC_OP_AND:             return VK_LOGIC_OP_AND;
-                case LogicOp::LOGIC_OP_NAND:            return VK_LOGIC_OP_NAND;
-                case LogicOp::LOGIC_OP_OR:              return VK_LOGIC_OP_OR;
-                case LogicOp::LOGIC_OP_NOR:             return VK_LOGIC_OP_NOR;
-                case LogicOp::LOGIC_OP_XOR:             return VK_LOGIC_OP_XOR;
-                case LogicOp::LOGIC_OP_EQUIV:           return VK_LOGIC_OP_EQUIVALENT;
-                case LogicOp::LOGIC_OP_AND_REVERSE:     return VK_LOGIC_OP_AND_REVERSE;
-                case LogicOp::LOGIC_OP_AND_INVERTED:    return VK_LOGIC_OP_AND_INVERTED;
-                case LogicOp::LOGIC_OP_OR_REVERSE:      return VK_LOGIC_OP_OR_REVERSE;
-                case LogicOp::LOGIC_OP_OR_INVERTED:     return VK_LOGIC_OP_OR_INVERTED;
-                default:
-                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more logic ops?");
-            }
-
-            return VK_LOGIC_OP_CLEAR;
-        }
-
-        
     }
 }

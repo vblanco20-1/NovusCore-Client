@@ -3,9 +3,11 @@
 
 #include "../Utils/ServiceLocator.h"
 #include "../Scripting/Classes/UI/UIPanel.h"
+#include "../Scripting/Classes/UI/UILabel.h"
 
 #include <Renderer/Renderer.h>
 #include <Renderer/Renderers/Vulkan/RendererVK.h>
+#include <Renderer/Descriptors/FontDesc.h>
 #include <Window/Window.h>
 #include <InputManager.h>
 #include <GLFW/glfw3.h>
@@ -78,6 +80,94 @@ void UIRenderer::Update(f32 deltaTime)
             constantBuffer->Apply(1);
 
             panel->ResetDirty();
+        }
+    }
+
+    for (auto uiLabel : UILabel::_labels) // TODO: Store labels in a better manner than this
+    {
+        UI::Label* label = uiLabel->GetInternal();
+
+        if (label->IsDirty())
+        {
+            // (Re)load font
+            label->_font = Renderer::Font::GetFont(_renderer, label->GetFontPath(), label->GetFontSize());
+
+            // Grow arrays if necessary
+            std::string& text = label->GetText();
+
+            size_t textLength = text.length();
+            size_t glyphCount = label->_models.size();
+
+            if (label->_models.size() < textLength)
+            {
+                label->_models.resize(textLength);
+                for (size_t i = glyphCount; i < textLength; i++)
+                {
+                    label->_models[i] = Renderer::ModelID::Invalid();
+                }
+            }
+            if (label->_textures.size() < textLength)
+            {
+                label->_textures.resize(textLength);
+                for (size_t i = glyphCount; i < textLength; i++)
+                {
+                    label->_textures[i] = Renderer::TextureID::Invalid();
+                }
+            }
+
+            Vector3 currentPosition = label->GetPosition();
+            for (size_t i = 0; i < textLength; i++)
+            {
+                char character = text[i];
+                Renderer::FontChar& fontChar = label->_font->GetChar(character);
+
+                Vector3 pos = currentPosition + Vector3(fontChar.xOffset, fontChar.yOffset, 0);
+                Vector2 size = Vector2(fontChar.width, fontChar.height);
+
+                Renderer::PrimitiveModelDesc primitiveModelDesc;
+                primitiveModelDesc.debugName = "Label " + character;
+
+                CalculateVertices(pos, size, primitiveModelDesc.vertices);
+
+                Renderer::ModelID modelID = label->_models[i];
+
+                // If the primitive model hasn't been created yet, create it
+                if (modelID == Renderer::ModelID::Invalid())
+                {
+                    // Indices
+                    primitiveModelDesc.indices.push_back(0);
+                    primitiveModelDesc.indices.push_back(1);
+                    primitiveModelDesc.indices.push_back(2);
+                    primitiveModelDesc.indices.push_back(1);
+                    primitiveModelDesc.indices.push_back(3);
+                    primitiveModelDesc.indices.push_back(2);
+
+                    label->_models[i] = _renderer->CreatePrimitiveModel(primitiveModelDesc);
+                }
+                else // Otherwise we just update the already existing primitive model
+                {
+                    _renderer->UpdatePrimitiveModel(modelID, primitiveModelDesc);
+                }
+
+                label->_textures[i] = fontChar.texture;
+
+                currentPosition.x += fontChar.advance;
+            }
+
+            // Create constant buffer if necessary
+            auto constantBuffer = label->GetConstantBuffer();
+            if (constantBuffer == nullptr)
+            {
+                constantBuffer = _renderer->CreateConstantBuffer<UI::Label::LabelConstantBuffer>();
+                label->SetConstantBuffer(constantBuffer);
+            }
+            constantBuffer->resource.textColor = label->GetColor();
+            constantBuffer->resource.outlineColor = label->GetOutlineColor();
+            constantBuffer->resource.outlineWidth = label->GetOutlineWidth();
+            constantBuffer->Apply(0);
+            constantBuffer->Apply(1);
+
+            label->ResetDirty();
         }
     }
 }
@@ -164,9 +254,11 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
             commandList.BeginPipeline(pipeline);
 
             // Draw all the panels
-            for (auto uiPanel : UIPanel::_panels) // TODO: Store panels in a better manner than this
+            for (auto uiPanel : UIPanel::_panels)
             {
                 UI::Panel* panel = uiPanel->GetInternal();
+
+                commandList.PushMarker("Panel", Vector3(0.0f, 0.1f, 0.0f));
 
                 // Set constant buffer
                 commandList.SetConstantBuffer(0, panel->GetConstantBuffer()->GetGPUResource(frameIndex));
@@ -176,6 +268,45 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
 
                 // Draw
                 commandList.Draw(panel->GetModelID());
+
+                commandList.PopMarker();
+            }
+            commandList.EndPipeline(pipeline);
+
+
+            // Draw text
+            vertexShaderDesc.path = "Data/shaders/text.vert.spv";
+            pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
+
+            pixelShaderDesc.path = "Data/shaders/text.frag.spv";
+            pipelineDesc.states.pixelShader = _renderer->LoadShader(pixelShaderDesc);
+
+            // Set pipeline
+            pipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
+            commandList.BeginPipeline(pipeline);
+
+            // Draw all the labels
+            for (auto uiLabel : UILabel::_labels)
+            {
+                UI::Label* label = uiLabel->GetInternal();
+
+                commandList.PushMarker("Label", Vector3(0.0f, 0.1f, 0.0f));
+
+                // Set constant buffer
+                commandList.SetConstantBuffer(0, label->GetConstantBuffer()->GetGPUResource(frameIndex));
+
+                // Each letter in the label has it's own plane and texture, this could be optimized in the future.
+                u32 numModels = label->GetTextLength();
+                for (u32 i = 0; i < numModels; i++)
+                {
+                    // Set texture-sampler pair
+                    commandList.SetTextureSampler(1, label->_textures[i], _linearSampler);
+
+                    // Draw
+                    commandList.Draw(label->_models[i]);
+                }
+
+                commandList.PopMarker();
             }
             commandList.EndPipeline(pipeline);
         });

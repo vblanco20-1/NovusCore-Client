@@ -86,6 +86,11 @@ namespace Renderer
         _modelHandler->UpdatePrimitiveModel(_device, model, desc);
     }
 
+    TextureID RendererVK::CreateDataTexture(DataTextureDesc& desc)
+    {
+        return _textureHandler->CreateDataTexture(_device, desc);
+    }
+
     ModelID RendererVK::LoadModel(ModelDesc& desc)
     {
         return _modelHandler->LoadModel(_device, desc);

@@ -84,18 +84,6 @@ namespace Renderer
             bool TryFindExistingCPipeline(u64 descHash, size_t& id);
             DescriptorSetLayoutData& GetDescriptorSet(u32 setNumber, std::vector<DescriptorSetLayoutData>& sets);
             
-            VkFormat ToVkFormat(const ImageFormat& format);
-            u32 ToByteSize(const InputFormat& format);
-            VkFormat ToVkFormat(const InputFormat& format);
-            VkPolygonMode ToVkPolygonMode(const FillMode& fillMode);
-            VkCullModeFlags ToVkCullModeFlags(const CullMode& cullMode);
-            VkFrontFace ToVkFrontFace(const FrontFaceState& frontFaceState);
-            VkSampleCountFlagBits ToVkSampleCount(const SampleCount& sampleCount);
-            VkBlendFactor ToVkBlendFactor(const BlendMode& blendMode);
-            VkBlendOp ToVkBlendOp(const BlendOp& blendOp);
-            VkColorComponentFlags ToVkColorComponentFlags(const u8& componentFlags);
-            VkLogicOp ToVkLogicOp(const LogicOp& logicOp);
-
         private:
             std::vector<GraphicsPipeline> _graphicsPipelines;
             std::vector<ComputePipeline> _computePipelines;

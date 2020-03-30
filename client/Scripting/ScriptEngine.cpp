@@ -7,6 +7,7 @@
 #include "Classes/Player.h"
 #include "Classes/UI/UIWidget.h"
 #include "Classes/UI/UIPanel.h"
+#include "Classes/UI/UILabel.h"
 
 thread_local asIScriptEngine* ScriptEngine::_scriptEngine = nullptr;
 thread_local asIScriptContext* ScriptEngine::_scriptContext = nullptr;
@@ -75,6 +76,7 @@ void ScriptEngine::RegisterFunctions()
     Player::RegisterType();
     UIWidget::RegisterType();
     UIPanel::RegisterType();
+    UILabel::RegisterType();
 
     ScriptEngine::RegisterScriptFunction("void Print(string msg)", asFUNCTION(ScriptEngine::Print));
 }

@@ -35,6 +35,8 @@ namespace Renderer
         ModelID CreatePrimitiveModel(PrimitiveModelDesc& desc) override;
         void UpdatePrimitiveModel(ModelID model, PrimitiveModelDesc& desc) override;
 
+        TextureID CreateDataTexture(DataTextureDesc& desc) override;
+
         // Loading
         ModelID LoadModel(ModelDesc& desc) override;
         TextureID LoadTexture(TextureDesc& desc) override;
