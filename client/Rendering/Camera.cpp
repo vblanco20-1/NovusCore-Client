@@ -1,7 +1,9 @@
 #include "Camera.h"
 #include <windows.h>
 #include <InputManager.h>
+#include "../Utils/ServiceLocator.h"
 #include <glm/gtx/rotate_vector.hpp>
+#include <GLFW/glfw3.h>
 
 Camera::Camera(const vec3& pos)
     : _viewMatrix()
@@ -10,37 +12,56 @@ Camera::Camera(const vec3& pos)
     _position = pos;
 }
 
+void Camera::Init()
+{
+    InputManager* inputManager = ServiceLocator::GetInputManager();
+
+    inputManager->RegisterBinding("Camera Forward", GLFW_KEY_W, BINDING_ACTION_PRESS | BINDING_ACTION_REPEAT, BINDING_MOD_ANY);
+    inputManager->RegisterBinding("Camera Backward", GLFW_KEY_S, BINDING_ACTION_PRESS | BINDING_ACTION_REPEAT, BINDING_MOD_ANY);
+    inputManager->RegisterBinding("Camera Left", GLFW_KEY_A, BINDING_ACTION_PRESS | BINDING_ACTION_REPEAT, BINDING_MOD_ANY);
+    inputManager->RegisterBinding("Camera Right", GLFW_KEY_D, BINDING_ACTION_PRESS | BINDING_ACTION_REPEAT, BINDING_MOD_ANY);
+    inputManager->RegisterBinding("Camera Up", GLFW_KEY_SPACE, BINDING_ACTION_PRESS | BINDING_ACTION_REPEAT, BINDING_MOD_ANY);
+    inputManager->RegisterBinding("Camera Down", GLFW_KEY_LEFT_SHIFT, BINDING_ACTION_PRESS | BINDING_ACTION_REPEAT, BINDING_MOD_ANY);
+
+
+    inputManager->RegisterBinding("Camera Rotate Up", GLFW_KEY_DOWN, BINDING_ACTION_PRESS | BINDING_ACTION_REPEAT, BINDING_MOD_ANY);
+    inputManager->RegisterBinding("Camera Rotate Down", GLFW_KEY_UP, BINDING_ACTION_PRESS | BINDING_ACTION_REPEAT, BINDING_MOD_ANY);
+    inputManager->RegisterBinding("Camera Rotate Left", GLFW_KEY_LEFT, BINDING_ACTION_PRESS | BINDING_ACTION_REPEAT, BINDING_MOD_ANY);
+    inputManager->RegisterBinding("Camera Rotate Right", GLFW_KEY_RIGHT, BINDING_ACTION_PRESS | BINDING_ACTION_REPEAT, BINDING_MOD_ANY);
+}
+
 void Camera::Update(f32 deltaTime)
 {
+    InputManager* inputManager = ServiceLocator::GetInputManager();
     _lastDeltaTime = deltaTime;
 
     // Movement
-    if (GetAsyncKeyState('W'))
+    if (inputManager->IsPressed("Camera Forward"_h))
     {
         vec3 direction = _direction;
         Translate(direction * _movementSpeed * deltaTime);
     }
-    if (GetAsyncKeyState('S'))
+    if (inputManager->IsPressed("Camera Backward"_h))
     {
         vec3 direction = -_direction;
         Translate(direction * _movementSpeed * deltaTime);
     }
-    if (GetAsyncKeyState('A'))
+    if (inputManager->IsPressed("Camera Left"_h))
     {
         vec3 direction = glm::cross(_direction, vec3(0, 1, 0));
         Translate(direction * _movementSpeed * deltaTime);
     }
-    if (GetAsyncKeyState('D'))
+    if (inputManager->IsPressed("Camera Right"_h))
     {
         vec3 direction = -glm::cross(_direction, vec3(0, 1, 0));
         Translate(direction * _movementSpeed * deltaTime);
     }
-    if (GetAsyncKeyState(VK_SPACE))
+    if (inputManager->IsPressed("Camera Up"_h))
     {
         vec3 direction = vec3(0, 1, 0);
         Translate(direction * _movementSpeed * deltaTime);
     }
-    if (GetAsyncKeyState(VK_SHIFT))
+    if (inputManager->IsPressed("Camera Down"_h))
     {
         vec3 direction = vec3(0, -1, 0);
         Translate(direction * _movementSpeed * deltaTime);
@@ -51,27 +72,20 @@ void Camera::Update(f32 deltaTime)
     const vec3& right = glm::cross(forward, up);
 
     // Rotation
-    if (GetAsyncKeyState('Q'))
-    {
-        Rotate(-_rotationSpeed * deltaTime, forward);
-    }
-    if (GetAsyncKeyState('E'))
-    {
-        Rotate(_rotationSpeed * deltaTime, forward);
-    }
-    if (GetAsyncKeyState(VK_UP))
-    {
-        Rotate(-_rotationSpeed * deltaTime, right);
-    }
-    if (GetAsyncKeyState(VK_DOWN))
+
+    if (inputManager->IsPressed("Camera Rotate Up"_h))
     {
         Rotate(_rotationSpeed * deltaTime, right);
     }
-    if (GetAsyncKeyState(VK_LEFT))
+    if (inputManager->IsPressed("Camera Rotate Down"_h))
+    {
+        Rotate(-_rotationSpeed * deltaTime, right);
+    }
+    if (inputManager->IsPressed("Camera Rotate Left"_h))
     {
         Rotate(-_rotationSpeed * deltaTime, up);
     }
-    if (GetAsyncKeyState(VK_RIGHT))
+    if (inputManager->IsPressed("Camera Rotate Right"_h))
     {
         Rotate(_rotationSpeed * deltaTime, up);
     }

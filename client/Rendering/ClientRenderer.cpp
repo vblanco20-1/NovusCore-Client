@@ -41,6 +41,10 @@ ClientRenderer::ClientRenderer()
 
     _inputManager = new InputManager();
     ServiceLocator::SetInputManager(_inputManager);
+
+    // We have to call Init here as we use the InputManager
+    _camera->Init();
+
     glfwSetKeyCallback(_window->GetWindow(), key_callback);
     glfwSetMouseButtonCallback(_window->GetWindow(), mouse_callback);
     glfwSetCursorPosCallback(_window->GetWindow(), cursor_position_callback);

@@ -1,6 +1,7 @@
 #include <NovusTypes.h>
 #include <functional>
 #include <Utils/StringUtils.h>
+#include <Memory>
 
 enum BindingAction
 {
@@ -25,7 +26,7 @@ enum BindingModifier
 
 class Window;
 class InputBinding;
-typedef void InputBindingFunc(Window*, InputBinding*);
+typedef void InputBindingFunc(Window*, std::shared_ptr<InputBinding>);
 class InputBinding
 {
 public:

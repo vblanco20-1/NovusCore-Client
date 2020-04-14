@@ -313,7 +313,7 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
     }
 }
 
-void UIRenderer::OnMouseClick(Window* window, InputBinding* binding)
+void UIRenderer::OnMouseClick(Window* window, std::shared_ptr<InputBinding> binding)
 {
     InputManager* inputManager = ServiceLocator::GetInputManager();
     f32 mouseX = inputManager->GetMousePositionX();
