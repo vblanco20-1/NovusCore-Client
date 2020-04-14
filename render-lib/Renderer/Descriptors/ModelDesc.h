@@ -7,9 +7,9 @@ namespace Renderer
 {
     struct Vertex
     {
-        Vector3 pos;
-        Vector3 normal;
-        Vector2 texCoord;
+        vec3 pos;
+        vec3 normal;
+        vec2 texCoord;
     };
 
     struct ModelDesc

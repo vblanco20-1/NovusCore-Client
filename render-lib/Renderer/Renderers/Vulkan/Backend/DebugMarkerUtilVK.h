@@ -30,17 +30,17 @@ namespace Renderer
                 }
             }
 
-            static void PushMarker(VkCommandBuffer commandBuffer, Vector3 color, std::string name)
+            static void PushMarker(VkCommandBuffer commandBuffer, Color color, std::string name)
             {
                 if (_debugMarkersAvailable && _debugMarkersEnabled)
                 {
                     VkDebugMarkerMarkerInfoEXT markerInfo = {};
                     markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
 
-                    markerInfo.color[0] = color.x;
-                    markerInfo.color[1] = color.y;
-                    markerInfo.color[2] = color.z;
-                    markerInfo.color[3] = 1;
+                    markerInfo.color[0] = color.r;
+                    markerInfo.color[1] = color.g;
+                    markerInfo.color[2] = color.b;
+                    markerInfo.color[3] = color.a;
 
                     markerInfo.pMarkerName = name.c_str();
                     fnCmdDebugMarkerBegin(commandBuffer, &markerInfo);

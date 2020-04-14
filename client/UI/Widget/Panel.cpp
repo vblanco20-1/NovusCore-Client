@@ -38,11 +38,12 @@ namespace UI
         _textureID = textureID;
     }
 
-    Vector4 Panel::GetColor() 
+    const Color& Panel::GetColor()
     { 
         return _color; 
     }
-    void Panel::SetColor(Vector4 color) 
+
+    void Panel::SetColor(const Color& color)
     { 
         _color = color;
         SetDirty();
@@ -61,34 +62,41 @@ namespace UI
     {
         return _dragable;
     }
+
     void Panel::SetDragable(bool value)
     {
         _dragable = value;
     }
+
     bool Panel::IsDragging()
     {
         return _isDragging;
     }
-    void Panel::BeingDrag(Vector2 deltaDragPosition)
+
+    void Panel::BeingDrag(const vec2& deltaDragPosition)
     {
         _deltaDragPosition = deltaDragPosition;
         _isDragging = true;
     }
-    Vector2 Panel::GetDeltaDragPosition()
+
+    const vec2& Panel::GetDeltaDragPosition()
     {
         return _deltaDragPosition;
     }
+
     bool Panel::DidDrag()
     {
         return _didDrag;
     }
+
     void Panel::SetDidDrag()
     {
         _didDrag = true;
     }
+
     void Panel::EndDrag()
     {
-        _deltaDragPosition = Vector2(0, 0);
+        _deltaDragPosition = vec2(0, 0);
         _didDrag = false;
         _isDragging = false;
     }

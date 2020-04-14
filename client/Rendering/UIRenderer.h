@@ -32,7 +32,7 @@ private:
 
     // Helper functions
     Renderer::TextureID ReloadTexture(std::string& texturePath);
-    void CalculateVertices(Vector3 pos, Vector2 size, std::vector<Renderer::Vertex>& vertices);
+    void CalculateVertices(const vec3& pos, const vec2& size, std::vector<Renderer::Vertex>& vertices);
 
 private:
     Renderer::Renderer* _renderer;

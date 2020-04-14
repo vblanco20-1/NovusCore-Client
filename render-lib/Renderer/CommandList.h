@@ -32,7 +32,7 @@ namespace Renderer
 
         }
 
-        void PushMarker(std::string marker, Vector3 color);
+        void PushMarker(std::string marker, Color color);
         void PopMarker();
 
         void BeginPipeline(GraphicsPipelineID pipelineID);
@@ -43,7 +43,7 @@ namespace Renderer
         void SetConstantBuffer(u32 slot, void* gpuResource);
         void SetTextureSampler(u32 slot, TextureID texture, SamplerID sampler);
 
-        void Clear(ImageID imageID, Vector4 color);
+        void Clear(ImageID imageID, Color color);
         void Clear(DepthImageID imageID, f32 depth, DepthClearFlags flags = DepthClearFlags::DEPTH_CLEAR_DEPTH, u8 stencil = 0);
 
         void Draw(ModelID modelID);
@@ -95,7 +95,7 @@ namespace Renderer
     class ScopedMarker
     {
     public:
-        ScopedMarker(CommandList& commandList, std::string marker, const Vector3& color)
+        ScopedMarker(CommandList& commandList, std::string marker, const Color& color)
             : _commandList(commandList)
         {
             _commandList.PushMarker(marker, color);

@@ -8,11 +8,11 @@ namespace Renderer
     struct ImageDesc
     {
         std::string debugName = "";
-        Vector2i dimensions = Vector2i(0, 0);
+        ivec2 dimensions = ivec2(0, 0);
         u32 depth = 1;
         ImageFormat format = IMAGE_FORMAT_UNKNOWN;
         SampleCount sampleCount = SAMPLE_COUNT_1;
-        Vector4 clearColor = Vector4(0, 0, 0, 1); // TODO: Color class would be better here...
+        Color clearColor = Color::Clear;
     };
 
     // Lets strong-typedef an ID type with the underlying type of u16

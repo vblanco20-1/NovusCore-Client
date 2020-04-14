@@ -20,8 +20,8 @@ namespace UI
     public:
         struct LabelConstantBuffer
         {
-            Vector4 textColor; // 16 bytes
-            Vector4 outlineColor; // 16 bytes
+            Color textColor; // 16 bytes
+            Color outlineColor; // 16 bytes
             f32 outlineWidth; // 4 bytes
 
             u8 padding[220] = {};
@@ -36,14 +36,14 @@ namespace UI
 
         u32 GetTextLength();
 
-        Vector4 GetColor();
-        void SetColor(Vector4 color);
+        const Color& GetColor();
+        void SetColor(const Color& color);
 
         f32 GetOutlineWidth();
         void SetOutlineWidth(f32 width);
 
-        Vector4 GetOutlineColor();
-        void SetOutlineColor(Vector4 color);
+        const Color& GetOutlineColor();
+        void SetOutlineColor(const Color& color);
 
         void SetFont(std::string& fontPath, f32 fontSize);
         std::string& GetFontPath();
@@ -54,8 +54,8 @@ namespace UI
 
     private:
         std::string _text;
-        Vector4 _color = Vector4(1,1,1,1);
-        Vector4 _outlineColor = Vector4(0, 0, 0, 1);
+        Color _color = Color(1,1,1,1);
+        Color _outlineColor = Color(0, 0, 0, 1);
         f32 _outlineWidth = 0.0f;
 
         std::string _fontPath;

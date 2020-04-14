@@ -26,12 +26,12 @@ namespace UI
         return static_cast<u32>(_text.length());
     }
 
-    Vector4 Label::GetColor()
+    const Color& Label::GetColor()
     { 
-        return _color; 
+        return _color;
     }
 
-    void Label::SetColor(Vector4 color)
+    void Label::SetColor(const Color& color)
     { 
         _color = color;
         SetDirty();
@@ -47,12 +47,12 @@ namespace UI
         _outlineWidth = width;
     }
 
-    Vector4 Label::GetOutlineColor()
+    const Color& Label::GetOutlineColor()
     {
         return _outlineColor;
     }
 
-    void Label::SetOutlineColor(Vector4 color)
+    void Label::SetOutlineColor(const Color& color)
     {
         _outlineColor = color;
         SetDirty();

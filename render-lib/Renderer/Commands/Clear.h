@@ -12,7 +12,7 @@ namespace Renderer
             static const BackendDispatchFunction DISPATCH_FUNCTION;
 
             ImageID image = ImageID::Invalid();
-            Vector4 color = Vector4(0, 0, 0, 1);
+            Color color = Color::Clear;
         };
         
         struct ClearDepthImage

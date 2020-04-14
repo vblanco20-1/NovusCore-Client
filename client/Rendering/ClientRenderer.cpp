@@ -9,6 +9,8 @@
 #include <InputManager.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/gtc/matrix_transform.hpp>
+
 const int WIDTH = 1920;
 const int HEIGHT = 1080;
 const size_t FRAME_ALLOCATOR_SIZE = 8 * 1024 * 1024; // 8 MB
@@ -32,7 +34,7 @@ void cursor_position_callback(GLFWwindow* window, f64 x, f64 y)
 
 ClientRenderer::ClientRenderer()
 {
-    _camera = new Camera(Vector3(0, 0, -10));
+    _camera = new Camera(vec3(0, 0, -10));
     _window = new Window();
     _window->Init(WIDTH, HEIGHT);
     ServiceLocator::SetWindow(_window);
@@ -65,7 +67,8 @@ void ClientRenderer::Update(f32 deltaTime)
     _camera->Update(deltaTime);
     
     // Update the view matrix to match the new camera position
-    _viewConstantBuffer->resource.viewMatrix = _camera->GetViewMatrix().Inverted();
+    
+    _viewConstantBuffer->resource.viewMatrix = _camera->GetViewMatrix();
     _viewConstantBuffer->Apply(_frameIndex);
 
     // Register models to be rendered TODO: Push this to the ECS later
@@ -149,6 +152,7 @@ void ClientRenderer::Render()
 
                 // Rasterizer state
                 pipelineDesc.states.rasterizerState.cullMode = Renderer::CullMode::CULL_MODE_BACK;
+                pipelineDesc.states.rasterizerState.frontFaceMode = Renderer::FrontFaceState::FRONT_FACE_STATE_COUNTERCLOCKWISE;
 
                 // Samplers TODO: We don't care which samplers we have here, we just need the number of samplers
                 pipelineDesc.states.samplers[0].enabled = true;
@@ -160,7 +164,7 @@ void ClientRenderer::Render()
                 pipelineDesc.renderTargets[0] = data.mainColor;
 
                 // Clear mainColor TODO: This should be handled by the parameter in Setup, and it should definitely not act on ImageID and DepthImageID
-                commandList.Clear(_mainColor, Vector4(0, 0, 0, 1));
+                commandList.Clear(_mainColor, Color(0, 0, 0, 1));
                 
                 // Set pipeline
                 Renderer::GraphicsPipelineID pipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
@@ -214,7 +218,7 @@ void ClientRenderer::CreatePermanentResources()
     // Main color rendertarget
     Renderer::ImageDesc mainColorDesc;
     mainColorDesc.debugName = "MainColor";
-    mainColorDesc.dimensions = Vector2i(WIDTH, HEIGHT);
+    mainColorDesc.dimensions = ivec2(WIDTH, HEIGHT);
     mainColorDesc.format = Renderer::IMAGE_FORMAT_R16G16B16A16_FLOAT;
     mainColorDesc.sampleCount = Renderer::SAMPLE_COUNT_1;
 
@@ -224,7 +228,7 @@ void ClientRenderer::CreatePermanentResources()
     // Main depth rendertarget
     Renderer::DepthImageDesc mainDepthDesc;
     mainDepthDesc.debugName = "MainDepth";
-    mainDepthDesc.dimensions = Vector2i(WIDTH, HEIGHT);
+    mainDepthDesc.dimensions = ivec2(WIDTH, HEIGHT);
     mainDepthDesc.format = Renderer::DEPTH_IMAGE_FORMAT_D32_FLOAT;
     mainDepthDesc.sampleCount = Renderer::SAMPLE_COUNT_1;
 
@@ -255,20 +259,14 @@ void ClientRenderer::CreatePermanentResources()
     // View Constant Buffer (for camera data)
     _viewConstantBuffer = _renderer->CreateConstantBuffer<ViewConstantBuffer>();
     {
-        Matrix& projMatrix = _viewConstantBuffer->resource.projMatrix;
+        mat4x4& projMatrix = _viewConstantBuffer->resource.projMatrix;
 
-        const f32 fov = (68.0f) / 2.0f;
+        const f32 fov = 68.0f;
         const f32 nearClip = 0.1f;
         const f32 farClip = 100.0f;
         f32 aspectRatio = static_cast<f32>(WIDTH) / static_cast<f32>(HEIGHT);
 
-        f32 tanFov = Math::Tan(Math::DegToRad(fov));
-        projMatrix.right.x = 1.0f / (tanFov * aspectRatio);
-        projMatrix.up.y = 1.0f / tanFov;
-        projMatrix.at.z = -(farClip + nearClip) / (nearClip - farClip);
-        projMatrix.pos.z = 2 * farClip * nearClip / (nearClip - farClip);
-        projMatrix.pad3 = 1.0f;
-        projMatrix.pad4 = 0.0f;
+        projMatrix = glm::perspective(fov, aspectRatio, nearClip, farClip);
 
         _viewConstantBuffer->Apply(0);
         _viewConstantBuffer->Apply(1);

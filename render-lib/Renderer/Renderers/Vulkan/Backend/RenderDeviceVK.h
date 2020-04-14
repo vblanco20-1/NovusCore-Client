@@ -58,7 +58,7 @@ namespace Renderer
 
             // InitWindow helper functions
             void CreateSurface(GLFWwindow* window, SwapChainVK* swapChain);
-            void CreateSwapChain(const Vector2i& windowSize, SwapChainVK* swapChain);
+            void CreateSwapChain(const ivec2& windowSize, SwapChainVK* swapChain);
             void CreateImageViews(SwapChainVK* swapChain);
             void CreateFrameBuffers(SwapChainVK* swapChain);
             void CreateBlitPipeline(ShaderHandlerVK* shaderHandler, SwapChainVK* swapChain);

@@ -43,8 +43,8 @@ void UIRenderer::Update(f32 deltaTime)
             Renderer::PrimitiveModelDesc primitiveModelDesc;
 
             // Update vertex buffer
-            Vector3& pos = panel->GetPosition();
-            Vector2& size = panel->GetSize();
+            const vec3& pos = panel->GetPosition();
+            const vec2& size = panel->GetSize();
 
             CalculateVertices(pos, size, primitiveModelDesc.vertices);
 
@@ -115,14 +115,14 @@ void UIRenderer::Update(f32 deltaTime)
                 }
             }
 
-            Vector3 currentPosition = label->GetPosition();
+            vec3 currentPosition = label->GetPosition();
             for (size_t i = 0; i < textLength; i++)
             {
                 char character = text[i];
                 Renderer::FontChar& fontChar = label->_font->GetChar(character);
 
-                Vector3 pos = currentPosition + Vector3(fontChar.xOffset, fontChar.yOffset, 0);
-                Vector2 size = Vector2(fontChar.width, fontChar.height);
+                const vec3& pos = currentPosition + vec3(fontChar.xOffset, fontChar.yOffset, 0);
+                const vec2& size = vec2(fontChar.width, fontChar.height);
 
                 Renderer::PrimitiveModelDesc primitiveModelDesc;
                 primitiveModelDesc.debugName = "Label " + character;
@@ -258,7 +258,7 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
             {
                 UI::Panel* panel = uiPanel->GetInternal();
 
-                commandList.PushMarker("Panel", Vector3(0.0f, 0.1f, 0.0f));
+                commandList.PushMarker("Panel", Color(0.0f, 0.1f, 0.0f));
 
                 // Set constant buffer
                 commandList.SetConstantBuffer(0, panel->GetConstantBuffer()->GetGPUResource(frameIndex));
@@ -290,7 +290,7 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
             {
                 UI::Label* label = uiLabel->GetInternal();
 
-                commandList.PushMarker("Label", Vector3(0.0f, 0.1f, 0.0f));
+                commandList.PushMarker("Label", Color(0.0f, 0.1f, 0.0f));
 
                 // Set constant buffer
                 commandList.SetConstantBuffer(0, label->GetConstantBuffer()->GetGPUResource(frameIndex));
@@ -326,8 +326,8 @@ void UIRenderer::OnMouseClick(Window* window, InputBinding* binding)
         if (!panel->IsClickable() && !panel->IsDragable())
             continue;
 
-        Vector2 size = panel->GetSize();
-        Vector2 pos = panel->GetPosition();
+        const vec2& size = panel->GetSize();
+        const vec2& pos = panel->GetPosition();
 
         if ((mouseX > pos.x && mouseX < pos.x + size.x) &&
             (mouseY > pos.y && mouseY < pos.y + size.y))
@@ -335,7 +335,7 @@ void UIRenderer::OnMouseClick(Window* window, InputBinding* binding)
             if (binding->state)
             {
                 if (panel->IsDragable())
-                    panel->BeingDrag(Vector2(mouseX - pos.x, mouseY - pos.y));
+                    panel->BeingDrag(vec2(mouseX - pos.x, mouseY - pos.y));
             }
             else
             {
@@ -372,9 +372,9 @@ void UIRenderer::OnMousePositionUpdate(Window* window, f32 x, f32 y)
         if (!panel->DidDrag())
             panel->SetDidDrag();
 
-        Vector2 deltaDragPosition = panel->GetDeltaDragPosition();
-        Vector2 size = panel->GetSize();
-        Vector3 newPosition(x - deltaDragPosition.x, y - deltaDragPosition.y, 0);
+        const vec2& deltaDragPosition = panel->GetDeltaDragPosition();
+        const vec2& size = panel->GetSize();
+        vec3 newPosition(x - deltaDragPosition.x, y - deltaDragPosition.y, 0);
 
         panel->SetPosition(newPosition);
         panel->SetDirty();
@@ -403,40 +403,40 @@ Renderer::TextureID UIRenderer::ReloadTexture(std::string& texturePath)
     return _renderer->LoadTexture(textureDesc);
 }
 
-void UIRenderer::CalculateVertices(Vector3 pos, Vector2 size, std::vector<Renderer::Vertex>& vertices)
+void UIRenderer::CalculateVertices(const vec3& pos, const vec2& size, std::vector<Renderer::Vertex>& vertices)
 {
-    Vector3 upperLeftPos = Vector3(pos.x, pos.y, 0.0f);
-    Vector3 upperRightPos = Vector3(pos.x + size.x, pos.y, 0.0f);
-    Vector3 lowerLeftPos = Vector3(pos.x, pos.y + size.y, 0.0f);
-    Vector3 lowerRightPos = Vector3(pos.x + size.x, pos.y + size.y, 0.0f);
+    vec3 upperLeftPos = vec3(pos.x, pos.y, 0.0f);
+    vec3 upperRightPos = vec3(pos.x + size.x, pos.y, 0.0f);
+    vec3 lowerLeftPos = vec3(pos.x, pos.y + size.y, 0.0f);
+    vec3 lowerRightPos = vec3(pos.x + size.x, pos.y + size.y, 0.0f);
 
     // UV space
     // TODO: Do scaling depending on rendertargets actual size instead of assuming 1080p (which is our reference resolution)
-    upperLeftPos /= Vector3(1920, 1080, 1.0f);
-    upperRightPos /= Vector3(1920, 1080, 1.0f);
-    lowerLeftPos /= Vector3(1920, 1080, 1.0f);
-    lowerRightPos /= Vector3(1920, 1080, 1.0f);
+    upperLeftPos /= vec3(1920, 1080, 1.0f);
+    upperRightPos /= vec3(1920, 1080, 1.0f);
+    lowerLeftPos /= vec3(1920, 1080, 1.0f);
+    lowerRightPos /= vec3(1920, 1080, 1.0f);
 
     // Vertices
     Renderer::Vertex upperLeft;
     upperLeft.pos = upperLeftPos;
-    upperLeft.normal = Vector3(0, 1, 0);
-    upperLeft.texCoord = Vector2(0, 0);
+    upperLeft.normal = vec3(0, 1, 0);
+    upperLeft.texCoord = vec2(0, 0);
 
     Renderer::Vertex upperRight;
     upperRight.pos = upperRightPos;
-    upperRight.normal = Vector3(0, 1, 0);
-    upperRight.texCoord = Vector2(1, 0);
+    upperRight.normal = vec3(0, 1, 0);
+    upperRight.texCoord = vec2(1, 0);
 
     Renderer::Vertex lowerLeft;
     lowerLeft.pos = lowerLeftPos;
-    lowerLeft.normal = Vector3(0, 1, 0);
-    lowerLeft.texCoord = Vector2(0, 1);
+    lowerLeft.normal = vec3(0, 1, 0);
+    lowerLeft.texCoord = vec2(0, 1);
 
     Renderer::Vertex lowerRight;
     lowerRight.pos = lowerRightPos;
-    lowerRight.normal = Vector3(0, 1, 0);
-    lowerRight.texCoord = Vector2(1, 1);
+    lowerRight.normal = vec3(0, 1, 0);
+    lowerRight.texCoord = vec2(1, 1);
 
     vertices.push_back(upperLeft);
     vertices.push_back(upperRight);

@@ -45,7 +45,7 @@ namespace Renderer
 
         void Execute(CommandList& commandList) override
         {
-            commandList.PushMarker(_name, Vector3(0.0f, 0.4f, 0.0f));
+            commandList.PushMarker(_name, Color(0.0f, 0.4f, 0.0f));
             _onExecute(_data, commandList);
             commandList.PopMarker();
         }

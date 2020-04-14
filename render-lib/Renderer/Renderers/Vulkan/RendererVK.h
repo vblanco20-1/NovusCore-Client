@@ -48,11 +48,11 @@ namespace Renderer
         // Command List Functions
         CommandListID BeginCommandList() override;
         void EndCommandList(CommandListID commandListID) override;
-        void Clear(CommandListID commandListID, ImageID image, Vector4 color) override;
+        void Clear(CommandListID commandListID, ImageID image, Color color) override;
         void Clear(CommandListID commandListID, DepthImageID image, DepthClearFlags clearFlags, f32 depth, u8 stencil) override;
         void Draw(CommandListID commandListID, ModelID model) override;
         void PopMarker(CommandListID commandListID) override;
-        void PushMarker(CommandListID commandListID, Vector3 color, std::string name) override;
+        void PushMarker(CommandListID commandListID, Color color, std::string name) override;
         void SetConstantBuffer(CommandListID commandListID, u32 slot, void* gpuResource) override;
         void BeginPipeline(CommandListID commandListID, GraphicsPipelineID pipeline) override;
         void EndPipeline(CommandListID commandListID, GraphicsPipelineID pipeline) override;

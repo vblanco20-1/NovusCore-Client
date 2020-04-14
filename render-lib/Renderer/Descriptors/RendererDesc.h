@@ -6,6 +6,6 @@ namespace Renderer
 {
     struct RendererDesc
     {
-        Vector2i windowSize;
+        vec2 windowSize = vec2(1280,720);
     };
 }

@@ -14,7 +14,7 @@ namespace UI
     public:
         struct PanelConstantBuffer
         {
-            Vector4 color; // 16 bytes
+            Color color; // 16 bytes
 
             u8 padding[240] = {};
         };
@@ -32,8 +32,8 @@ namespace UI
         Renderer::TextureID GetTextureID();
         void SetTextureID(Renderer::TextureID textureID);
 
-        Vector4 GetColor();
-        void SetColor(Vector4 color);
+        const Color& GetColor();
+        void SetColor(const Color& color);
 
         bool IsClickable();
         void SetClickable(bool value);
@@ -50,16 +50,16 @@ namespace UI
 
         std::string _texture;
         Renderer::TextureID _textureID = Renderer::TextureID::Invalid();
-        Vector4 _color;
+        Color _color;
         bool _clickable;
         bool _dragable;
         bool _isDragging;
         bool _didDrag;
-        Vector2 _deltaDragPosition;
+        vec2 _deltaDragPosition;
 
         bool IsDragging();
-        void BeingDrag(Vector2 deltaDragPosition);
-        Vector2 GetDeltaDragPosition();
+        void BeingDrag(const vec2& deltaDragPosition);
+        const vec2& GetDeltaDragPosition();
         bool DidDrag();
         void SetDidDrag();
         void EndDrag();

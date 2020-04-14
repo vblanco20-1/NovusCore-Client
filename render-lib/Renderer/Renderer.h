@@ -72,11 +72,11 @@ namespace Renderer
         // Command List Functions
         virtual CommandListID BeginCommandList() = 0;
         virtual void EndCommandList(CommandListID commandList) = 0;
-        virtual void Clear(CommandListID commandList, ImageID image, Vector4 color) = 0;
+        virtual void Clear(CommandListID commandList, ImageID image, Color color) = 0;
         virtual void Clear(CommandListID commandList, DepthImageID image, DepthClearFlags clearFlags, f32 depth, u8 stencil) = 0;
         virtual void Draw(CommandListID commandList, ModelID model) = 0;
         virtual void PopMarker(CommandListID commandList) = 0;
-        virtual void PushMarker(CommandListID commandList, Vector3 color, std::string name) = 0;
+        virtual void PushMarker(CommandListID commandList, Color color, std::string name) = 0;
         virtual void SetConstantBuffer(CommandListID commandList, u32 slot, void* gpuResource) = 0;
         virtual void BeginPipeline(CommandListID commandList, GraphicsPipelineID pipeline) = 0;
         virtual void EndPipeline(CommandListID commandList, GraphicsPipelineID pipeline) = 0;

@@ -32,7 +32,7 @@ std::string UILabel::GetTypeName()
 
 void UILabel::SetColor(f32 r, f32 g, f32 b)
 {
-    _label.SetColor(Vector4(r, g, b, 1));
+    _label.SetColor(Color(r, g, b, 1));
 }
 
 void UILabel::SetOutlineWidth(f32 width)
@@ -42,7 +42,7 @@ void UILabel::SetOutlineWidth(f32 width)
 
 void UILabel::SetOutlineColor(f32 r, f32 g, f32 b)
 {
-    _label.SetOutlineColor(Vector4(r, g, b, 1));
+    _label.SetOutlineColor(Color(r, g, b, 1));
 }
 
 void UILabel::SetText(std::string& text)

@@ -145,17 +145,17 @@ namespace Renderer
             
             for (u32 i = 0; i < vertexCount; i++)
             {
-                if (!buffer->Get<Vector3>(data.vertices[i].pos))
+                if (!buffer->Get<vec3>(data.vertices[i].pos))
                 {
                     NC_LOG_FATAL("Model file %s failed to read vertex %u position", desc.path.c_str(), i);
                 }
 
-                if (!buffer->Get<Vector3>(data.vertices[i].normal))
+                if (!buffer->Get<vec3>(data.vertices[i].normal))
                 {
                     NC_LOG_FATAL("Model file %s failed to read vertex %u normal", desc.path.c_str(), i);
                 }
 
-                if (!buffer->Get<Vector2>(data.vertices[i].texCoord))
+                if (!buffer->Get<vec2>(data.vertices[i].texCoord))
                 {
                     NC_LOG_FATAL("Model file %s failed to read vertex %u texCoord", desc.path.c_str(), i);
                 }

@@ -80,7 +80,7 @@ namespace Renderer
                 return VK_PRESENT_MODE_FIFO_KHR;
             }
 
-            VkExtent2D ChooseSwapExtent(const Vector2i& windowSize, const VkSurfaceCapabilitiesKHR& capabilities)
+            VkExtent2D ChooseSwapExtent(const ivec2& windowSize, const VkSurfaceCapabilitiesKHR& capabilities)
             {
                 if (capabilities.currentExtent.width != UINT32_MAX)
                 {

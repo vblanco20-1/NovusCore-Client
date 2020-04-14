@@ -6,8 +6,8 @@ namespace Renderer
     // This struct needs to be 256 bytes padded
     struct InstanceData
     {
-        Vector4 colorMultiplier = Vector4(1,1,1,1); // 16 bytes
-        Matrix modelMatrix = Matrix(); // 64 bytes
+        vec4 colorMultiplier = vec4(1,1,1,1); // 16 bytes
+        mat4x4 modelMatrix = mat4x4(1.0f); // 64 bytes
         u8 padding[176];
     };
 }

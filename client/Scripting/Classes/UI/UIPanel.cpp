@@ -36,7 +36,7 @@ std::string UIPanel::GetTypeName()
 
 void UIPanel::SetColor(f32 r, f32 g, f32 b, f32 a)
 {
-    _panel.SetColor(Vector4(r, g, b, a));
+    _panel.SetColor(Color(r, g, b, a));
 }
 void UIPanel::SetTexture(std::string& texture)
 {

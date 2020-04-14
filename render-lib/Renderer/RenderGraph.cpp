@@ -43,7 +43,7 @@ namespace Renderer
     {
         // TODO: Parallel_for this
         CommandList commandList(_renderer, _desc.allocator);
-        commandList.PushMarker("RenderGraph", Vector3(0.0f, 0.0f, 0.4f));
+        commandList.PushMarker("RenderGraph", Color(0.0f, 0.0f, 0.4f));
         for (IRenderPass* pass : _executingPasses)
         {
             pass->Execute(commandList);

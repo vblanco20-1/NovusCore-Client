@@ -55,7 +55,7 @@ namespace Renderer
 
             GLFWwindow* glfwWindow = window->GetWindow();
             
-            Vector2i size;
+            ivec2 size;
             glfwGetWindowSize(glfwWindow, &size.x, &size.y);
 
             // -- Create our swapchain abstraction and give it to the window --
@@ -358,7 +358,7 @@ namespace Renderer
             }
         }
 
-        void RenderDeviceVK::CreateSwapChain(const Vector2i& windowSize, SwapChainVK* swapChain)
+        void RenderDeviceVK::CreateSwapChain(const ivec2& windowSize, SwapChainVK* swapChain)
         {
             SwapChainSupportDetails swapChainSupport = swapChain->QuerySwapChainSupport(_physicalDevice);
 

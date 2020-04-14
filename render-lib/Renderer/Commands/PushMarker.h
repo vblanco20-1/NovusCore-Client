@@ -9,7 +9,7 @@ namespace Renderer
         {
             static const BackendDispatchFunction DISPATCH_FUNCTION;
 
-            Vector3 color = Vector3(1, 1, 1);
+            Color color = Color::White;
             char marker[16];
         };
     }

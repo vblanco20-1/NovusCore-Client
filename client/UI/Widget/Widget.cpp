@@ -13,16 +13,18 @@ namespace UI
 
     }
 
-    Vector3 Widget::GetPosition() { return _position; }
-    void Widget::SetPosition(Vector3 position) 
+    const vec3& Widget::GetPosition() { return _position; }
+    void Widget::SetPosition(const vec3& position)
     { 
         _position = position;
         SetDirty();
     }
-    Vector2 Widget::GetSize() { return _size; }
-    void Widget::SetSize(Vector2 size) { _size = size; }
-    Vector2 Widget::GetAnchor() { return _anchor; }
-    void Widget::SetAnchor(Vector2 anchor) { _anchor = anchor; }
+
+    const vec2& Widget::GetSize() { return _size; }
+    void Widget::SetSize(const vec2& size) { _size = size; }
+
+    const vec2& Widget::GetAnchor() { return _anchor; }
+    void Widget::SetAnchor(const vec2& anchor) { _anchor = anchor; }
 
     Widget* Widget::GetParent() { return _parent; }
     void Widget::SetParent(Widget* widget)

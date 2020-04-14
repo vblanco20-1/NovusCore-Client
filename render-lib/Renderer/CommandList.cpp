@@ -19,7 +19,7 @@ namespace Renderer
         _renderer->EndCommandList(commandList);
     }
 
-    void CommandList::PushMarker(std::string marker, Vector3 color)
+    void CommandList::PushMarker(std::string marker, Color color)
     {
         Commands::PushMarker* command = AddCommand<Commands::PushMarker>();
         assert(marker.length() < 16); // Max length of marker names is enforced to 15 chars since we have to store the string internally
@@ -84,7 +84,7 @@ namespace Renderer
         command->sampler = sampler;
     }
 
-    void CommandList::Clear(ImageID imageID, Vector4 color)
+    void CommandList::Clear(ImageID imageID, Color color)
     {
         Commands::ClearImage* command = AddCommand<Commands::ClearImage>();                                                                                                       
         command->image = imageID;

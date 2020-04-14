@@ -131,16 +131,16 @@ namespace Renderer
         _commandListHandler->EndCommandList(_device, commandListID);
     }
 
-    void RendererVK::Clear(CommandListID commandListID, ImageID imageID, Vector4 color)
+    void RendererVK::Clear(CommandListID commandListID, ImageID imageID, Color color)
     {
         VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
         VkImage image = _imageHandler->GetImage(imageID);
         
         VkClearColorValue clearColorValue = {};
-        clearColorValue.float32[0] = color.x;
-        clearColorValue.float32[1] = color.y;
-        clearColorValue.float32[2] = color.z;
-        clearColorValue.float32[3] = color.w;
+        clearColorValue.float32[0] = color.r;
+        clearColorValue.float32[1] = color.g;
+        clearColorValue.float32[2] = color.b;
+        clearColorValue.float32[3] = color.a;
 
         VkImageSubresourceRange ImageSubresourceRange;
         ImageSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -187,7 +187,7 @@ namespace Renderer
         Backend::DebugMarkerUtilVK::PopMarker(commandBuffer);
     }
 
-    void RendererVK::PushMarker(CommandListID commandListID, Vector3 color, std::string name)
+    void RendererVK::PushMarker(CommandListID commandListID, Color color, std::string name)
     {
         VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
         Backend::DebugMarkerUtilVK::PushMarker(commandBuffer, color, name);
@@ -336,7 +336,7 @@ namespace Renderer
     {
         CommandListID commandListID = _commandListHandler->BeginCommandList(_device);
         VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
-        PushMarker(commandListID, Vector3(1, 0, 0), "Present Blitting");
+        PushMarker(commandListID, Color::Red, "Present Blitting");
 
         Backend::SwapChainVK* swapChain = static_cast<Backend::SwapChainVK*>(window->GetSwapChain());
 

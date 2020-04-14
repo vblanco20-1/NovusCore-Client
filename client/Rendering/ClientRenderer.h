@@ -21,16 +21,16 @@ namespace Memory
 
 struct ViewConstantBuffer
 {
-    Matrix viewMatrix; // 64 bytes
-    Matrix projMatrix; // 64 bytes
+    mat4x4 viewMatrix; // 64 bytes
+    mat4x4 projMatrix; // 64 bytes
 
     u8 padding[128] = {};
 };
 
 struct ModelConstantBuffer
 {
-    Vector4 colorMultiplier; // 16 bytes
-    Matrix modelMatrix; // 64 bytes
+    vec4 colorMultiplier; // 16 bytes
+    mat4x4 modelMatrix; // 64 bytes
 
     u8 padding[176] = {};
 };
