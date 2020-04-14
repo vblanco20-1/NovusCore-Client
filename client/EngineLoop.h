@@ -30,7 +30,6 @@
 #include <entt.hpp>
 #include <asio/io_service.hpp>
 #include "Network/NetworkClient.h"
-#include "Rendering/ClientRenderer.h"
 
 namespace tf
 {

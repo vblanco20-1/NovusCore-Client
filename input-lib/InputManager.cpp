@@ -2,7 +2,7 @@
 #include <Utils/StringUtils.h>
 #include <GLFW/glfw3.h>
 
-InputManager::InputManager() : _inputBindingMap(), _bindingToInputBindingMap()
+InputManager::InputManager() : _inputBindingMap(), _bindingToInputBindingMap(), _KeyboardInputCheckerCallbackMap()
 {
     // Mouse
     _inputBindingMap[GLFW_MOUSE_BUTTON_1] = robin_hood::unordered_map<u32, std::shared_ptr<InputBinding>>();
@@ -143,6 +143,7 @@ InputManager::InputManager() : _inputBindingMap(), _bindingToInputBindingMap()
     }
 
     _bindingToInputBindingMap.reserve(64);
+    _KeyboardInputCheckerCallbackMap.reserve(8);
 }
 
 void InputManager::KeyboardInputChecker(Window* window, i32 key, i32 /*scanCode*/, i32 action, i32 modifiers)
@@ -166,6 +167,11 @@ void InputManager::KeyboardInputChecker(Window* window, i32 key, i32 /*scanCode*
 
             inputBinding->callback(window, inputBinding);
         }
+    }
+
+    for (auto kv : _KeyboardInputCheckerCallbackMap)
+    {
+        kv.second(window, key, action, modifiers);
     }
 }
 void InputManager::MouseInputChecker(Window* window, i32 button, i32 action, i32 modifiers)
@@ -228,6 +234,26 @@ bool InputManager::UnregisterBinding(std::string bindingName)
 
     _inputBindingMap[_bindingToInputBindingMap[hashedBindingName]->key].erase(hashedBindingName);
     _bindingToInputBindingMap.erase(hashedBindingName);
+    return true;
+}
+
+bool InputManager::RegisterInputCheckerCallback(u32 callbackNameHash, std::function<InputCheckerFunc> callback)
+{
+    auto iterator = _KeyboardInputCheckerCallbackMap.find(callbackNameHash);
+    if (iterator != _KeyboardInputCheckerCallbackMap.end())
+        return false;
+
+    _KeyboardInputCheckerCallbackMap[callbackNameHash] = callback;
+    return true;
+}
+
+bool InputManager::UnregisterInputCheckerCallback(u32 callbackNameHash)
+{
+    auto iterator = _KeyboardInputCheckerCallbackMap.find(callbackNameHash);
+    if (iterator == _KeyboardInputCheckerCallbackMap.end())
+        return false;
+
+    _KeyboardInputCheckerCallbackMap.erase(callbackNameHash);
     return true;
 }
 
