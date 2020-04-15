@@ -19,17 +19,17 @@ u32 MAIN_RENDER_LAYER = "MainLayer"_h; // _h will compiletime hash the string in
 void key_callback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 modifiers)
 {
     Window* userWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    ServiceLocator::GetInputManager()->KeyboardInputChecker(userWindow, key, scancode, action, modifiers);
+    ServiceLocator::GetInputManager()->KeyboardInputHandler(userWindow, key, scancode, action, modifiers);
 }
 void mouse_callback(GLFWwindow* window, i32 button, i32 action, i32 modifiers)
 {
     Window* userWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    ServiceLocator::GetInputManager()->MouseInputChecker(userWindow, button, action, modifiers);
+    ServiceLocator::GetInputManager()->MouseInputHandler(userWindow, button, action, modifiers);
 }
 void cursor_position_callback(GLFWwindow* window, f64 x, f64 y)
 {
     Window* userWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    ServiceLocator::GetInputManager()->MousePositionUpdate(userWindow, static_cast<f32>(x), static_cast<f32>(y));
+    ServiceLocator::GetInputManager()->MousePositionHandler(userWindow, static_cast<f32>(x), static_cast<f32>(y));
 }
 
 ClientRenderer::ClientRenderer()

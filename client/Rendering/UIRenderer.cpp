@@ -21,9 +21,9 @@ UIRenderer::UIRenderer(Renderer::Renderer* renderer)
     CreatePermanentResources();
 
     InputManager* inputManager = ServiceLocator::GetInputManager();
-    inputManager->RegisterBinding("UI Click Checker", GLFW_MOUSE_BUTTON_LEFT, BINDING_ACTION_CLICK, BINDING_MOD_ANY, std::bind(&UIRenderer::OnMouseClick, this, std::placeholders::_1, std::placeholders::_2));
-    inputManager->RegisterMouseUpdateCallback("UI Mouse Position Checker", std::bind(&UIRenderer::OnMousePositionUpdate, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-    inputManager->RegisterInputCheckerCallback("UI Keyboard Input Checker"_h, std::bind(&UIRenderer::OnKeyboardInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+    inputManager->RegisterKeybind("UI Click Checker", GLFW_MOUSE_BUTTON_LEFT, KEYBIND_ACTION_CLICK, KEYBIND_MOD_ANY, std::bind(&UIRenderer::OnMouseClick, this, std::placeholders::_1, std::placeholders::_2));
+    inputManager->RegisterMousePositionCallback("UI Mouse Position Checker", std::bind(&UIRenderer::OnMousePositionUpdate, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    inputManager->RegisterKeyboardInputCallback("UI Keyboard Input Checker"_h, std::bind(&UIRenderer::OnKeyboardInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 }
 
 void UIRenderer::Update(f32 deltaTime)
@@ -314,7 +314,7 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
     }
 }
 
-void UIRenderer::OnMouseClick(Window* window, std::shared_ptr<InputBinding> binding)
+void UIRenderer::OnMouseClick(Window* window, std::shared_ptr<Keybind> keybind)
 {
     InputManager* inputManager = ServiceLocator::GetInputManager();
     f32 mouseX = inputManager->GetMousePositionX();
@@ -333,7 +333,7 @@ void UIRenderer::OnMouseClick(Window* window, std::shared_ptr<InputBinding> bind
         if ((mouseX > pos.x && mouseX < pos.x + size.x) &&
             (mouseY > pos.y && mouseY < pos.y + size.y))
         {
-            if (binding->state)
+            if (keybind->state)
             {
                 if (panel->IsDragable())
                     panel->BeingDrag(vec2(mouseX - pos.x, mouseY - pos.y));
@@ -348,7 +348,7 @@ void UIRenderer::OnMouseClick(Window* window, std::shared_ptr<InputBinding> bind
             }
         }
 
-        if (!binding->state)
+        if (!keybind->state)
         {
             if (panel->IsDragable())
             {

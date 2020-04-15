@@ -16,7 +16,7 @@ namespace Renderer
 }
 
 class Window;
-class InputBinding;
+class Keybind;
 class UIRenderer
 {
 public:
@@ -24,9 +24,9 @@ public:
 
     void Update(f32 deltaTime);
     void AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID renderTarget, u8 frameIndex);
-    void OnMouseClick(Window* window, std::shared_ptr<InputBinding> binding);
+    void OnMouseClick(Window* window, std::shared_ptr<Keybind> keybind);
     void OnMousePositionUpdate(Window* window, f32 x, f32 y);
-    void OnKeyboardInput(Window* window, i32 key, i32 action, i32 modifiers);
+    void OnKeyboardInput(Window* window, i32 key, i32 actionMask, i32 modifierMask);
 
 private:
     void CreatePermanentResources();
