@@ -12,8 +12,11 @@ public:
     static asIScriptEngine* GetScriptEngine();
     static asIScriptContext* GetScriptContext();
 
+    static i32 SetNamespace(std::string name);
+    static i32 ResetNamespace();
     static i32 RegisterScriptClass(std::string name, i32 byteSize, u32 flags);
-    static i32 RegisterScriptClassFunction(std::string declaration, const asSFuncPtr& functionPointer, bool isStatic = false, void* auxiliary = 0, i32 compositeOffset = 0, bool isCompositeIndirect = false);
+    static i32 RegisterScriptClassConstructor(std::string declaration, const asSFuncPtr& functionPointer);
+    static i32 RegisterScriptClassFunction(std::string declaration, const asSFuncPtr& functionPointer, asECallConvTypes callConvType = asECallConvTypes::asCALL_THISCALL, void* auxiliary = 0, i32 compositeOffset = 0, bool isCompositeIndirect = false);
     static i32 RegisterScriptClassProperty(std::string declaration, i32 byteOffset, i32 compositeOffset = 0, bool isCompositeIndirect = false);
     static i32 RegisterScriptFunction(std::string declaration, const asSFuncPtr& functionPointer, void* auxiliary = 0);
     static i32 RegisterScriptFunctionDef(std::string declaration);

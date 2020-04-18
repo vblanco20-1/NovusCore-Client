@@ -4,6 +4,7 @@
 // Types to register
 #include "Addons/scriptarray/scriptarray.h"
 #include "Addons/scriptstdstring/scriptstdstring.h"
+#include "Classes/Math/Math.h"
 #include "Classes/Player.h"
 #include "Classes/UI/UIWidget.h"
 #include "Classes/UI/UIPanel.h"
@@ -27,15 +28,27 @@ void ScriptEngine::Initialize()
         _scriptContext = _scriptEngine->CreateContext();
     }
 }
+
 asIScriptEngine* ScriptEngine::GetScriptEngine()
 {
     Initialize();
     return _scriptEngine;
 }
+
 asIScriptContext* ScriptEngine::GetScriptContext()
 {
     Initialize();
     return _scriptContext;
+}
+
+i32 ScriptEngine::SetNamespace(std::string name)
+{
+    return _scriptEngine->SetDefaultNamespace(name.c_str());
+}
+
+i32 ScriptEngine::ResetNamespace()
+{
+    return _scriptEngine->SetDefaultNamespace("");
 }
 
 i32 ScriptEngine::RegisterScriptClass(std::string name, i32 byteSize, u32 flags)
@@ -43,10 +56,17 @@ i32 ScriptEngine::RegisterScriptClass(std::string name, i32 byteSize, u32 flags)
     _scriptCurrentObjectName = name;
     return _scriptEngine->RegisterObjectType(name.c_str(), byteSize, flags);
 }
-i32 ScriptEngine::RegisterScriptClassFunction(std::string declaration, const asSFuncPtr& functionPointer, bool isStatic, void* auxiliary, i32 compositeOffset, bool isCompositeIndirect)
+
+i32 ScriptEngine::RegisterScriptClassConstructor(std::string declaration, const asSFuncPtr& functionPointer)
 {
-    return _scriptEngine->RegisterObjectMethod(_scriptCurrentObjectName.c_str(), declaration.c_str(), functionPointer, isStatic ? asECallConvTypes::asCALL_THISCALL_ASGLOBAL : asECallConvTypes::asCALL_THISCALL, auxiliary, compositeOffset, isCompositeIndirect);
+    return _scriptEngine->RegisterObjectBehaviour(_scriptCurrentObjectName.c_str(), asBEHAVE_CONSTRUCT, declaration.c_str(), functionPointer, asCALL_CDECL_OBJLAST);
 }
+
+i32 ScriptEngine::RegisterScriptClassFunction(std::string declaration, const asSFuncPtr& functionPointer, asECallConvTypes callConvType, void* auxiliary, i32 compositeOffset, bool isCompositeIndirect)
+{
+    return _scriptEngine->RegisterObjectMethod(_scriptCurrentObjectName.c_str(), declaration.c_str(), functionPointer, callConvType, auxiliary, compositeOffset, isCompositeIndirect);
+}
+
 i32 ScriptEngine::RegisterScriptClassProperty(std::string declaration, i32 byteOffset, i32 compositeOffset, bool isCompositeIndirect)
 {
     return _scriptEngine->RegisterObjectProperty(_scriptCurrentObjectName.c_str(), declaration.c_str(), byteOffset, compositeOffset, isCompositeIndirect);
@@ -73,6 +93,8 @@ void ScriptEngine::RegisterFunctions()
     RegisterStdStringUtils(_scriptEngine);
 
     // NovusCore Types
+    ASMath::RegisterNamespace();
+
     Player::RegisterType();
     UIWidget::RegisterType();
     UIPanel::RegisterType();
@@ -96,6 +118,7 @@ void ScriptEngine::MessageCallback(const asSMessageInfo* msg, void* param)
         NC_LOG_MESSAGE("[Script]: %s (%d, %d) : %s\n", msg->section, msg->row, msg->col, msg->message);
     }
 }
+
 void ScriptEngine::Print(std::string& message)
 {
     NC_LOG_MESSAGE("[Script]: %s", message.c_str());
