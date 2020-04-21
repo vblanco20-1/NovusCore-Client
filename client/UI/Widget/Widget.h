@@ -10,7 +10,7 @@ namespace UI
     class Widget
     {
     public:
-        Widget(f32 posX, f32 posY, f32 width, f32 height);
+        Widget(const vec2& pos, const vec2& size);
 
         const vec3& GetPosition();
         void SetPosition(const vec3& position);

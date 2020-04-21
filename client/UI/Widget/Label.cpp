@@ -2,8 +2,8 @@
 
 namespace UI
 {
-    Label::Label(f32 posX, f32 posY, f32 width, f32 height)
-        : Widget(posX, posY, width, height)
+    Label::Label(const vec2& pos, const vec2& size)
+        : Widget(pos, size)
         , _color(1.0f, 1.0f, 1.0f, 1.0f)
     {
 

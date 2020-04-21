@@ -3,8 +3,8 @@
 
 std::vector<UILabel*> UILabel::_labels;
 
-UILabel::UILabel(f32 posX, f32 posY, f32 width, f32 height)
-    : _label(posX, posY, width, height)
+UILabel::UILabel(const vec2& pos, const vec2& size)
+    : _label(pos, size)
     , UIWidget(&_label)
 {
     _labels.push_back(this);
@@ -16,10 +16,10 @@ void UILabel::RegisterType()
     assert(r >= 0);
     {
         r = ScriptEngine::RegisterScriptInheritance<UIWidget, UILabel>("UIWidget");
-        r = ScriptEngine::RegisterScriptFunction("UILabel@ CreateLabel(float xPos = 0, float yPos = 0, float width = 100, float height = 100)", asFUNCTION(UILabel::CreateLabel)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("void SetColor(float r, float g, float b)", asMETHOD(UILabel, SetColor)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptFunction("UILabel@ CreateLabel(vec2 pos = vec2(0, 0), vec2 size = vec2(100, 100))", asFUNCTION(UILabel::CreateLabel)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void SetColor(vec3 color)", asMETHOD(UILabel, SetColor)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetOutlineWidth(float width)", asMETHOD(UILabel, SetOutlineWidth)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("void SetOutlineColor(float r, float g, float b)", asMETHOD(UILabel, SetOutlineColor)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void SetOutlineColor(vec3 color)", asMETHOD(UILabel, SetOutlineColor)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetText(string texture)", asMETHOD(UILabel, SetText)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetFont(string fontPath, float fontSize)", asMETHOD(UILabel, SetFont)); assert(r >= 0);
     }
@@ -30,9 +30,9 @@ std::string UILabel::GetTypeName()
     return "UILabel";
 }
 
-void UILabel::SetColor(f32 r, f32 g, f32 b)
+void UILabel::SetColor(vec3 color)
 {
-    _label.SetColor(Color(r, g, b, 1));
+    _label.SetColor(Color(color.r, color.g, color.b, 1));
 }
 
 void UILabel::SetOutlineWidth(f32 width)
@@ -40,9 +40,9 @@ void UILabel::SetOutlineWidth(f32 width)
     _label.SetOutlineWidth(width);
 }
 
-void UILabel::SetOutlineColor(f32 r, f32 g, f32 b)
+void UILabel::SetOutlineColor(vec3 color)
 {
-    _label.SetOutlineColor(Color(r, g, b, 1));
+    _label.SetOutlineColor(Color(color.r, color.g, color.b, 1));
 }
 
 void UILabel::SetText(std::string& text)
@@ -55,9 +55,9 @@ void UILabel::SetFont(std::string& fontPath, f32 fontSize)
     _label.SetFont(fontPath, fontSize);
 }
 
-UILabel* UILabel::CreateLabel(f32 posX, f32 posY, f32 width, f32 height)
+UILabel* UILabel::CreateLabel(const vec2& pos, const vec2& size)
 {
-    UILabel* label = new UILabel(posX, posY, width, height);
+    UILabel* label = new UILabel(pos, size);
 
     return label;
 }

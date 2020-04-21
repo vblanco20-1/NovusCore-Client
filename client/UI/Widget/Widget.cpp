@@ -3,9 +3,9 @@
 namespace UI
 {
     // Public
-    Widget::Widget(f32 posX, f32 posY, f32 width, f32 height)
-        : _position(posX, posY, 0)
-        , _size(width, height)
+    Widget::Widget(const vec2& pos, const vec2& size)
+        : _position(pos.x, pos.y, 0)
+        , _size(size)
         , _parent(nullptr)
         , _children(16)
         , _isDirty(true) 

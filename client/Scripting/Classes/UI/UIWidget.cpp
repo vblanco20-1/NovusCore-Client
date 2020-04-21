@@ -15,21 +15,22 @@ std::string UIWidget::GetTypeName()
 {
     return "UIWidget";
 }
-void UIWidget::SetPosition(f32 x, f32 y, f32 depth)
+void UIWidget::SetPosition(vec2 pos, f32 depth)
 {
-    _widget->SetPosition(vec3(x, y, depth));
+    float d = depth == 0 ? _widget->GetPosition().z : depth;
+    _widget->SetPosition(vec3(pos.x, pos.y, d));
 }
-void UIWidget::SetSize(f32 width, f32 height)
+void UIWidget::SetSize(vec2 size)
 {
-    _widget->SetSize(vec2(width, height));
+    _widget->SetSize(size);
 }
-float UIWidget::GetPositionX()
+vec2 UIWidget::GetPosition()
 {
-    return _widget->GetPosition().x;
+    return _widget->GetPosition();
 }
-float UIWidget::GetPositionY()
+vec2 UIWidget::GetSize()
 {
-    return _widget->GetPosition().y;
+    return _widget->GetSize();
 }
 float UIWidget::GetDepth()
 {

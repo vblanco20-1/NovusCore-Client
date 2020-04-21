@@ -20,7 +20,7 @@ namespace UI
         };
 
     public:
-        Panel(f32 posX, f32 posY, f32 width, f32 height);
+        Panel(const vec2& pos, const vec2& size);
 
     private:
         Renderer::ModelID GetModelID();

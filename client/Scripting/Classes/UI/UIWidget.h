@@ -16,18 +16,18 @@ public:
     static void RegisterBase()
     {
         i32 r = ScriptEngine::RegisterScriptClassFunction("string GetTypeName()", asMETHOD(T, GetTypeName)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("void SetPosition(float x, float y, float depth)", asMETHOD(T, SetPosition)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("void SetSize(float width, float height)", asMETHOD(T, SetSize)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("float GetPositionX()", asMETHOD(T, GetPositionX)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("float GetPositionY()", asMETHOD(T, GetPositionY)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void SetPosition(vec2 pos, float depth = 0)", asMETHOD(T, SetPosition)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void SetSize(vec2 size)", asMETHOD(T, SetSize)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("vec2 GetPosition()", asMETHOD(T, GetPosition)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("vec2 GetSize()", asMETHOD(T, GetSize)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("float GetDepth()", asMETHOD(T, GetDepth)); assert(r >= 0);
     }
 
     virtual std::string GetTypeName();
-    virtual void SetPosition(f32 x, f32 y, f32 depth);
-    virtual void SetSize(f32 width, f32 height);
-    virtual f32 GetPositionX();
-    virtual f32 GetPositionY();
+    virtual void SetPosition(vec2 pos, f32 depth);
+    virtual void SetSize(vec2 size);
+    virtual vec2 GetPosition();
+    virtual vec2 GetSize();
     virtual f32 GetDepth();
 
 private:

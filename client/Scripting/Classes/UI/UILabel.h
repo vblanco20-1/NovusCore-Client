@@ -6,13 +6,13 @@
 class UILabel : public UIWidget
 {
 public:
-    UILabel(f32 posX, f32 posY, f32 width, f32 height);
+    UILabel(const vec2& pos, const vec2& size);
     static void RegisterType();
 
     std::string GetTypeName() override;
-    void SetColor(f32 r, f32 g, f32 b);
+    void SetColor(vec3 color);
     void SetOutlineWidth(f32 width);
-    void SetOutlineColor(f32 r, f32 g, f32 b);
+    void SetOutlineColor(vec3 color);
 
     void SetText(std::string& text);
     void SetFont(std::string& fontPath, f32 fontSize);
@@ -20,7 +20,7 @@ public:
     UI::Label* GetInternal() { return &_label; }
     static std::vector<UILabel*> _labels;
 private:
-    static UILabel* CreateLabel(f32 posX, f32 posY, f32 width, f32 height);
+    static UILabel* CreateLabel(const vec2& pos, const vec2& size);
 
 private:
     UI::Label _label;

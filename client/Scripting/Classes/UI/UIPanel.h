@@ -6,11 +6,11 @@
 class UIPanel : public UIWidget
 {
 public:
-    UIPanel(f32 posX, f32 posY, f32 width, f32 height);
+    UIPanel(const vec2& pos, const vec2& size);
     static void RegisterType();
 
     std::string GetTypeName() override;
-    void SetColor(f32 r, f32 g, f32 b, f32 a);
+    void SetColor(vec4 color);
 
     void SetTexture(std::string& texture);
 
@@ -26,7 +26,7 @@ public:
     UI::Panel* GetInternal();
     static std::vector<UIPanel*> _panels;
 private:
-    static UIPanel* CreatePanel(f32 posX, f32 posY, f32 width, f32 height, bool clickable);
+    static UIPanel* CreatePanel(vec2 pos, vec2 size);
 
 private:
     UI::Panel _panel;

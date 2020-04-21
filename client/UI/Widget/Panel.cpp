@@ -3,8 +3,8 @@
 namespace UI
 {
     // Public
-    Panel::Panel(f32 posX, f32 posY, f32 width, f32 height)
-        : Widget(posX, posY, width, height)
+    Panel::Panel(const vec2& pos, const vec2& size)
+        : Widget(pos, size)
         , _color(1.0f, 1.0f, 1.0f, 1.0f), _clickable(true), _dragable(false), _isDragging(false), _deltaDragPosition(0, 0), _didDrag(false)
     {
     }
