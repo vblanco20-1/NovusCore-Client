@@ -35,6 +35,7 @@ namespace UI
         void SetText(std::string& text);
 
         u32 GetTextLength();
+        u32 GetGlyphCount();
 
         const Color& GetColor();
         void SetColor(const Color& color);
@@ -54,6 +55,8 @@ namespace UI
 
     private:
         std::string _text;
+        u32 _glyphCount;
+
         Color _color = Color(1,1,1,1);
         Color _outlineColor = Color(0, 0, 0, 1);
         f32 _outlineWidth = 0.0f;

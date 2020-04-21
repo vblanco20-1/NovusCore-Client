@@ -1,5 +1,7 @@
 #include "Label.h"
 
+#include <algorithm>
+
 namespace UI
 {
     Label::Label(const vec2& pos, const vec2& size)
@@ -19,11 +21,20 @@ namespace UI
     { 
         _text = text;
         SetDirty();
+        _glyphCount = static_cast<u32>(std::count_if(text.begin(), text.end(), [](char c)
+        {
+            return c != ' ';
+        }));
     }
 
     u32 Label::GetTextLength()
     {
         return static_cast<u32>(_text.length());
+    }
+
+    u32 Label::GetGlyphCount()
+    {
+        return _glyphCount;
     }
 
     const Color& Label::GetColor()

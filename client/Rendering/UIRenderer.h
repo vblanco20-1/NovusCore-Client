@@ -2,12 +2,10 @@
 #include <NovusTypes.h>
 
 #include <Renderer/Descriptors/ImageDesc.h>
-#include <Renderer/Descriptors/DepthImageDesc.h>
 #include <Renderer/Descriptors/TextureDesc.h>
 #include <Renderer/Descriptors/ModelDesc.h>
 #include <Renderer/Descriptors/SamplerDesc.h>
 #include <Renderer/ConstantBuffer.h>
-#include <Renderer/InstanceData.h>
 
 namespace Renderer
 {

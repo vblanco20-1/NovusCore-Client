@@ -34,6 +34,12 @@ void UIRenderer::Update(f32 deltaTime)
 
         if (panel->IsDirty())
         {
+            if (panel->GetTexture().length() == 0)
+            {
+                panel->ResetDirty();
+                continue;
+            }
+
             // (Re)load texture
             Renderer::TextureID textureID = ReloadTexture(panel->GetTexture());
             panel->SetTextureID(textureID);
@@ -96,30 +102,44 @@ void UIRenderer::Update(f32 deltaTime)
             // Grow arrays if necessary
             std::string& text = label->GetText();
 
-            size_t textLength = text.length();
+            size_t textLength = text.size();
+            size_t textLengthWithoutSpaces = std::count_if(text.begin(), text.end(), [](char c)
+            {
+                return c != ' ';
+            });
+
             size_t glyphCount = label->_models.size();
 
-            if (label->_models.size() < textLength)
+            if (label->_models.size() < textLengthWithoutSpaces)
             {
-                label->_models.resize(textLength);
-                for (size_t i = glyphCount; i < textLength; i++)
+                label->_models.resize(textLengthWithoutSpaces);
+                for (size_t i = glyphCount; i < textLengthWithoutSpaces; i++)
                 {
                     label->_models[i] = Renderer::ModelID::Invalid();
                 }
             }
-            if (label->_textures.size() < textLength)
+            if (label->_textures.size() < textLengthWithoutSpaces)
             {
-                label->_textures.resize(textLength);
-                for (size_t i = glyphCount; i < textLength; i++)
+                label->_textures.resize(textLengthWithoutSpaces);
+                for (size_t i = glyphCount; i < textLengthWithoutSpaces; i++)
                 {
                     label->_textures[i] = Renderer::TextureID::Invalid();
                 }
             }
 
+            size_t glyph = 0;
             vec3 currentPosition = label->GetPosition();
             for (size_t i = 0; i < textLength; i++)
             {
                 char character = text[i];
+
+                // If we encounter a space we just advance currentPosition and continue
+                if (character == ' ')
+                {
+                    currentPosition.x += label->GetFontSize() * 0.15f;
+                    continue;
+                }
+
                 Renderer::FontChar& fontChar = label->_font->GetChar(character);
 
                 const vec3& pos = currentPosition + vec3(fontChar.xOffset, fontChar.yOffset, 0);
@@ -130,7 +150,7 @@ void UIRenderer::Update(f32 deltaTime)
 
                 CalculateVertices(pos, size, primitiveModelDesc.vertices);
 
-                Renderer::ModelID modelID = label->_models[i];
+                Renderer::ModelID modelID = label->_models[glyph];
 
                 // If the primitive model hasn't been created yet, create it
                 if (modelID == Renderer::ModelID::Invalid())
@@ -143,16 +163,17 @@ void UIRenderer::Update(f32 deltaTime)
                     primitiveModelDesc.indices.push_back(3);
                     primitiveModelDesc.indices.push_back(2);
 
-                    label->_models[i] = _renderer->CreatePrimitiveModel(primitiveModelDesc);
+                    label->_models[glyph] = _renderer->CreatePrimitiveModel(primitiveModelDesc);
                 }
                 else // Otherwise we just update the already existing primitive model
                 {
                     _renderer->UpdatePrimitiveModel(modelID, primitiveModelDesc);
                 }
 
-                label->_textures[i] = fontChar.texture;
+                label->_textures[glyph] = fontChar.texture;
 
                 currentPosition.x += fontChar.advance;
+                glyph++;
             }
 
             // Create constant buffer if necessary
@@ -274,7 +295,6 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
             }
             commandList.EndPipeline(pipeline);
 
-
             // Draw text
             vertexShaderDesc.path = "Data/shaders/text.vert.spv";
             pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
@@ -296,9 +316,9 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                 // Set constant buffer
                 commandList.SetConstantBuffer(0, label->GetConstantBuffer()->GetGPUResource(frameIndex));
 
-                // Each letter in the label has it's own plane and texture, this could be optimized in the future.
-                u32 numModels = label->GetTextLength();
-                for (u32 i = 0; i < numModels; i++)
+                // Each glyph in the label has it's own plane and texture, this could be optimized in the future.
+                u32 glyphs = label->GetGlyphCount();
+                for (u32 i = 0; i < glyphs; i++)
                 {
                     // Set texture-sampler pair
                     commandList.SetTextureSampler(1, label->_textures[i], _linearSampler);
