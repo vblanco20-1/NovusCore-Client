@@ -30,7 +30,7 @@ std::string UILabel::GetTypeName()
     return "UILabel";
 }
 
-void UILabel::SetColor(vec3 color)
+void UILabel::SetColor(const vec3& color)
 {
     _label.SetColor(Color(color.r, color.g, color.b, 1));
 }
@@ -40,7 +40,7 @@ void UILabel::SetOutlineWidth(f32 width)
     _label.SetOutlineWidth(width);
 }
 
-void UILabel::SetOutlineColor(vec3 color)
+void UILabel::SetOutlineColor(const vec3& color)
 {
     _label.SetOutlineColor(Color(color.r, color.g, color.b, 1));
 }

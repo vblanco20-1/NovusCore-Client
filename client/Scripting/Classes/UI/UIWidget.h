@@ -24,8 +24,8 @@ public:
     }
 
     virtual std::string GetTypeName();
-    virtual void SetPosition(vec2 pos, f32 depth);
-    virtual void SetSize(vec2 size);
+    virtual void SetPosition(const vec2& pos, f32 depth);
+    virtual void SetSize(const vec2& size);
     virtual vec2 GetPosition();
     virtual vec2 GetSize();
     virtual f32 GetDepth();

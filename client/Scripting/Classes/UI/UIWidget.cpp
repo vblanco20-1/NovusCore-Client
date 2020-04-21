@@ -15,12 +15,12 @@ std::string UIWidget::GetTypeName()
 {
     return "UIWidget";
 }
-void UIWidget::SetPosition(vec2 pos, f32 depth)
+void UIWidget::SetPosition(const vec2& pos, f32 depth)
 {
     float d = depth == 0 ? _widget->GetPosition().z : depth;
     _widget->SetPosition(vec3(pos.x, pos.y, d));
 }
-void UIWidget::SetSize(vec2 size)
+void UIWidget::SetSize(const vec2& size)
 {
     _widget->SetSize(size);
 }

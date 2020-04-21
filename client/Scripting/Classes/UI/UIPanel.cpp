@@ -34,7 +34,7 @@ std::string UIPanel::GetTypeName()
     return "UIPanel";
 }
 
-void UIPanel::SetColor(vec4 color)
+void UIPanel::SetColor(const vec4& color)
 {
     _panel.SetColor(Color(color.r, color.g, color.b, color.a));
 }
@@ -84,9 +84,8 @@ UI::Panel* UIPanel::GetInternal()
 {
     return &_panel;
 }
-UIPanel* UIPanel::CreatePanel(vec2 pos, vec2 size)
+UIPanel* UIPanel::CreatePanel(const vec2& pos, const vec2& size)
 {
     UIPanel* panel = new UIPanel(pos, size);
-
     return panel;
 }

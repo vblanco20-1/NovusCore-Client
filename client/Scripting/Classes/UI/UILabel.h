@@ -10,9 +10,9 @@ public:
     static void RegisterType();
 
     std::string GetTypeName() override;
-    void SetColor(vec3 color);
+    void SetColor(const vec3& color);
     void SetOutlineWidth(f32 width);
-    void SetOutlineColor(vec3 color);
+    void SetOutlineColor(const vec3& color);
 
     void SetText(std::string& text);
     void SetFont(std::string& fontPath, f32 fontSize);

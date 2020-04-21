@@ -10,7 +10,7 @@ public:
     static void RegisterType();
 
     std::string GetTypeName() override;
-    void SetColor(vec4 color);
+    void SetColor(const vec4& color);
 
     void SetTexture(std::string& texture);
 
@@ -26,7 +26,7 @@ public:
     UI::Panel* GetInternal();
     static std::vector<UIPanel*> _panels;
 private:
-    static UIPanel* CreatePanel(vec2 pos, vec2 size);
+    static UIPanel* CreatePanel(const vec2& pos, const vec2& size);
 
 private:
     UI::Panel _panel;
