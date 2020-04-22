@@ -19,48 +19,57 @@ namespace UI
 
     public:
         Panel(const vec2& pos, const vec2& size);
+        static void RegisterType();
 
-    private:
-        Renderer::ModelID GetModelID();
+        std::string GetTypeName() override { return "Panel"; }
+
+        Renderer::ModelID GetModelID() { return Widget::GetModelID(); }
         void SetModelID(Renderer::ModelID modelID);
 
-        std::string& GetTexture();
+        std::string& GetTexture() { return Widget::GetTexture(); }
         void SetTexture(std::string& texture);
 
-        Renderer::TextureID GetTextureID();
+        Renderer::TextureID GetTextureID() { return Widget::GetTextureID(); }
         void SetTextureID(Renderer::TextureID textureID);
 
-        const Color& GetColor();
+        const Color& GetColor() { return _color; }
         void SetColor(const Color& color);
 
-        bool IsClickable();
+        bool IsClickable() { return _clickable; }
         void SetClickable(bool value);
 
-        bool IsDragable();
-        void SetDragable(bool value);
+        bool IsDraggable() { return _draggable; }
+        void SetDraggable(bool value);
 
+        bool IsDragging() { return _isDragging; }
+        bool DidDrag() { return _didDrag; }
+        const vec2& GetDeltaDragPosition() { return _deltaDragPosition; }
+
+        void SetOnClick(asIScriptFunction* function);
+        void OnClick();
 
         Renderer::ConstantBuffer<PanelConstantBuffer>* GetConstantBuffer() { return _constantBuffer; }
+
+    private:
         void SetConstantBuffer(Renderer::ConstantBuffer<PanelConstantBuffer>* constantBuffer) { _constantBuffer = constantBuffer; }
 
+        static Panel* CreatePanel(const vec2& pos, const vec2& size);
     private:
         Color _color;
         bool _clickable;
-        bool _dragable;
+        bool _draggable;
         bool _isDragging;
         bool _didDrag;
         vec2 _deltaDragPosition;
 
-        bool IsDragging();
         void BeingDrag(const vec2& deltaDragPosition);
-        const vec2& GetDeltaDragPosition();
-        bool DidDrag();
         void SetDidDrag();
         void EndDrag();
 
         Renderer::ConstantBuffer<PanelConstantBuffer>* _constantBuffer = nullptr;
 
-        friend class ::UIPanel;
+        asIScriptFunction* _onClickCallback;
+
         friend class UIRenderer;
     };
 }

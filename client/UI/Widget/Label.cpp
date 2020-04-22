@@ -1,22 +1,38 @@
 #include "Label.h"
 
 #include <algorithm>
+#include "../../Rendering/UIElementRegistry.h"
 
 namespace UI
 {
     Label::Label(const vec2& pos, const vec2& size)
         : Widget(pos, size)
+        , _glyphCount(0)
         , _color(1.0f, 1.0f, 1.0f, 1.0f)
+        , _outlineColor(0.f, 0.f, 0.f, 1.f)
+        , _outlineWidth(0.f)
+        , _fontSize(0)
+        , _font(nullptr)
     {
-
+        UIElementRegistry::Instance()->AddLabel(this);
     }
 
-    // Private
-    std::string& Label::GetText()
-    { 
-        return _text; 
+    void Label::RegisterType()
+    {
+        i32 r = ScriptEngine::RegisterScriptClass("Label", 0, asOBJ_REF | asOBJ_NOCOUNT);
+        assert(r >= 0);
+        {
+            r = ScriptEngine::RegisterScriptInheritance<Widget, Label>("Widget");
+            r = ScriptEngine::RegisterScriptFunction("Label@ CreateLabel(vec2 pos = vec2(0, 0), vec2 size = vec2(100, 100))", asFUNCTION(Label::CreateLabel)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void SetColor(Color color)", asMETHOD(Label, SetColor)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void SetOutlineWidth(float width)", asMETHOD(Label, SetOutlineWidth)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void SetOutlineColor(Color color)", asMETHOD(Label, SetOutlineColor)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void SetText(string texture)", asMETHOD(Label, SetText)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void SetFont(string fontPath, float fontSize)", asMETHOD(Label, SetFont)); assert(r >= 0);
+        }
     }
 
+    // Public
     void Label::SetText(std::string& text)
     { 
         _text = text;
@@ -27,40 +43,15 @@ namespace UI
         }));
     }
 
-    u32 Label::GetTextLength()
-    {
-        return static_cast<u32>(_text.length());
-    }
-
-    u32 Label::GetGlyphCount()
-    {
-        return _glyphCount;
-    }
-
-    const Color& Label::GetColor()
-    { 
-        return _color;
-    }
-
     void Label::SetColor(const Color& color)
     { 
         _color = color;
         SetDirty();
     }
 
-    f32 Label::GetOutlineWidth()
-    {
-        return _outlineWidth;
-    }
-
     void Label::SetOutlineWidth(f32 width)
     {
         _outlineWidth = width;
-    }
-
-    const Color& Label::GetOutlineColor()
-    {
-        return _outlineColor;
     }
 
     void Label::SetOutlineColor(const Color& color)
@@ -71,18 +62,20 @@ namespace UI
 
     void Label::SetFont(std::string& fontPath, f32 fontSize)
     {
+        if (_parent)
+        {
+            _localPosition.y = fontSize;
+        }
+
         _fontPath = fontPath;
         _fontSize = fontSize;
         SetDirty();
     }
 
-    std::string& Label::GetFontPath()
+    Label* Label::CreateLabel(const vec2& pos, const vec2& size)
     {
-        return _fontPath;
-    }
+        Label* label = new Label(pos, size);
 
-    f32 Label::GetFontSize()
-    {
-        return _fontSize;
+        return label;
     }
 }
