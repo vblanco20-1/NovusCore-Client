@@ -8,6 +8,10 @@
 #include "../UI/Widget/Label.h"
 #include "../UI/Widget/Button.h"
 #include "../UI/Widget/InputField.h"
+#include "../ECS/Components/UI/UIElement.h"
+#include "../ECS/Components/UI/UITransform.h"
+#include "../ECS/Components/UI/UITransformEvents.h"
+#include "../ECS/Components/UI/UIRenderable.h"
 
 #include <Renderer/Renderer.h>
 #include <Renderer/Renderers/Vulkan/RendererVK.h>
@@ -29,25 +33,47 @@ UIRenderer::UIRenderer(Renderer::Renderer* renderer) : _focusedField(nullptr)
     inputManager->RegisterMousePositionCallback("UI Mouse Position Checker", std::bind(&UIRenderer::OnMousePositionUpdate, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     inputManager->RegisterKeyboardInputCallback("UI Keyboard Input Checker"_h, std::bind(&UIRenderer::OnKeyboardInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
     inputManager->RegisterCharInputCallback("UI Char Input Cheker"_h, std::bind(&UIRenderer::OnCharInput, this, std::placeholders::_1, std::placeholders::_2));
+
+    entt::registry* registry = ServiceLocator::GetUIRegistry();
+
+    registry->prepare<UIElement>();
+    registry->prepare<UITransform>();
+    registry->prepare<UITransformEvents>();
+    registry->prepare<UIRenderable>();
+
+    // Construct Test Panel
+    entt::entity panel = registry->create();
+    UIElement& uiElement = registry->assign<UIElement>(panel);
+    UITransform& transform = registry->assign<UITransform>(panel);
+    transform.position = vec2(50, 50);
+    transform.size = vec2(100, 100);
+    transform.depth = 0;
+    transform.isDirty = true;
+
+    UITransformEvents& transformEvents = registry->assign<UITransformEvents>(panel);
+    UIRenderable& renderable = registry->assign<UIRenderable>(panel);
+    renderable.texture = "Data/textures/NovusUIPanel.png";
 }
 
 void UIRenderer::Update(f32 deltaTime)
 {
     UIElementRegistry* uiElementRegistry = UIElementRegistry::Instance();
 
-    for (auto panel : uiElementRegistry->GetPanels()) // TODO: Store panels in a better manner than this
-    {
-        if (panel->IsDirty())
+    entt::registry* registry = ServiceLocator::GetUIRegistry();
+    auto renderableView = registry->view<UITransform, UIRenderable>();
+    renderableView.each([this](const auto, UITransform& transform, UIRenderable& renderable)
         {
-            if (panel->GetTexture().length() == 0)
+            if (!transform.isDirty)
+                return;
+
+            if (renderable.texture.length() == 0)
             {
-                panel->ResetDirty();
-                continue;
+                transform.isDirty = false;
+                return;
             }
 
             // (Re)load texture
-            Renderer::TextureID textureID = ReloadTexture(panel->GetTexture());
-            panel->SetTextureID(textureID);
+            renderable.textureID = ReloadTexture(renderable.texture);
 
             // Update position depending on parents etc
             // TODO
@@ -55,14 +81,13 @@ void UIRenderer::Update(f32 deltaTime)
             Renderer::PrimitiveModelDesc primitiveModelDesc;
 
             // Update vertex buffer
-            const vec3 pos = vec3(panel->GetScreenPosition(), 0);
-            const vec2& size = panel->GetSize();
+            const vec3& pos = vec3(transform.position.x, transform.position.y, transform.depth);
+            const vec2& size = transform.size;
 
             CalculateVertices(pos, size, primitiveModelDesc.vertices);
 
-            Renderer::ModelID modelID = panel->GetModelID();
             // If the primitive model hasn't been created yet, create it
-            if (modelID == Renderer::ModelID::Invalid())
+            if (renderable.modelID == Renderer::ModelID::Invalid())
             {
                 // Indices
                 primitiveModelDesc.indices.push_back(0);
@@ -72,249 +97,26 @@ void UIRenderer::Update(f32 deltaTime)
                 primitiveModelDesc.indices.push_back(3);
                 primitiveModelDesc.indices.push_back(2);
 
-                Renderer::ModelID modelID = _renderer->CreatePrimitiveModel(primitiveModelDesc);
-                panel->SetModelID(modelID);
+                renderable.modelID = _renderer->CreatePrimitiveModel(primitiveModelDesc);
             }
             else // Otherwise we just update the already existing primitive model
             {
-                _renderer->UpdatePrimitiveModel(modelID, primitiveModelDesc);
+                _renderer->UpdatePrimitiveModel(renderable.modelID, primitiveModelDesc);
             }
 
             // Create constant buffer if necessary
-            auto constantBuffer = panel->GetConstantBuffer();
+            auto constantBuffer = renderable.constantBuffer;
             if (constantBuffer == nullptr)
             {
-                constantBuffer = _renderer->CreateConstantBuffer<UI::Panel::PanelConstantBuffer>();
-                panel->SetConstantBuffer(constantBuffer);
+                constantBuffer = _renderer->CreateConstantBuffer<UIRenderable::PanelConstantBuffer>();
+                renderable.constantBuffer = constantBuffer;
             }
-            constantBuffer->resource.color = panel->GetColor();
+            constantBuffer->resource.color = renderable.color;
             constantBuffer->Apply(0);
             constantBuffer->Apply(1);
 
-            panel->ResetDirty();
-        }
-    }
-
-    for (auto button : uiElementRegistry->GetButtons()) // TODO: Store panels in a better manner than this
-    {
-        if (button->IsDirty())
-        {
-            if (button->GetTexture().length() == 0)
-            {
-                button->ResetDirty();
-                continue;
-            }
-
-            // (Re)load texture
-            Renderer::TextureID textureID = ReloadTexture(button->GetTexture());
-            button->SetTextureID(textureID);
-
-            // Update position depending on parents etc
-            // TODO
-
-            Renderer::PrimitiveModelDesc primitiveModelDesc;
-
-            // Update vertex buffer
-            const vec3 pos = vec3(button->GetScreenPosition(), 0);
-            const vec2& size = button->GetSize();
-
-            CalculateVertices(pos, size, primitiveModelDesc.vertices);
-
-            Renderer::ModelID modelID = button->GetModelID();
-            // If the primitive model hasn't been created yet, create it
-            if (modelID == Renderer::ModelID::Invalid())
-            {
-                // Indices
-                primitiveModelDesc.indices.push_back(0);
-                primitiveModelDesc.indices.push_back(1);
-                primitiveModelDesc.indices.push_back(2);
-                primitiveModelDesc.indices.push_back(1);
-                primitiveModelDesc.indices.push_back(3);
-                primitiveModelDesc.indices.push_back(2);
-
-                Renderer::ModelID modelID = _renderer->CreatePrimitiveModel(primitiveModelDesc);
-                button->SetModelID(modelID);
-            }
-            else // Otherwise we just update the already existing primitive model
-            {
-                _renderer->UpdatePrimitiveModel(modelID, primitiveModelDesc);
-            }
-
-            // Create constant buffer if necessary
-            auto constantBuffer = button->GetConstantBuffer();
-            if (constantBuffer == nullptr)
-            {
-                constantBuffer = _renderer->CreateConstantBuffer<UI::Button::ButtonConstantBuffer>();
-                button->SetConstantBuffer(constantBuffer);
-            }
-            constantBuffer->resource.color = button->GetColor();
-            constantBuffer->Apply(0);
-            constantBuffer->Apply(1);
-
-            button->ResetDirty();
-        }
-    }
-
-    for (auto inputField : uiElementRegistry->GetInputFields()) // TODO: Store panels in a better manner than this
-    {
-        if (inputField->IsDirty())
-        {
-            if (inputField->GetTexture().length() == 0)
-            {
-                inputField->ResetDirty();
-                continue;
-            }
-
-            // (Re)load texture
-            Renderer::TextureID textureID = ReloadTexture(inputField->GetTexture());
-            inputField->SetTextureID(textureID);
-
-            // Update position depending on parents etc
-            // TODO
-
-            Renderer::PrimitiveModelDesc primitiveModelDesc;
-
-            // Update vertex buffer
-            const vec3 pos = vec3(inputField->GetScreenPosition(), 0);
-            const vec2& size = inputField->GetSize();
-
-            CalculateVertices(pos, size, primitiveModelDesc.vertices);
-
-            Renderer::ModelID modelID = inputField->GetModelID();
-            // If the primitive model hasn't been created yet, create it
-            if (modelID == Renderer::ModelID::Invalid())
-            {
-                // Indices
-                primitiveModelDesc.indices.push_back(0);
-                primitiveModelDesc.indices.push_back(1);
-                primitiveModelDesc.indices.push_back(2);
-                primitiveModelDesc.indices.push_back(1);
-                primitiveModelDesc.indices.push_back(3);
-                primitiveModelDesc.indices.push_back(2);
-
-                Renderer::ModelID modelID = _renderer->CreatePrimitiveModel(primitiveModelDesc);
-                inputField->SetModelID(modelID);
-            }
-            else // Otherwise we just update the already existing primitive model
-            {
-                _renderer->UpdatePrimitiveModel(modelID, primitiveModelDesc);
-            }
-
-            // Create constant buffer if necessary
-            auto constantBuffer = inputField->GetConstantBuffer();
-            if (constantBuffer == nullptr)
-            {
-                constantBuffer = _renderer->CreateConstantBuffer<UI::InputField::InputFieldConstantBuffer>();
-                inputField->SetConstantBuffer(constantBuffer);
-            }
-            constantBuffer->resource.color = inputField->GetColor();
-            constantBuffer->Apply(0);
-            constantBuffer->Apply(1);
-
-            inputField->ResetDirty();
-        }
-    }
-
-    for (auto label : uiElementRegistry->GetLabels()) // TODO: Store labels in a better manner than this
-    {
-        if (label->IsDirty())
-        {
-            // (Re)load font
-            label->_font = Renderer::Font::GetFont(_renderer, label->GetFontPath(), label->GetFontSize());
-
-            // Grow arrays if necessary
-            const std::string& text = label->GetText();
-
-            size_t textLength = text.size();
-            size_t textLengthWithoutSpaces = std::count_if(text.begin(), text.end(), [](char c)
-                {
-                    return c != ' ';
-                });
-
-            size_t glyphCount = label->_models.size();
-
-            if (label->_models.size() < textLengthWithoutSpaces)
-            {
-                label->_models.resize(textLengthWithoutSpaces);
-                for (size_t i = glyphCount; i < textLengthWithoutSpaces; i++)
-                {
-                    label->_models[i] = Renderer::ModelID::Invalid();
-                }
-            }
-            if (label->_textures.size() < textLengthWithoutSpaces)
-            {
-                label->_textures.resize(textLengthWithoutSpaces);
-                for (size_t i = glyphCount; i < textLengthWithoutSpaces; i++)
-                {
-                    label->_textures[i] = Renderer::TextureID::Invalid();
-                }
-            }
-
-            size_t glyph = 0;
-            vec3 currentPosition = vec3(label->GetScreenPosition(), 0);
-            for (size_t i = 0; i < textLength; i++)
-            {
-                char character = text[i];
-
-                // If we encounter a space we just advance currentPosition and continue
-                if (character == ' ')
-                {
-                    currentPosition.x += label->GetFontSize() * 0.15f;
-                    continue;
-                }
-
-                Renderer::FontChar& fontChar = label->_font->GetChar(character);
-
-                const vec3& pos = currentPosition + vec3(fontChar.xOffset, fontChar.yOffset, 0);
-                const vec2& size = vec2(fontChar.width, fontChar.height);
-
-                Renderer::PrimitiveModelDesc primitiveModelDesc;
-                primitiveModelDesc.debugName = "Label " + character;
-
-                CalculateVertices(pos, size, primitiveModelDesc.vertices);
-
-                Renderer::ModelID modelID = label->_models[glyph];
-
-                // If the primitive model hasn't been created yet, create it
-                if (modelID == Renderer::ModelID::Invalid())
-                {
-                    // Indices
-                    primitiveModelDesc.indices.push_back(0);
-                    primitiveModelDesc.indices.push_back(1);
-                    primitiveModelDesc.indices.push_back(2);
-                    primitiveModelDesc.indices.push_back(1);
-                    primitiveModelDesc.indices.push_back(3);
-                    primitiveModelDesc.indices.push_back(2);
-
-                    label->_models[glyph] = _renderer->CreatePrimitiveModel(primitiveModelDesc);
-                }
-                else // Otherwise we just update the already existing primitive model
-                {
-                    _renderer->UpdatePrimitiveModel(modelID, primitiveModelDesc);
-                }
-
-                label->_textures[glyph] = fontChar.texture;
-
-                currentPosition.x += fontChar.advance;
-                glyph++;
-            }
-
-            // Create constant buffer if necessary
-            auto constantBuffer = label->GetConstantBuffer();
-            if (constantBuffer == nullptr)
-            {
-                constantBuffer = _renderer->CreateConstantBuffer<UI::Label::LabelConstantBuffer>();
-                label->SetConstantBuffer(constantBuffer);
-            }
-            constantBuffer->resource.textColor = label->GetColor();
-            constantBuffer->resource.outlineColor = label->GetOutlineColor();
-            constantBuffer->resource.outlineWidth = label->GetOutlineWidth();
-            constantBuffer->Apply(0);
-            constantBuffer->Apply(1);
-
-            label->ResetDirty();
-        }
-    }
+            transform.isDirty = false;
+        });
 }
 
 void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID renderTarget, u8 frameIndex)
@@ -400,73 +202,25 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
             commandList.BeginPipeline(pipeline);
 
             // Draw all the panels
-            for (auto panel : uiElementRegistry->GetPanels())
-            {
-                commandList.PushMarker("Panel", Color(0.0f, 0.1f, 0.0f));
+            entt::registry* registry = ServiceLocator::GetUIRegistry();
+            auto renderableView = registry->view<UITransform, UIRenderable>();
+            renderableView.each([this, &commandList, frameIndex](const auto, UITransform& transform, UIRenderable& renderable)
+                {
+                    commandList.PushMarker("Renderable", Color(0.0f, 0.1f, 0.0f));
 
-                // Set constant buffer
-                commandList.SetConstantBuffer(0, panel->GetConstantBuffer()->GetGPUResource(frameIndex));
+                    // Set constant buffer
+                    commandList.SetConstantBuffer(0, renderable.constantBuffer->GetGPUResource(frameIndex));
 
-                // Set texture-sampler pair
-                commandList.SetTextureSampler(1, panel->GetTextureID(), _linearSampler);
+                    // Set texture-sampler pair
+                    commandList.SetTextureSampler(1, renderable.textureID, _linearSampler);
 
-                // Draw
-                commandList.Draw(panel->GetModelID());
+                    // Draw
+                    commandList.Draw(renderable.modelID);
 
-                commandList.PopMarker();
-            }
+                    commandList.PopMarker();
+                });
             commandList.EndPipeline(pipeline);
-
-            // Set pipeline
-            pipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
-            commandList.BeginPipeline(pipeline);
-
-            // Draw all the buttons
-            for (auto button : uiElementRegistry->GetButtons())
-            {
-                if (button->GetTexture().length() == 0)
-                    continue;
-
-                commandList.PushMarker("Button", Color(0.0f, 0.0f, 0.0f));
-
-                // Set constant buffer
-                commandList.SetConstantBuffer(0, button->GetConstantBuffer()->GetGPUResource(frameIndex));
-
-                // Set texture-sampler pair
-                commandList.SetTextureSampler(1, button->GetTextureID(), _linearSampler);
-
-                // Draw
-                commandList.Draw(button->GetModelID());
-
-                commandList.PopMarker();
-            }
-            commandList.EndPipeline(pipeline);
-
-            // Set pipeline
-            pipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
-            commandList.BeginPipeline(pipeline);
-            
-            // Draw all the inputFields
-            for (auto inputField : uiElementRegistry->GetInputFields())
-            {
-                if (inputField->GetTexture().length() == 0)
-                    continue;
-
-                commandList.PushMarker("InputField", Color(0.0f, 0.0f, 0.0f));
-
-                // Set constant buffer
-                commandList.SetConstantBuffer(0, inputField->GetConstantBuffer()->GetGPUResource(frameIndex));
-
-                // Set texture-sampler pair
-                commandList.SetTextureSampler(1, inputField->GetTextureID(), _linearSampler);
-
-                // Draw
-                commandList.Draw(inputField->GetModelID());
-
-                commandList.PopMarker();
-            }
-            commandList.EndPipeline(pipeline);
-
+           
             // Draw text
             vertexShaderDesc.path = "Data/shaders/text.vert.spv";
             pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);

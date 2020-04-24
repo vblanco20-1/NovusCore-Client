@@ -39,6 +39,7 @@ namespace tf
 struct FrameworkRegistryPair
 {
     entt::registry gameRegistry;
+    entt::registry uiRegistry;
     tf::Framework framework;
     tf::Taskflow taskflow;
 };

@@ -70,8 +70,9 @@ void EngineLoop::Run()
 {
     _isRunning = true;
 
-    SetupUpdateFramework();
     _updateFramework.gameRegistry.create();
+    _updateFramework.uiRegistry.create();
+    SetupUpdateFramework();
 
     std::string scriptPath = "./Data/scripts";
     ScriptHandler::LoadScriptDirectory(scriptPath);
@@ -173,8 +174,10 @@ void EngineLoop::SetupUpdateFramework()
 {
     tf::Framework& framework = _updateFramework.framework;
     entt::registry& gameRegistry = _updateFramework.gameRegistry;
+    entt::registry& uiRegistry = _updateFramework.uiRegistry;
 
     ServiceLocator::SetGameRegistry(&gameRegistry);
+    ServiceLocator::SetUIRegistry(&uiRegistry);
     SetMessageHandler();
 
     // ConnectionUpdateSystem

@@ -1,6 +1,7 @@
 #include "ServiceLocator.h"
 
 entt::registry* ServiceLocator::_gameRegistry = nullptr;
+entt::registry* ServiceLocator::_uiRegistry = nullptr;
 MessageHandler* ServiceLocator::_networkMessageHandler = nullptr;
 Window* ServiceLocator::_window = nullptr;
 InputManager* ServiceLocator::_inputManager = nullptr;
@@ -11,6 +12,11 @@ void ServiceLocator::SetGameRegistry(entt::registry* registry)
 {
     assert(_gameRegistry == nullptr);
     _gameRegistry = registry;
+}
+void ServiceLocator::SetUIRegistry(entt::registry* registry)
+{
+    assert(_uiRegistry == nullptr);
+    _uiRegistry = registry;
 }
 void ServiceLocator::SetNetworkMessageHandler(MessageHandler* networkMessageHandler)
 {

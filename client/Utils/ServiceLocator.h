@@ -12,6 +12,8 @@ class ServiceLocator
 public:
     static entt::registry* GetGameRegistry() { return _gameRegistry; }
     static void SetGameRegistry(entt::registry* registry);
+    static entt::registry* GetUIRegistry() { return _uiRegistry; }
+    static void SetUIRegistry(entt::registry* registry);
     static MessageHandler* GetNetworkMessageHandler() { return _networkMessageHandler; }
     static void SetNetworkMessageHandler(MessageHandler* serverMessageHandler);
     static Window* GetWindow() { return _window; }
@@ -32,6 +34,7 @@ public:
 private:
     ServiceLocator() { }
     static entt::registry* _gameRegistry;
+    static entt::registry* _uiRegistry;
     static MessageHandler* _networkMessageHandler;
     static Window* _window;
     static InputManager* _inputManager;
