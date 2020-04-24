@@ -2,7 +2,7 @@
 #include <Utils/StringUtils.h>
 #include <GLFW/glfw3.h>
 
-InputManager::InputManager() : _keyToKeybindMap(), _titleToKeybindMap(), _keyboardInputCallbackMap()
+InputManager::InputManager() : _keyToKeybindMap(), _titleToKeybindMap(), _keyboardInputCallbackMap(), _charInputCallbackMap()
 {
     // Mouse
     _keyToKeybindMap[GLFW_MOUSE_BUTTON_1] = robin_hood::unordered_map<u32, std::shared_ptr<Keybind>>();
@@ -148,6 +148,13 @@ InputManager::InputManager() : _keyToKeybindMap(), _titleToKeybindMap(), _keyboa
 
 void InputManager::KeyboardInputHandler(Window* window, i32 key, i32 /*scanCode*/, i32 actionMask, i32 modifierMask)
 {
+    for (auto kv : _keyboardInputCallbackMap)
+    {
+        //If this returns true it consumed the input.
+        if (kv.second(window, key, actionMask, modifierMask))
+            return;
+    }
+
     for (auto kv : _keyToKeybindMap[key])
     {
         auto inputBinding = kv.second;
@@ -165,13 +172,19 @@ void InputManager::KeyboardInputHandler(Window* window, i32 key, i32 /*scanCode*
             if (!inputBinding->callback)
                 continue;
 
-            inputBinding->callback(window, inputBinding);
+            //If this returns true it consumed the input.
+            if (inputBinding->callback(window, inputBinding))
+                return;
         }
     }
-
-    for (auto kv : _keyboardInputCallbackMap)
+}
+void InputManager::CharInputHandler(Window* window, u32 unicodeKey)
+{
+    for (auto kv : _charInputCallbackMap)
     {
-        kv.second(window, key, actionMask, modifierMask);
+        //If this returns true it consumed the input.
+        if (kv.second(window, unicodeKey))
+            break;
     }
 }
 void InputManager::MouseInputHandler(Window* window, i32 button, i32 actionMask, i32 modifierMask)
@@ -255,6 +268,26 @@ bool InputManager::UnregisterKeyboardInputCallback(u32 callbackNameHash)
         return false;
 
     _keyboardInputCallbackMap.erase(callbackNameHash);
+    return true;
+}
+
+bool InputManager::RegisterCharInputCallback(u32 callbackNameHash, std::function<CharInputCallbackFunc> callback)
+{
+    auto iterator = _charInputCallbackMap.find(callbackNameHash);
+    if (iterator != _charInputCallbackMap.end())
+        return false;
+
+    _charInputCallbackMap[callbackNameHash] = callback;
+    return true;
+}
+
+bool InputManager::UnregisterCharInputCallback(u32 callbackNameHash)
+{
+    auto iterator = _charInputCallbackMap.find(callbackNameHash);
+    if (iterator == _charInputCallbackMap.end())
+        return false;
+
+    _charInputCallbackMap.erase(callbackNameHash);
     return true;
 }
 

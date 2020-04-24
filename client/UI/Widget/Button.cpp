@@ -40,21 +40,6 @@ namespace UI
     }
 
     // Public
-    void Button::SetModelID(Renderer::ModelID modelID)
-    {
-        Widget::SetModelID(modelID);
-    }
-
-    void Button::SetTexture(std::string& texture)
-    {
-        Widget::SetTexture(texture);
-    }
-
-    void Button::SetTextureID(Renderer::TextureID textureID)
-    {
-        Widget::SetTextureID(textureID);
-    }
-
     void Button::SetColor(const Color& color)
     {
         _color = color;
@@ -65,7 +50,7 @@ namespace UI
         _clickable = value;
     }
 
-    std::string& Button::GetText()
+    const std::string& Button::GetText() const
     {
         return _label->GetText();
     }
