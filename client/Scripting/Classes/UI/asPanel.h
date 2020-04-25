@@ -41,6 +41,14 @@ namespace UI
         void SetDepth(const u16& depth);
 
         // TransformEvents Functions
+        void SetEventFlag(const UITransformEventsFlags flags) { events.SetFlag(flags); }
+        void UnsetEventFlag(const UITransformEventsFlags flags) { events.UnsetFlag(flags); }
+        const bool IsClickable() const { return events.IsClickable(); }
+        const bool IsDraggable() const { return events.IsDraggable(); }
+        const bool IsFocusable() const { return events.IsFocusable(); }
+        void SetOnClickCallback(asIScriptFunction* callback);
+        void SetOnDragCallback(asIScriptFunction* callback);
+        void SetOnFocusCallback(asIScriptFunction* callback);
 
         // Renderable Functions
         const std::string& GetTexture() const

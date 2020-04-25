@@ -25,6 +25,15 @@ namespace UI
         r = ScriptEngine::RegisterScriptClassFunction("void SetDepth(float depth)", asMETHOD(asPanel, SetDepth)); assert(r >= 0);
 
         // TransformEvents Functions
+        r = ScriptEngine::RegisterScriptClassFunction("void SetEventFlag(int8 flags)", asMETHOD(asPanel, SetEventFlag)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void UnsetEventFlag(int8 flags)", asMETHOD(asPanel, UnsetEventFlag)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("bool IsClickable()", asMETHOD(asPanel, IsClickable)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("bool IsDraggable()", asMETHOD(asPanel, IsDraggable)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("bool IsFocusable()", asMETHOD(asPanel, IsFocusable)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptFunctionDef("void PanelEventCallback(Panel@ panel)"); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void OnClick(PanelEventCallback@ cb)", asMETHOD(asPanel, SetOnClickCallback)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void OnDragged(PanelEventCallback@ cb)", asMETHOD(asPanel, SetOnDragCallback)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void OnFocused(PanelEventCallback@ cb)", asMETHOD(asPanel, SetOnFocusCallback)); assert(r >= 0);
 
         // Renderable Functions
         r = ScriptEngine::RegisterScriptClassFunction("string GetTexture()", asMETHOD(asPanel, GetTexture)); assert(r >= 0);
@@ -112,6 +121,57 @@ namespace UI
             });
     }
 
+    void asPanel::SetOnClickCallback(asIScriptFunction* callback)
+    {
+        events.onClickCallback = callback;
+        events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_CLICKABLE);
+
+        entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
+        entt::entity entId = entityId;
+
+        gameRegistry->ctx<ScriptSingleton>().AddTransaction([callback, entId]()
+            {
+                entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
+                UITransformEvents& events = uiRegistry->get<UITransformEvents>(entId);
+                events.onClickCallback = callback;
+                events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_CLICKABLE);
+            });
+    }
+
+    void asPanel::SetOnDragCallback(asIScriptFunction* callback)
+    {
+        events.onDraggedCallback = callback;
+        events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_DRAGGABLE);
+
+        entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
+        entt::entity entId = entityId;
+
+        gameRegistry->ctx<ScriptSingleton>().AddTransaction([callback, entId]()
+            {
+                entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
+                UITransformEvents& events = uiRegistry->get<UITransformEvents>(entId);
+                events.onDraggedCallback = callback;
+                events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_DRAGGABLE);
+            });
+    }
+
+    void asPanel::SetOnFocusCallback(asIScriptFunction* callback)
+    {
+        events.onFocusedCallback = callback;
+        events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
+
+        entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
+        entt::entity entId = entityId;
+
+        gameRegistry->ctx<ScriptSingleton>().AddTransaction([callback, entId]()
+            {
+                entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
+                UITransformEvents& events = uiRegistry->get<UITransformEvents>(entId);
+                events.onFocusedCallback = callback;
+                events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
+            });
+    }
+
     void asPanel::SetTexture(const std::string& texture)
     {
         renderable.texture = texture;
@@ -158,8 +218,8 @@ namespace UI
 
         asPanel* panel = new asPanel();
         panel->entityId = elementData.entityId;
-        addElementQueue.elementPool.enqueue(elementData);
 
+        addElementQueue.elementPool.enqueue(elementData);
         return panel;
     }
 }
