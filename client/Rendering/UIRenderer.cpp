@@ -296,7 +296,7 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                     commandList.PushMarker("Renderable", Color(0.0f, 0.1f, 0.0f));
 
                     // Set constant buffer
-                    commandList.SetConstantBuffer(0, renderable.constantBuffer->GetGPUResource(frameIndex));
+                    commandList.SetConstantBuffer(0, renderable.constantBuffer->GetGPUResource(frameIndex), frameIndex);
 
                     // Set texture-sampler pair
                     commandList.SetTextureSampler(1, renderable.textureID, _linearSampler);
@@ -328,7 +328,7 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                     commandList.PushMarker("Text", Color(0.0f, 0.1f, 0.0f));
 
                     // Set constant buffer
-                    commandList.SetConstantBuffer(0, text.constantBuffer->GetGPUResource(frameIndex));
+                    commandList.SetConstantBuffer(0, text.constantBuffer->GetGPUResource(frameIndex), frameIndex);
 
                     // Each glyph in the label has it's own plane and texture, this could be optimized in the future.
                     size_t glyphs = text.models.size();
