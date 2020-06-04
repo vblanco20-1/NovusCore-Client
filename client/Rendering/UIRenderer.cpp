@@ -299,7 +299,11 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                     commandList.SetConstantBuffer(0, renderable.constantBuffer->GetGPUResource(frameIndex), frameIndex);
 
                     // Set texture-sampler pair
-                    commandList.SetTextureSampler(1, renderable.textureID, _linearSampler);
+                    //commandList.SetCombinedTextureSampler(1, renderable.textureID, _linearSampler);
+
+                    // Set Texture and sampler
+                    commandList.SetTexture(1, renderable.textureID);
+                    commandList.SetSampler(2, _linearSampler);
 
                     // Draw
                     commandList.Draw(renderable.modelID);
@@ -330,12 +334,18 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                     // Set constant buffer
                     commandList.SetConstantBuffer(0, text.constantBuffer->GetGPUResource(frameIndex), frameIndex);
 
+                    // Set sampler
+                    commandList.SetSampler(1, _linearSampler);
+
                     // Each glyph in the label has it's own plane and texture, this could be optimized in the future.
                     size_t glyphs = text.models.size();
                     for (u32 i = 0; i < glyphs; i++)
                     {
                         // Set texture-sampler pair
-                        commandList.SetTextureSampler(1, text.textures[i], _linearSampler);
+                        //commandList.SetCombinedTextureSampler(1, text.textures[i], _linearSampler);
+
+                        // Set texture
+                        commandList.SetTexture(2, text.textures[i]);
 
                         // Draw
                         commandList.Draw(text.models[i]);
