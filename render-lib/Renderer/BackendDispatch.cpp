@@ -8,7 +8,8 @@
 #include "Commands/SetPipeline.h"
 #include "Commands/SetScissorRect.h"
 #include "Commands/SetViewport.h"
-#include "Commands/SetTextureSampler.h"
+#include "Commands/SetSampler.h"
+#include "Commands/SetTextureArray.h"
 
 namespace Renderer
 {
@@ -29,6 +30,12 @@ namespace Renderer
         renderer->Draw(commandList, actualData->model);
     }
 
+    void BackendDispatch::DrawInstanced(Renderer * renderer, CommandListID commandList, const void* data)
+    {
+        const Commands::DrawInstanced* actualData = static_cast<const Commands::DrawInstanced*>(data);
+        renderer->DrawInstanced(commandList, actualData->model, actualData->count);
+    }
+
     void BackendDispatch::PopMarker(Renderer* renderer, CommandListID commandList, const void* /*data*/)
     {
         renderer->PopMarker(commandList);
@@ -43,7 +50,7 @@ namespace Renderer
     void BackendDispatch::SetConstantBuffer(Renderer* renderer, CommandListID commandList, const void* data)
     {
         const Commands::SetConstantBuffer* actualData = static_cast<const Commands::SetConstantBuffer*>(data);
-        renderer->SetConstantBuffer(commandList, actualData->slot, actualData->gpuResource);
+        renderer->SetConstantBuffer(commandList, actualData->slot, actualData->gpuResource, actualData->frameIndex);
     }
 
     void BackendDispatch::BeginGraphicsPipeline(Renderer* renderer, CommandListID commandList, const void* data)
@@ -76,9 +83,21 @@ namespace Renderer
         renderer->SetViewport(commandList, actualData->viewport);
     }
 
-    void BackendDispatch::SetTextureSampler(Renderer* renderer, CommandListID commandList, const void* data)
+    void BackendDispatch::SetSampler(Renderer* renderer, CommandListID commandList, const void* data)
     {
-        const Commands::SetTextureSampler* actualData = static_cast<const Commands::SetTextureSampler*>(data);
-        renderer->SetTextureSampler(commandList, actualData->slot, actualData->texture, actualData->sampler);
+        const Commands::SetSampler* actualData = static_cast<const Commands::SetSampler*>(data);
+        renderer->SetSampler(commandList, actualData->slot, actualData->sampler);
+    }
+
+    void BackendDispatch::SetTexture(Renderer* renderer, CommandListID commandList, const void* data)
+    {
+        const Commands::SetTexture* actualData = static_cast<const Commands::SetTexture*>(data);
+        renderer->SetTexture(commandList, actualData->slot, actualData->texture);
+    }
+    
+    void BackendDispatch::SetTextureArray(Renderer* renderer, CommandListID commandList, const void* data)
+    {
+        const Commands::SetTextureArray* actualData = static_cast<const Commands::SetTextureArray*>(data);
+        renderer->SetTextureArray(commandList, actualData->slot, actualData->textureArray);
     }
 }

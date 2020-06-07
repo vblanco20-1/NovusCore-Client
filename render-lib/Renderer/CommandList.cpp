@@ -69,19 +69,33 @@ namespace Renderer
         command->viewport.maxDepth = maxDepth;
     }
 
-    void CommandList::SetConstantBuffer(u32 slot, void* gpuResource)
+    void CommandList::SetConstantBuffer(u32 slot, void* gpuResource, size_t frameIndex)
     {
         Commands::SetConstantBuffer* command = AddCommand<Commands::SetConstantBuffer>();
         command->slot = slot;
         command->gpuResource = gpuResource;
+        command->frameIndex = frameIndex;
     }
 
-    void CommandList::SetTextureSampler(u32 slot, TextureID texture, SamplerID sampler)
+    void CommandList::SetSampler(u32 slot, SamplerID sampler)
     {
-        Commands::SetTextureSampler* command = AddCommand<Commands::SetTextureSampler>();
+        Commands::SetSampler* command = AddCommand<Commands::SetSampler>();
+        command->slot = slot;
+        command->sampler = sampler;
+    }
+
+    void CommandList::SetTexture(u32 slot, TextureID texture)
+    {
+        Commands::SetTexture* command = AddCommand<Commands::SetTexture>();
         command->slot = slot;
         command->texture = texture;
-        command->sampler = sampler;
+    }
+
+    void CommandList::SetTextureArray(u32 slot, TextureArrayID textureArray)
+    {
+        Commands::SetTextureArray* command = AddCommand<Commands::SetTextureArray>();
+        command->slot = slot;
+        command->textureArray = textureArray;
     }
 
     void CommandList::Clear(ImageID imageID, Color color)
@@ -102,7 +116,16 @@ namespace Renderer
 
     void CommandList::Draw(ModelID modelID)
     {
+        assert(modelID != ModelID::Invalid());
         Commands::Draw* command = AddCommand<Commands::Draw>();
         command->model = modelID;
+    }
+    void CommandList::DrawInstanced(ModelID modelID, u32 count)
+    {
+        assert(modelID != ModelID::Invalid());
+        assert(count > 0);
+        Commands::DrawInstanced* command = AddCommand<Commands::DrawInstanced>();
+        command->model = modelID;
+        command->count = count;
     }
 }

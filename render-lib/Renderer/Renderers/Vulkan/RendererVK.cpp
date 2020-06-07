@@ -18,7 +18,7 @@
 
 namespace Renderer
 {
-    RendererVK::RendererVK()
+    RendererVK::RendererVK(TextureDesc& debugTexture)
         : _device(new Backend::RenderDeviceVK())
     {
         _device->Init();
@@ -29,6 +29,8 @@ namespace Renderer
         _pipelineHandler = new Backend::PipelineHandlerVK();
         _commandListHandler = new Backend::CommandListHandlerVK();
         _samplerHandler = new Backend::SamplerHandlerVK();
+
+        _textureHandler->LoadDebugTexture(_device, debugTexture);
     }
 
     void RendererVK::InitWindow(Window* window)
@@ -91,6 +93,11 @@ namespace Renderer
         return _textureHandler->CreateDataTexture(_device, desc);
     }
 
+    TextureArrayID RendererVK::CreateTextureArray(TextureArrayDesc& desc)
+    {
+        return _textureHandler->CreateTextureArray(_device, desc);
+    }
+
     ModelID RendererVK::LoadModel(ModelDesc& desc)
     {
         return _modelHandler->LoadModel(_device, desc);
@@ -99,6 +106,11 @@ namespace Renderer
     TextureID RendererVK::LoadTexture(TextureDesc& desc)
     {
         return _textureHandler->LoadTexture(_device, desc);
+    }
+
+    TextureID RendererVK::LoadTextureIntoArray(TextureDesc& desc, TextureArrayID textureArray, u32& arrayIndex)
+    {
+        return _textureHandler->LoadTextureIntoArray(_device, desc, textureArray, arrayIndex);
     }
 
     VertexShaderID RendererVK::LoadShader(VertexShaderDesc& desc)
@@ -142,25 +154,54 @@ namespace Renderer
         clearColorValue.float32[2] = color.b;
         clearColorValue.float32[3] = color.a;
 
-        VkImageSubresourceRange ImageSubresourceRange;
-        ImageSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        ImageSubresourceRange.baseMipLevel = 0;
-        ImageSubresourceRange.levelCount = 1;
-        ImageSubresourceRange.baseArrayLayer = 0;
-        ImageSubresourceRange.layerCount = 1;
+        VkImageSubresourceRange imageSubresourceRange;
+        imageSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageSubresourceRange.baseMipLevel = 0;
+        imageSubresourceRange.levelCount = 1;
+        imageSubresourceRange.baseArrayLayer = 0;
+        imageSubresourceRange.layerCount = 1;
 
         // Transition image to TRANSFER_DST_OPTIMAL
         _device->TransitionImageLayout(commandBuffer, image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-        vkCmdClearColorImage(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColorValue, 1, &ImageSubresourceRange);
+        vkCmdClearColorImage(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColorValue, 1, &imageSubresourceRange);
 
         // Transition image back to GENERAL
         _device->TransitionImageLayout(commandBuffer, image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
     }
 
-    void RendererVK::Clear(CommandListID /*commandListID*/, DepthImageID /*imageID*/, DepthClearFlags /*clearFlags*/, f32 /*depth*/, u8 /*stencil*/)
+    void RendererVK::Clear(CommandListID commandListID, DepthImageID imageID, DepthClearFlags clearFlags, f32 depth, u8 stencil)
     {
-        
+        VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
+        VkImage image = _imageHandler->GetImage(imageID);
+
+        VkClearDepthStencilValue clearDepthValue = {};
+        VkImageSubresourceRange range = {};
+
+        if (clearFlags == DepthClearFlags::DEPTH_CLEAR_DEPTH || clearFlags == DepthClearFlags::DEPTH_CLEAR_BOTH)
+        {
+            clearDepthValue.depth = depth;
+            range.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+        }
+
+        if (clearFlags == DepthClearFlags::DEPTH_CLEAR_STENCIL || clearFlags == DepthClearFlags::DEPTH_CLEAR_BOTH)
+        {
+            clearDepthValue.stencil = stencil;
+            range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+
+        range.layerCount = 1;
+        range.levelCount = 1;
+        range.baseArrayLayer = 0;
+        range.baseMipLevel = 0;
+
+        // Transition image to TRANSFER_DST_OPTIMAL
+        _device->TransitionImageLayout(commandBuffer, image, range.aspectMask, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+        vkCmdClearDepthStencilImage(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearDepthValue, 1, &range);
+
+        // Transition image back to DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        _device->TransitionImageLayout(commandBuffer, image, range.aspectMask, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
     }
 
     void RendererVK::Draw(CommandListID commandListID, ModelID modelID)
@@ -174,11 +215,29 @@ namespace Renderer
 
         // Bind index buffer
         VkBuffer indexBuffer = _modelHandler->GetIndexBuffer(modelID);
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         // Draw
         u32 numIndices = _modelHandler->GetNumIndices(modelID);
         vkCmdDrawIndexed(commandBuffer, numIndices, 1, 0, 0, 0);
+    }
+
+    void RendererVK::DrawInstanced(CommandListID commandListID, ModelID modelID, u32 count)
+    {
+        VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
+
+        // Bind vertex buffer
+        VkBuffer vertexBuffer = _modelHandler->GetVertexBuffer(modelID);
+        VkDeviceSize offsets[] = { 0 };
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
+
+        // Bind index buffer
+        VkBuffer indexBuffer = _modelHandler->GetIndexBuffer(modelID);
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+        // Draw
+        u32 numIndices = _modelHandler->GetNumIndices(modelID);
+        vkCmdDrawIndexed(commandBuffer, numIndices, count, 0, 0, 0);
     }
 
     void RendererVK::PopMarker(CommandListID commandListID)
@@ -193,7 +252,7 @@ namespace Renderer
         Backend::DebugMarkerUtilVK::PushMarker(commandBuffer, color, name);
     }
 
-    void RendererVK::SetConstantBuffer(CommandListID commandListID, u32 slot, void* gpuResource)
+    void RendererVK::SetConstantBuffer(CommandListID commandListID, u32 slot, void* gpuResource, size_t frameIndex)
     {
         VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
         GraphicsPipelineID graphicsPipelineID = _commandListHandler->GetBoundGraphicsPipeline(commandListID);
@@ -214,7 +273,7 @@ namespace Renderer
             poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
             poolInfo.poolSizeCount = 1;
             poolInfo.pPoolSizes = &poolSize;
-            poolInfo.maxSets = Backend::ConstantBufferBackendVK::FRAME_BUFFER_COUNT;
+            poolInfo.maxSets = constantBuffer->descriptorSet.Num;
 
             if (vkCreateDescriptorPool(_device->_device, &poolInfo, nullptr, &constantBuffer->descriptorPool) != VK_SUCCESS)
             {
@@ -227,21 +286,21 @@ namespace Renderer
             allocInfo.descriptorSetCount = 1;
             allocInfo.pSetLayouts = &descriptorSetLayout;
 
-            for (int i = 0; i < Backend::ConstantBufferBackendVK::FRAME_BUFFER_COUNT; i++)
+            for (int i = 0; i < constantBuffer->descriptorSet.Num; i++)
             {
-                if (vkAllocateDescriptorSets(_device->_device, &allocInfo, &constantBuffer->descriptorSet[i]) != VK_SUCCESS)
+                if (vkAllocateDescriptorSets(_device->_device, &allocInfo, &constantBuffer->descriptorSet.Get(i)) != VK_SUCCESS)
                 {
                     NC_LOG_FATAL("Failed to allocate descriptor sets!");
                 }
 
                 VkDescriptorBufferInfo descriptorBufferInfo = {};
-                descriptorBufferInfo.buffer = constantBuffer->uniformBuffers[i];
+                descriptorBufferInfo.buffer = constantBuffer->uniformBuffers.Get(i);
                 descriptorBufferInfo.offset = 0;
                 descriptorBufferInfo.range = constantBuffer->bufferSize;
 
                 VkWriteDescriptorSet descriptorWrite = {};
                 descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrite.dstSet = constantBuffer->descriptorSet[i];
+                descriptorWrite.dstSet = constantBuffer->descriptorSet.Get(i);
                 descriptorWrite.dstBinding = 0;
                 descriptorWrite.dstArrayElement = 0;
                 descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -255,9 +314,7 @@ namespace Renderer
         }
 
         // Bind descriptor set
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, slot, 1, &constantBuffer->descriptorSet[constantBuffer->useIndex], 0, nullptr);
-        // Flip useIndex between 0 and 1
-        constantBuffer->useIndex = !constantBuffer->useIndex;
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, slot, 1, &constantBuffer->descriptorSet.Get(frameIndex), 0, nullptr);
     }
 
     void RendererVK::BeginPipeline(CommandListID commandListID, GraphicsPipelineID pipelineID)
@@ -320,16 +377,40 @@ namespace Renderer
         
     }
 
-    void RendererVK::SetTextureSampler(CommandListID commandListID, u32 slot, TextureID textureID, SamplerID samplerID)
+    void RendererVK::SetSampler(CommandListID commandListID, u32 slot, SamplerID samplerID)
     {
         VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
         GraphicsPipelineID graphicsPipelineID = _commandListHandler->GetBoundGraphicsPipeline(commandListID);
         VkPipelineLayout pipelineLayout = _pipelineHandler->GetPipelineLayout(graphicsPipelineID);
 
-        VkDescriptorSet combinedSamplerDescriptor = _samplerHandler->GetCombinedSampler(_device, _textureHandler, _pipelineHandler, samplerID, slot, textureID, graphicsPipelineID);
+        VkDescriptorSet samplerDescriptor = _samplerHandler->GetDescriptorSet(samplerID);
 
         // Bind descriptor set
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, slot, 1, &combinedSamplerDescriptor, 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, slot, 1, &samplerDescriptor, 0, nullptr);
+    }
+
+    void RendererVK::SetTexture(CommandListID commandListID, u32 slot, TextureID textureID)
+    {
+        VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
+        GraphicsPipelineID graphicsPipelineID = _commandListHandler->GetBoundGraphicsPipeline(commandListID);
+        VkPipelineLayout pipelineLayout = _pipelineHandler->GetPipelineLayout(graphicsPipelineID);
+
+        VkDescriptorSet textureDescriptor = _textureHandler->GetDescriptorSet(textureID);
+
+        // Bind descriptor set
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, slot, 1, &textureDescriptor, 0, nullptr);
+    }
+
+    void RendererVK::SetTextureArray(CommandListID commandListID, u32 slot, TextureArrayID textureArrayID)
+    {
+        VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
+        GraphicsPipelineID graphicsPipelineID = _commandListHandler->GetBoundGraphicsPipeline(commandListID);
+        VkPipelineLayout pipelineLayout = _pipelineHandler->GetPipelineLayout(graphicsPipelineID);
+
+        VkDescriptorSet textureArrayDescriptor = _textureHandler->GetDescriptorSet(textureArrayID);
+
+        // Bind descriptor set
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, slot, 1, &textureArrayDescriptor, 0, nullptr);
     }
 
     void RendererVK::Present(Window* window, ImageID imageID)
