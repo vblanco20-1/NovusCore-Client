@@ -5,11 +5,11 @@
 
 enum class MovementFlags : u32
 {
-    NONE,
-    FORWARD,
-    BACKWARD,
-    LEFT,
-    RIGHT,
+    NONE = 1 << 0,
+    FORWARD = 1 << 1,
+    BACKWARD = 1 << 2,
+    LEFT = 1 << 3,
+    RIGHT = 1 << 4,
 
     VERTICAL = FORWARD | BACKWARD,
     HORIZONTAL = LEFT | RIGHT,

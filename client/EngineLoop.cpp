@@ -17,6 +17,7 @@
 #include "ECS/Components/Network/AuthenticationSingleton.h"
 #include "ECS/Components/Rendering/Model.h"
 #include "ECS/Components/Transform.h"
+#include "ECS/Components/LocalplayerSingleton.h"
 
 // Components
 
@@ -24,10 +25,14 @@
 #include "ECS/Systems/Network/ConnectionSystems.h"
 #include "ECS/Systems/UI/AddElementSystem.h"
 #include "ECS/Systems/Rendering/RenderModelSystem.h"
+#include "ECS/Systems/MovementSystem.h"
 
 // Handlers
 #include "Network/Handlers/Client/GeneralHandlers.h"
 #include "Scripting/ScriptHandler.h"
+
+#include <InputManager.h>
+#include <GLFW/glfw3.h>
 
 EngineLoop::EngineLoop() : _isRunning(false), _inputQueue(256), _outputQueue(256)
 {
@@ -91,12 +96,20 @@ void EngineLoop::Run()
     ScriptSingleton& scriptSingleton = _updateFramework.gameRegistry.set<ScriptSingleton>();
     ConnectionSingleton& connectionSingleton = _updateFramework.gameRegistry.set<ConnectionSingleton>();
     AuthenticationSingleton& authenticationSingleton = _updateFramework.gameRegistry.set<AuthenticationSingleton>();
+    LocalplayerSingleton& localplayerSingleton = _updateFramework.gameRegistry.set<LocalplayerSingleton>();
     connectionSingleton.connection = _network.client;
 
     Timer timer;
     f32 targetDelta = 1.0f / 60.f;
 
     _clientRenderer = new ClientRenderer();
+
+    // Bind Movement Keys
+    InputManager * inputManager = ServiceLocator::GetInputManager();
+    inputManager->RegisterKeybind("Move Forward", GLFW_KEY_W, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE);
+    inputManager->RegisterKeybind("Move Backward", GLFW_KEY_S, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE);
+    inputManager->RegisterKeybind("Move Left", GLFW_KEY_A, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE);
+    inputManager->RegisterKeybind("Move Right", GLFW_KEY_D, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE);
 
     std::string scriptPath = "./Data/scripts";
     ScriptHandler::LoadScriptDirectory(scriptPath);
@@ -215,6 +228,15 @@ void EngineLoop::SetupUpdateFramework()
         });
     addElementSystemTask.gather(connectionUpdateSystemTask);
 
+    // MovementSystem
+    tf::Task movementSystemTask = framework.emplace([&gameRegistry]()
+        {
+            ZoneScopedNC("MovementSystem::Update", tracy::Color::Blue2)
+                MovementSystem::Update(gameRegistry);
+            gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
+        });
+    movementSystemTask.gather(connectionUpdateSystemTask);
+
     // RenderModelSystem
     tf::Task renderModelSystemTask = framework.emplace([this, &gameRegistry]()
         {
@@ -222,7 +244,7 @@ void EngineLoop::SetupUpdateFramework()
                 RenderModelSystem::Update(gameRegistry, _clientRenderer);
             gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
         });
-    renderModelSystemTask.gather(addElementSystemTask);
+    renderModelSystemTask.gather(movementSystemTask);
 
     // ScriptSingletonTask
     tf::Task ScriptSingletonTask = framework.emplace([&uiRegistry, &gameRegistry]()

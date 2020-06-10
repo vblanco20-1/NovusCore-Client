@@ -36,10 +36,10 @@ void ConnectionUpdateSystem::HandleRead(BaseSocket* socket)
 
     while (buffer->GetActiveSize())
     {
-        u16 opcode = 0;
+        Opcode opcode = Opcode::INVALID;
         u16 size = 0;
 
-        buffer->GetU16(opcode);
+        buffer->Get(opcode);
         buffer->GetU16(size);
 
         if (size > NETWORK_BUFFER_SIZE)
@@ -100,7 +100,7 @@ void ConnectionUpdateSystem::HandleConnect(BaseSocket* socket)
     if (!authentication.srp.StartAuthentication())
         return;
 
-    buffer->PutU16(Opcode::CMSG_LOGON_CHALLENGE);
+    buffer->Put(Opcode::CMSG_LOGON_CHALLENGE);
     buffer->PutU16(0);
 
     u16 payloadSize = logonChallenge.Serialize(buffer, authentication.srp.aBuffer);

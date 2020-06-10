@@ -37,7 +37,7 @@ bool Client::AuthHandlers::HandshakeHandler(std::shared_ptr<NetworkClient> clien
 
     std::memcpy(clientResponse.M1, authenticationSingleton.srp.M, 32);
 
-    buffer->PutU16(Opcode::CMSG_LOGON_RESPONSE);
+    buffer->Put(Opcode::CMSG_LOGON_RESPONSE);
     buffer->PutU16(0);
 
     u16 payloadSize = clientResponse.Serialize(buffer);
@@ -66,7 +66,7 @@ bool Client::AuthHandlers::HandshakeResponseHandler(std::shared_ptr<NetworkClien
 
     // Send CMSG_CONNECTED (This will be changed in the future)
     std::shared_ptr<ByteBuffer> buffer = ByteBuffer::Borrow<128>();
-    buffer->PutU16(Opcode::CMSG_CONNECTED);
+    buffer->Put(Opcode::CMSG_CONNECTED);
     buffer->PutU16(0);
     client->Send(buffer.get());
 
