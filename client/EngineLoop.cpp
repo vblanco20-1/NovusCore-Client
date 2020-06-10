@@ -92,7 +92,6 @@ void EngineLoop::Run()
 
     MapLoader::Load(_updateFramework.gameRegistry);
 
-    MapSingleton& mapSingleton = _updateFramework.gameRegistry.set<MapSingleton>();
     TimeSingleton& timeSingleton = _updateFramework.gameRegistry.set<TimeSingleton>();
     ScriptSingleton& scriptSingleton = _updateFramework.gameRegistry.set<ScriptSingleton>();
     ConnectionSingleton& connectionSingleton = _updateFramework.gameRegistry.set<ConnectionSingleton>();
