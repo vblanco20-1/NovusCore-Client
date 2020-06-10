@@ -94,14 +94,14 @@ void Camera::Init()
     });
 
     UpdateCameraVectors();
+
+    ServiceLocator::SetCamera(this);
 }
 
 void Camera::Update(f32 deltaTime)
 {
     InputManager* inputManager = ServiceLocator::GetInputManager();
     _lastDeltaTime = deltaTime;
-
-    
 
     // Movement
     if (inputManager->IsKeyPressed("Camera Forward"_h))

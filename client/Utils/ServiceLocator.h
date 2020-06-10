@@ -7,6 +7,7 @@
 class MessageHandler;
 class Window;
 class InputManager;
+class Camera;
 namespace Renderer
 {
     class Renderer;
@@ -24,6 +25,8 @@ public:
     static void SetWindow(Window* window);
     static InputManager* GetInputManager() { return _inputManager; }
     static void SetInputManager(InputManager* inputManager);
+    static Camera* GetCamera() { return _camera; }
+    static void SetCamera(Camera* camera);
     static moodycamel::ConcurrentQueue<Message>* GetMainInputQueue() 
     {
         assert(_mainInputQueue != nullptr);
@@ -48,6 +51,7 @@ private:
     static MessageHandler* _networkMessageHandler;
     static Window* _window;
     static InputManager* _inputManager;
+    static Camera* _camera;
     static moodycamel::ConcurrentQueue<Message>* _mainInputQueue;
     static Renderer::Renderer* _renderer;
 };

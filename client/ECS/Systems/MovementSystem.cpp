@@ -4,6 +4,7 @@
 #include <Utils/StringUtils.h>
 #include <Networking/Opcode.h>
 #include "../../Utils/ServiceLocator.h"
+#include "../../Rendering/Camera.h"
 #include "../Components/Singletons/TimeSingleton.h"
 #include "../Components/Network/ConnectionSingleton.h"
 #include "../Components/LocalplayerSingleton.h"
@@ -95,25 +96,33 @@ void MovementSystem::Update(entt::registry& registry)
         // Make sure we only send stop once
         if (transform.moveFlags != originalFlags)
         {
+            Camera* camera = ServiceLocator::GetCamera();
+
             ConnectionSingleton& connectionSingleton = registry.ctx<ConnectionSingleton>();
             std::shared_ptr<ByteBuffer> buffer = ByteBuffer::Borrow<128>();
             buffer->Put(Opcode::MSG_MOVE_STOP_ENTITY);
             buffer->PutU16(32);
 
+            vec3 position = camera->GetPosition();
+            vec3 rotation = camera->GetRotation();
+
             buffer->Put(localplayerSingleton.entity);
             buffer->Put(transform.moveFlags);
-            buffer->Put(transform.position);
-            buffer->Put(transform.rotation);
+            buffer->Put(position);
+            buffer->Put(rotation);
             connectionSingleton.connection->Send(buffer.get());
-            
+
+            transform.position = position;
+            transform.rotation = rotation;
             transform.isDirty = true;
         }
     }
     else
     {
         // Calculate new position
+        Camera* camera = ServiceLocator::GetCamera();
         TimeSingleton& timeSingleton = registry.ctx<TimeSingleton>();
-        transform.position.x += 1 * timeSingleton.deltaTime;
+        //transform.position.x += 1 * timeSingleton.deltaTime;
 
         // Send Packet
         ConnectionSingleton& connectionSingleton = registry.ctx<ConnectionSingleton>();
@@ -130,11 +139,17 @@ void MovementSystem::Update(entt::registry& registry)
 
         buffer->PutU16(32);
 
+        vec3 position = camera->GetPosition();
+        vec3 rotation = camera->GetRotation();
+
         buffer->Put(localplayerSingleton.entity);
         buffer->Put(transform.moveFlags);
-        buffer->Put(transform.position);
-        buffer->Put(transform.rotation);
+        buffer->Put(position);
+        buffer->Put(rotation);
         connectionSingleton.connection->Send(buffer.get());
+
+        transform.position = position;
+        transform.rotation = rotation;
         transform.isDirty = true;
     }
 }

@@ -7,6 +7,7 @@
 #include <Networking/MessageHandler.h>
 #include "Utils/MapLoader.h"
 #include "Rendering/ClientRenderer.h"
+#include "Rendering/Camera.h"
 #include <Renderer/Renderer.h>
 
 // Component Singletons
@@ -110,6 +111,40 @@ void EngineLoop::Run()
     inputManager->RegisterKeybind("Move Backward", GLFW_KEY_S, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE);
     inputManager->RegisterKeybind("Move Left", GLFW_KEY_A, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE);
     inputManager->RegisterKeybind("Move Right", GLFW_KEY_D, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE);
+
+    inputManager->RegisterMousePositionCallback("MouseLook - Player", [this](Window* window, f32 xPos, f32 yPos)
+        {
+            entt::registry* registry = ServiceLocator::GetGameRegistry();
+
+            LocalplayerSingleton& localplayerSingleton = registry->ctx<LocalplayerSingleton>();
+            if (localplayerSingleton.entity == entt::null)
+                return;
+
+            Camera* camera = ServiceLocator::GetCamera();
+            if (camera->IsMouseCaptured())
+            {
+                ConnectionSingleton& connectionSingleton = registry->ctx<ConnectionSingleton>();
+                Transform& transform = registry->get<Transform>(localplayerSingleton.entity);
+
+                std::shared_ptr<ByteBuffer> buffer = ByteBuffer::Borrow<128>();
+                buffer->Put(Opcode::MSG_MOVE_ENTITY);
+
+                buffer->PutU16(32);
+
+                vec3 position = camera->GetPosition();
+                vec3 rotation = camera->GetRotation();
+
+                buffer->Put(localplayerSingleton.entity);
+                buffer->Put(transform.moveFlags);
+                buffer->Put(position);
+                buffer->Put(rotation);
+                connectionSingleton.connection->Send(buffer.get());
+
+                transform.position = position;
+                transform.rotation = rotation;
+                transform.isDirty = true;
+            }
+        });
 
     std::string scriptPath = "./Data/scripts";
     ScriptHandler::LoadScriptDirectory(scriptPath);

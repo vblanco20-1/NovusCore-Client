@@ -14,6 +14,10 @@ public:
     mat4x4 GetViewMatrix() const;
     mat4x4 GetCameraMatrix() const;
 
+    vec3 GetPosition() { return _position; }
+    vec3 GetRotation() { return vec3(0, _yaw, _pitch); }
+    bool IsMouseCaptured() { return _captureMouse; }
+
 private:
     void UpdateCameraVectors();
 

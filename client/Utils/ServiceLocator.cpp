@@ -5,6 +5,7 @@ entt::registry* ServiceLocator::_uiRegistry = nullptr;
 MessageHandler* ServiceLocator::_networkMessageHandler = nullptr;
 Window* ServiceLocator::_window = nullptr;
 InputManager* ServiceLocator::_inputManager = nullptr;
+Camera* ServiceLocator::_camera = nullptr;
 Renderer::Renderer* ServiceLocator::_renderer = nullptr;
 
 moodycamel::ConcurrentQueue<Message>* ServiceLocator::_mainInputQueue = nullptr;
@@ -34,6 +35,12 @@ void ServiceLocator::SetInputManager(InputManager* inputManager)
 {
     assert(_inputManager == nullptr);
     _inputManager = inputManager;
+}
+
+void ServiceLocator::SetCamera(Camera* camera)
+{
+    assert(_camera == nullptr);
+    _camera = camera;
 }
 
 void ServiceLocator::SetRenderer(Renderer::Renderer* renderer)
