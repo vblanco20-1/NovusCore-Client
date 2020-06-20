@@ -1,5 +1,6 @@
 #pragma once
 #include <NovusTypes.h>
+#include <Utils/DebugHandler.h>
 #include <cassert>
 
 namespace Renderer
@@ -365,6 +366,7 @@ namespace Renderer
         f32 minLOD = 0.0f;
         f32 maxLOD = std::numeric_limits<f32>::max();
         ShaderVisibility shaderVisibility = SHADER_VISIBILITY_PIXEL;
+        bool unnormalizedCoordinates = false;
     };
 
     enum ImageFormat
@@ -434,4 +436,83 @@ namespace Renderer
         DEPTH_IMAGE_FORMAT_D16_UNORM,
         DEPTH_IMAGE_FORMAT_R16_UNORM
     };
+
+    enum ImageComponentType
+    {
+        IMAGE_COMPONENT_TYPE_FLOAT,
+        IMAGE_COMPONENT_TYPE_UINT,
+        IMAGE_COMPONENT_TYPE_SINT,
+        IMAGE_COMPONENT_TYPE_UNORM,
+        IMAGE_COMPONENT_TYPE_SNORM,
+
+        IMAGE_COMPONENT_TYPE_COUNT
+    };
+
+    inline ImageComponentType ToImageComponentType(ImageFormat imageFormat)
+    {
+        switch (imageFormat)
+        {
+            case IMAGE_FORMAT_R32G32B32A32_FLOAT:
+            case IMAGE_FORMAT_R32G32B32_FLOAT:
+            case IMAGE_FORMAT_R16G16B16A16_FLOAT:
+            case IMAGE_FORMAT_R32G32_FLOAT:
+            case IMAGE_FORMAT_R11G11B10_FLOAT:
+            case IMAGE_FORMAT_R16G16_FLOAT:
+            case IMAGE_FORMAT_R32_FLOAT:
+            case IMAGE_FORMAT_R16_FLOAT:
+                return IMAGE_COMPONENT_TYPE_FLOAT;
+
+            case IMAGE_FORMAT_R32G32B32A32_UINT:
+            case IMAGE_FORMAT_R32G32B32_UINT:
+            case IMAGE_FORMAT_R16G16B16A16_UINT:
+            case IMAGE_FORMAT_R32G32_UINT:
+            case IMAGE_FORMAT_R10G10B10A2_UINT:
+            case IMAGE_FORMAT_R8G8B8A8_UINT:
+            case IMAGE_FORMAT_R16G16_UINT:
+            case IMAGE_FORMAT_R32_UINT:
+            case IMAGE_FORMAT_R8G8_UINT:
+            case IMAGE_FORMAT_R16_UINT:
+            case IMAGE_FORMAT_R8_UINT:
+                return IMAGE_COMPONENT_TYPE_UINT;
+
+            case IMAGE_FORMAT_R32G32B32A32_SINT:
+            case IMAGE_FORMAT_R32G32B32_SINT:
+            case IMAGE_FORMAT_R16G16B16A16_SINT:
+            case IMAGE_FORMAT_R32G32_SINT:
+            case IMAGE_FORMAT_R8G8B8A8_SINT:
+            case IMAGE_FORMAT_R16G16_SINT:
+            case IMAGE_FORMAT_R32_SINT:
+            case IMAGE_FORMAT_R8G8_SINT:
+            case IMAGE_FORMAT_R16_SINT:
+            case IMAGE_FORMAT_R8_SINT:
+                return IMAGE_COMPONENT_TYPE_SINT;
+            
+            case IMAGE_FORMAT_R16G16B16A16_UNORM:
+            case IMAGE_FORMAT_R10G10B10A2_UNORM:
+            case IMAGE_FORMAT_R8G8B8A8_UNORM:
+            case IMAGE_FORMAT_R8G8B8A8_UNORM_SRGB:
+            case IMAGE_FORMAT_R16G16_UNORM:
+            case IMAGE_FORMAT_R8G8_UNORM:
+            case IMAGE_FORMAT_D16_UNORM:
+            case IMAGE_FORMAT_R16_UNORM:
+            case IMAGE_FORMAT_R8_UNORM:
+                return IMAGE_COMPONENT_TYPE_UNORM;
+
+            case IMAGE_FORMAT_R16G16B16A16_SNORM:
+            case IMAGE_FORMAT_R8G8B8A8_SNORM:
+            case IMAGE_FORMAT_R16G16_SNORM:
+            case IMAGE_FORMAT_R8G8_SNORM:
+            case IMAGE_FORMAT_R16_SNORM:
+            case IMAGE_FORMAT_R8_SNORM:
+                return IMAGE_COMPONENT_TYPE_SNORM;
+
+            case IMAGE_FORMAT_UNKNOWN:
+                NC_LOG_FATAL("This should never hit, we should catch unknowns earlier!");
+
+            default:
+                NC_LOG_FATAL("This should never hit, did we forget to add more cases after updating ImageFormat?");
+                
+        }
+        return IMAGE_COMPONENT_TYPE_FLOAT;
+    }
 }

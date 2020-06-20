@@ -87,7 +87,7 @@ bool MapLoader::ExtractChunkData(FileReader& reader, Terrain::Chunk& chunk, Stri
     buffer.Get<Terrain::HeightHeader>(chunk.heightHeader);
     buffer.Get<Terrain::HeightBox>(chunk.heightBox);
 
-    for (u32 i = 0; i < 256; i++)
+    for (u32 i = 0; i < Terrain::MAP_CELLS_PER_CHUNK; i++)
     {
         buffer.Get<Terrain::Cell>(chunk.cells[i]);
 

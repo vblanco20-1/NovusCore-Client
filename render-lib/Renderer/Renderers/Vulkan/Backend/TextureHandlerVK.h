@@ -40,6 +40,7 @@ namespace Renderer
 
                 i32 width;
                 i32 height;
+                i32 layers = 1;
 
                 VkFormat format;
 

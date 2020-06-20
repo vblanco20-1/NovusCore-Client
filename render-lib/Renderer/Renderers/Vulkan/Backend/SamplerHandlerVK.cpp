@@ -51,7 +51,7 @@ namespace Renderer
             samplerInfo.anisotropyEnable = ToAnisotropyEnabled(desc.filter);
             samplerInfo.maxAnisotropy = static_cast<f32>(desc.maxAnisotropy);
             samplerInfo.borderColor = ToVkBorderColor(desc.borderColor);
-            samplerInfo.unnormalizedCoordinates = VK_FALSE;
+            samplerInfo.unnormalizedCoordinates = desc.unnormalizedCoordinates;
             samplerInfo.compareEnable = desc.comparisonFunc != ComparisonFunc::COMPARISON_FUNC_ALWAYS;
             samplerInfo.compareOp = ToVkCompareOp(desc.comparisonFunc);
             samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;

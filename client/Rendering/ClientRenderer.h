@@ -51,6 +51,9 @@ private:
 
     // Permanent resources
     Renderer::ImageID _mainColor;
+    Renderer::ImageID _debugTextureID;
+    Renderer::ImageID _debugAlphaMap;
+
     Renderer::DepthImageID _mainDepth;
 
     Renderer::ModelID _cubeModel;
@@ -63,4 +66,6 @@ private:
     // Sub renderers
     UIRenderer* _uiRenderer;
     TerrainRenderer* _terrainRenderer;
+
+    u8 _debugDrawingMode = 0;
 };

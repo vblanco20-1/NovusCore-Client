@@ -71,7 +71,9 @@ namespace Renderer
             CreateSwapChain(size, swapChain);
             CreateImageViews(swapChain);
             CreateFrameBuffers(swapChain);
-            CreateBlitPipeline(shaderHandler, swapChain);
+            CreateBlitPipeline(shaderHandler, swapChain, "blitFloat", IMAGE_COMPONENT_TYPE_FLOAT);
+            CreateBlitPipeline(shaderHandler, swapChain, "blitUint", IMAGE_COMPONENT_TYPE_UINT);
+            CreateBlitPipeline(shaderHandler, swapChain, "blitInt", IMAGE_COMPONENT_TYPE_SINT);
         }
 
         BufferBackend* RenderDeviceVK::CreateBufferBackend(size_t size, Backend::BufferBackend::Type type)
@@ -576,17 +578,43 @@ namespace Renderer
                     NC_LOG_FATAL("Failed to create framebuffer!");
                 }
             }
+
+            // Create sampler
+            VkSamplerCreateInfo samplerInfo = {};
+            samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+            samplerInfo.magFilter = VK_FILTER_NEAREST;
+            samplerInfo.minFilter = VK_FILTER_NEAREST;
+            samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            samplerInfo.anisotropyEnable = VK_TRUE;
+            samplerInfo.maxAnisotropy = 16;
+            samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+            samplerInfo.unnormalizedCoordinates = VK_FALSE;
+            samplerInfo.compareEnable = VK_FALSE;
+            samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            samplerInfo.mipLodBias = 0.0f;
+            samplerInfo.minLod = 0.0f;
+            samplerInfo.maxLod = 0.0f;
+
+            if (vkCreateSampler(_device, &samplerInfo, nullptr, &swapChain->sampler) != VK_SUCCESS)
+            {
+                NC_LOG_FATAL("Failed to create texture sampler!");
+            }
         }
 
-        void RenderDeviceVK::CreateBlitPipeline(ShaderHandlerVK* shaderHandler, SwapChainVK* swapChain)
+        void RenderDeviceVK::CreateBlitPipeline(ShaderHandlerVK* shaderHandler, SwapChainVK* swapChain, std::string fragShaderName, ImageComponentType componentType)
         {
+            BlitPipeline& pipeline = swapChain->blitPipelines[componentType];
+
             // Load shaders
             VertexShaderDesc vertexShaderDesc;
             vertexShaderDesc.path = "Data/shaders/blit.vert.spv";
             VertexShaderID vertexShader = shaderHandler->LoadShader(this, vertexShaderDesc);
 
             PixelShaderDesc pixelShaderDesc;
-            pixelShaderDesc.path = "Data/shaders/blit.frag.spv";
+            pixelShaderDesc.path = "Data/shaders/" + fragShaderName + ".frag.spv";
             PixelShaderID pixelShader = shaderHandler->LoadShader(this, pixelShaderDesc);
 
             // Create shader stage infos
@@ -619,7 +647,7 @@ namespace Renderer
             layoutInfo.bindingCount = 1;
             layoutInfo.pBindings = &samplerLayoutBinding;
 
-            if (vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &swapChain->descriptorSetLayout) != VK_SUCCESS)
+            if (vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &pipeline.descriptorSetLayout) != VK_SUCCESS)
             {
                 NC_LOG_FATAL("Failed to create descriptor set layout!");
             }
@@ -635,7 +663,7 @@ namespace Renderer
             descriptorPoolInfo.pPoolSizes = &descriptorPoolSize;
             descriptorPoolInfo.maxSets = 1;
 
-            if (vkCreateDescriptorPool(_device, &descriptorPoolInfo, nullptr, &swapChain->descriptorPool) != VK_SUCCESS)
+            if (vkCreateDescriptorPool(_device, &descriptorPoolInfo, nullptr, &pipeline.descriptorPool) != VK_SUCCESS)
             {
                 NC_LOG_FATAL("Failed to create descriptor pool!");
             }
@@ -643,37 +671,13 @@ namespace Renderer
             // Create descriptor set
             VkDescriptorSetAllocateInfo allocInfo = {};
             allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            allocInfo.descriptorPool = swapChain->descriptorPool;
+            allocInfo.descriptorPool = pipeline.descriptorPool;
             allocInfo.descriptorSetCount = 1;
-            allocInfo.pSetLayouts = &swapChain->descriptorSetLayout;
+            allocInfo.pSetLayouts = &pipeline.descriptorSetLayout;
 
-            if (vkAllocateDescriptorSets(_device, &allocInfo, &swapChain->descriptorSet) != VK_SUCCESS)
+            if (vkAllocateDescriptorSets(_device, &allocInfo, &pipeline.descriptorSet) != VK_SUCCESS)
             {
                 NC_LOG_FATAL("Failed to allocate descriptor sets!");
-            }
-
-            // Create sampler
-            VkSamplerCreateInfo samplerInfo = {};
-            samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            samplerInfo.magFilter = VK_FILTER_NEAREST;
-            samplerInfo.minFilter = VK_FILTER_NEAREST;
-            samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            samplerInfo.anisotropyEnable = VK_TRUE;
-            samplerInfo.maxAnisotropy = 16;
-            samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-            samplerInfo.unnormalizedCoordinates = VK_FALSE;
-            samplerInfo.compareEnable = VK_FALSE;
-            samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            samplerInfo.mipLodBias = 0.0f;
-            samplerInfo.minLod = 0.0f;
-            samplerInfo.maxLod = 0.0f;
-
-            if (vkCreateSampler(_device, &samplerInfo, nullptr, &swapChain->sampler) != VK_SUCCESS)
-            {
-                NC_LOG_FATAL("Failed to create texture sampler!");
             }
 
             // No vertex info
@@ -758,11 +762,11 @@ namespace Renderer
             VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
             pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
             pipelineLayoutInfo.setLayoutCount = 1;
-            pipelineLayoutInfo.pSetLayouts = &swapChain->descriptorSetLayout;
+            pipelineLayoutInfo.pSetLayouts = &pipeline.descriptorSetLayout;
             pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
             pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-            if (vkCreatePipelineLayout(_device, &pipelineLayoutInfo, nullptr, &swapChain->pipelineLayout) != VK_SUCCESS)
+            if (vkCreatePipelineLayout(_device, &pipelineLayoutInfo, nullptr, &pipeline.pipelineLayout) != VK_SUCCESS)
             {
                 NC_LOG_FATAL("Failed to create pipeline layout!");
             }
@@ -779,13 +783,13 @@ namespace Renderer
             pipelineInfo.pDepthStencilState = nullptr; // Optional
             pipelineInfo.pColorBlendState = &colorBlending;
             pipelineInfo.pDynamicState = nullptr; // Optional
-            pipelineInfo.layout = swapChain->pipelineLayout;
+            pipelineInfo.layout = pipeline.pipelineLayout;
             pipelineInfo.renderPass = swapChain->renderPass;
             pipelineInfo.subpass = 0;
             pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
             pipelineInfo.basePipelineIndex = -1; // Optional
 
-            if (vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &swapChain->pipeline) != VK_SUCCESS)
+            if (vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.pipeline) != VK_SUCCESS)
             {
                 NC_LOG_FATAL("Failed to create graphics pipeline!");
             }
@@ -1019,7 +1023,7 @@ namespace Renderer
             EndSingleTimeCommands(commandBuffer);
         }
 
-        void RenderDeviceVK::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, u32 width, u32 height)
+        void RenderDeviceVK::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, u32 width, u32 height, u32 numLayers)
         {
             VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -1031,7 +1035,7 @@ namespace Renderer
             region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             region.imageSubresource.mipLevel = 0;
             region.imageSubresource.baseArrayLayer = 0;
-            region.imageSubresource.layerCount = 1;
+            region.imageSubresource.layerCount = numLayers;
 
             region.imageOffset = { 0, 0, 0 };
             region.imageExtent = {
@@ -1052,16 +1056,16 @@ namespace Renderer
             EndSingleTimeCommands(commandBuffer);
         }
 
-        void RenderDeviceVK::TransitionImageLayout(VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout)
+        void RenderDeviceVK::TransitionImageLayout(VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout, u32 numLayers)
         {
             VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
-            TransitionImageLayout(commandBuffer, image, aspects, oldLayout, newLayout);
+            TransitionImageLayout(commandBuffer, image, aspects, oldLayout, newLayout, numLayers);
 
             EndSingleTimeCommands(commandBuffer);
         }
 
-        void RenderDeviceVK::TransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout)
+        void RenderDeviceVK::TransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout, u32 numLayers)
         {
             VkImageMemoryBarrier imageBarrier = {};
             imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1072,7 +1076,7 @@ namespace Renderer
             imageBarrier.subresourceRange.aspectMask = aspects;
             imageBarrier.subresourceRange.baseMipLevel = 0;
             imageBarrier.subresourceRange.levelCount = 1;
-            imageBarrier.subresourceRange.layerCount = 1;
+            imageBarrier.subresourceRange.layerCount = numLayers;
 
             VkPipelineStageFlagBits srcFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
             VkPipelineStageFlagBits dstFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;

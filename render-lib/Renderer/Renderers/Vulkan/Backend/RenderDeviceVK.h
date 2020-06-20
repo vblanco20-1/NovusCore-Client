@@ -65,7 +65,7 @@ namespace Renderer
             void CreateSwapChain(const ivec2& windowSize, SwapChainVK* swapChain);
             void CreateImageViews(SwapChainVK* swapChain);
             void CreateFrameBuffers(SwapChainVK* swapChain);
-            void CreateBlitPipeline(ShaderHandlerVK* shaderHandler, SwapChainVK* swapChain);
+            void CreateBlitPipeline(ShaderHandlerVK* shaderHandler, SwapChainVK* swapChain, std::string fragShaderName, ImageComponentType componentType);
 
             int RateDeviceSuitability(VkPhysicalDevice device);
             QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
@@ -79,9 +79,9 @@ namespace Renderer
 
             void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkBuffer& buffer, VmaAllocation& allocation);
             void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-            void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, u32 width, u32 height);
-            void TransitionImageLayout(VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout);
-            void TransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout);
+            void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, u32 width, u32 height, u32 numLayers);
+            void TransitionImageLayout(VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout, u32 numLayers);
+            void TransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout, u32 numLayers);
 
         private:
             static const u32 FRAME_INDEX_COUNT = 2;

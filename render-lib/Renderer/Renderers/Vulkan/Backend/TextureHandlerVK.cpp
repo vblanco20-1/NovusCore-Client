@@ -215,6 +215,7 @@ namespace Renderer
         {
             assert(desc.width > 0);
             assert(desc.height > 0);
+            assert(desc.layers > 0);
             assert(desc.data != nullptr);
 
             size_t nextHandle = _textures.size();
@@ -228,6 +229,7 @@ namespace Renderer
 
             texture.width = desc.width;
             texture.height = desc.height;
+            texture.layers = desc.layers;
             texture.format = FormatConverterVK::ToVkFormat(desc.format);
 
             CreateTexture(device, texture, desc.data);
@@ -381,7 +383,7 @@ namespace Renderer
             VkBuffer stagingBuffer;
             VmaAllocation stagingBufferAllocation;
 
-            VkDeviceSize imageSize = Math::RoofToInt(static_cast<f64>(texture.width) * static_cast<f64>(texture.height) * FormatTexelSize(texture.format));
+            VkDeviceSize imageSize = Math::RoofToInt(static_cast<f64>(texture.width) * static_cast<f64>(texture.height) * static_cast<f64>(texture.layers) * FormatTexelSize(texture.format));
 
             device->CreateBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY, stagingBuffer, stagingBufferAllocation);
 
@@ -400,7 +402,7 @@ namespace Renderer
             imageInfo.extent.height = static_cast<u32>(texture.height);
             imageInfo.extent.depth = 1;
             imageInfo.mipLevels = 1;
-            imageInfo.arrayLayers = 1;
+            imageInfo.arrayLayers = texture.layers;
             imageInfo.format = texture.format;
             imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
             imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -420,21 +422,21 @@ namespace Renderer
             DebugMarkerUtilVK::SetObjectName(device->_device, (u64)texture.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, texture.debugName.c_str());
 
             // Copy data from stagingBuffer into image
-            device->TransitionImageLayout(texture.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-            device->CopyBufferToImage(stagingBuffer, texture.image, static_cast<u32>(texture.width), static_cast<u32>(texture.height));
-            device->TransitionImageLayout(texture.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            device->TransitionImageLayout(texture.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texture.layers);
+            device->CopyBufferToImage(stagingBuffer, texture.image, static_cast<u32>(texture.width), static_cast<u32>(texture.height), texture.layers);
+            device->TransitionImageLayout(texture.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, texture.layers);
 
             // Create color view
             VkImageViewCreateInfo viewInfo = {};
             viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
             viewInfo.image = texture.image;
-            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            viewInfo.viewType = texture.layers == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
             viewInfo.format = texture.format;
             viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             viewInfo.subresourceRange.baseMipLevel = 0;
             viewInfo.subresourceRange.levelCount = 1;
             viewInfo.subresourceRange.baseArrayLayer = 0;
-            viewInfo.subresourceRange.layerCount = 1;
+            viewInfo.subresourceRange.layerCount = texture.layers;
 
             if (vkCreateImageView(device->_device, &viewInfo, nullptr, &texture.imageView) != VK_SUCCESS)
             {

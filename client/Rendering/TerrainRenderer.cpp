@@ -21,7 +21,8 @@ void TerrainRenderer::Update(f32 deltaTime)
     Renderer::RenderLayer& terrainLayer = _renderer->GetRenderLayer("Terrain"_h);
     terrainLayer.Reset();
 
-    for (size_t i = 0; i < _chunkModelInstances.size(); i++)
+    u32 numInstances = static_cast<u32>(_chunkModelInstances.size());
+    for (size_t i = 0; i < numInstances; i++)
     {
         terrainLayer.RegisterModel(Renderer::ModelID::Invalid(), &_chunkModelInstances[i]);
     }
@@ -213,10 +214,12 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
             commandList.SetConstantBuffer(0, viewConstantBuffer->GetDescriptor(frameIndex), frameIndex);
 
             // Set sampler
-            commandList.SetSampler(3, _linearSampler);
+            commandList.SetSampler(3, _alphaSampler);
+            commandList.SetSampler(4, _colorSampler);
 
-            // Set texture array
-            commandList.SetTextureArray(4, _terrainTextureArray);
+            // Set texture arrays
+            commandList.SetTextureArray(5, _terrainColorTextureArray);
+            commandList.SetTextureArray(6, _terrainAlphaTextureArray);
 
             // Render main layer
             Renderer::RenderLayer& mainLayer = _renderer->GetRenderLayer("Terrain"_h);
@@ -236,7 +239,134 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
                     commandList.SetStorageBuffer(2, terrainInstanceData->vertexBuffer->GetDescriptor(frameIndex), frameIndex);
                     
                     // Set constant buffer
-                    commandList.SetConstantBuffer(5, terrainInstanceData->chunkData->GetDescriptor(frameIndex), frameIndex);
+                    commandList.SetConstantBuffer(7, terrainInstanceData->chunkData->GetDescriptor(frameIndex), frameIndex);
+
+                    // Draw
+                    commandList.DrawIndexedBindless(_chunkModel, Terrain::NUM_INDICES_PER_CHUNK, Terrain::MAP_CELLS_PER_CHUNK);
+                }
+            }
+            commandList.EndPipeline(pipeline);
+        });
+    }
+}
+
+void TerrainRenderer::AddTerrainDebugPass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID textureIDTarget, Renderer::ImageID alphaMapTarget, Renderer::DepthImageID depthTarget, u8 frameIndex)
+{
+    // Terrain Debug Pass
+    {
+        struct TerrainPassData
+        {
+            Renderer::RenderPassMutableResource textureIDTarget;
+            Renderer::RenderPassMutableResource alphaMapTarget;
+            Renderer::RenderPassMutableResource mainDepth;
+        };
+
+        renderGraph->AddPass<TerrainPassData>("TerrainDebug",
+            [=](TerrainPassData& data, Renderer::RenderGraphBuilder& builder) // Setup
+        {
+            data.textureIDTarget = builder.Write(textureIDTarget, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
+            data.alphaMapTarget = builder.Write(alphaMapTarget, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
+            data.mainDepth = builder.Write(depthTarget, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
+
+            return true; // Return true from setup to enable this pass, return false to disable it
+        },
+            [=, &renderGraph](TerrainPassData& data, Renderer::CommandList& commandList) // Execute
+        {
+            commandList.Clear(textureIDTarget, Color(0,0,0,0));
+            commandList.Clear(alphaMapTarget, Color(0, 0, 0, 0));
+
+            Renderer::GraphicsPipelineDesc pipelineDesc;
+            renderGraph->InitializePipelineDesc(pipelineDesc);
+
+            // Shaders
+            Renderer::VertexShaderDesc vertexShaderDesc;
+            vertexShaderDesc.path = "Data/shaders/terrain.vert.spv";
+            pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
+
+            Renderer::PixelShaderDesc pixelShaderDesc;
+            pixelShaderDesc.path = "Data/shaders/terrainDebug.frag.spv";
+            pipelineDesc.states.pixelShader = _renderer->LoadShader(pixelShaderDesc);
+
+            // Constant buffers  TODO: Improve on this, if I set state 0 and 3 it won't work etc...
+            pipelineDesc.states.constantBufferStates[0].enabled = true; // ViewCB
+            pipelineDesc.states.constantBufferStates[0].shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_VERTEX;
+            pipelineDesc.states.constantBufferStates[1].enabled = true; // ModelCB
+            pipelineDesc.states.constantBufferStates[1].shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_VERTEX;
+
+            // Input layouts TODO: Improve on this, if I set state 0 and 3 it won't work etc... Maybe responsibility for this should be moved to ModelHandler and the cooker?
+            pipelineDesc.states.inputLayouts[0].enabled = true;
+            pipelineDesc.states.inputLayouts[0].SetName("INSTANCEID");
+            pipelineDesc.states.inputLayouts[0].format = Renderer::InputFormat::INPUT_FORMAT_R32_UINT;
+            pipelineDesc.states.inputLayouts[0].inputClassification = Renderer::InputClassification::INPUT_CLASSIFICATION_PER_INSTANCE;
+
+            // Viewport
+            pipelineDesc.states.viewport.topLeftX = 0;
+            pipelineDesc.states.viewport.topLeftY = 0;
+            pipelineDesc.states.viewport.width = static_cast<f32>(WIDTH);
+            pipelineDesc.states.viewport.height = static_cast<f32>(HEIGHT);
+            pipelineDesc.states.viewport.minDepth = 0.0f;
+            pipelineDesc.states.viewport.maxDepth = 1.0f;
+
+            // ScissorRect
+            pipelineDesc.states.scissorRect.left = 0;
+            pipelineDesc.states.scissorRect.right = WIDTH;
+            pipelineDesc.states.scissorRect.top = 0;
+            pipelineDesc.states.scissorRect.bottom = HEIGHT;
+
+            // Depth state
+            pipelineDesc.states.depthStencilState.depthEnable = true;
+            pipelineDesc.states.depthStencilState.depthFunc = Renderer::ComparisonFunc::COMPARISON_FUNC_EQUAL;
+
+            // Rasterizer state
+            pipelineDesc.states.rasterizerState.cullMode = Renderer::CullMode::CULL_MODE_BACK;
+            pipelineDesc.states.rasterizerState.frontFaceMode = Renderer::FrontFaceState::FRONT_FACE_STATE_COUNTERCLOCKWISE;
+
+            // Samplers TODO: We don't care which samplers we have here, we just need the number of samplers
+            pipelineDesc.states.samplers[0].enabled = true;
+
+            // Render targets
+            pipelineDesc.renderTargets[0] = data.textureIDTarget;
+            pipelineDesc.renderTargets[1] = data.alphaMapTarget;
+
+            pipelineDesc.depthStencil = data.mainDepth;
+
+            // Set pipeline
+            Renderer::GraphicsPipelineID pipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
+            commandList.BeginPipeline(pipeline);
+
+            // Set instance buffer
+            commandList.SetBuffer(0, _terrainInstanceIDs->GetBuffer(frameIndex));
+
+            // Set view constant buffer
+            commandList.SetConstantBuffer(0, viewConstantBuffer->GetDescriptor(frameIndex), frameIndex);
+
+            // Set sampler
+            commandList.SetSampler(3, _alphaSampler);
+            commandList.SetSampler(4, _colorSampler);
+
+            // Set texture arrays
+            commandList.SetTextureArray(5, _terrainColorTextureArray);
+            commandList.SetTextureArray(6, _terrainAlphaTextureArray);
+
+            // Render main layer
+            Renderer::RenderLayer& mainLayer = _renderer->GetRenderLayer("Terrain"_h);
+
+            for (auto const& model : mainLayer.GetModels())
+            {
+                auto const& instances = model.second;
+
+                for (auto const& instance : instances)
+                {
+                    // Set model constant buffer
+                    commandList.SetConstantBuffer(1, instance->GetDescriptor(frameIndex), frameIndex);
+
+                    TerrainInstanceData* terrainInstanceData = instance->GetOptional<TerrainInstanceData>();
+
+                    // Set vertex storage buffer
+                    commandList.SetStorageBuffer(2, terrainInstanceData->vertexBuffer->GetDescriptor(frameIndex), frameIndex);
+
+                    // Set constant buffer
+                    commandList.SetConstantBuffer(7, terrainInstanceData->chunkData->GetDescriptor(frameIndex), frameIndex);
 
                     // Draw
                     commandList.DrawIndexedBindless(_chunkModel, Terrain::NUM_INDICES_PER_CHUNK, Terrain::MAP_CELLS_PER_CHUNK);
@@ -252,28 +382,54 @@ void TerrainRenderer::CreatePermanentResources()
     entt::registry* registry = ServiceLocator::GetGameRegistry();
     MapSingleton& mapSingleton = registry->ctx<MapSingleton>();
 
-    // Create texture array TODO: REMOVE
-    Renderer::TextureArrayDesc textureSetDesc;
-    textureSetDesc.size = 4096;
+    // Create texture array
+    Renderer::TextureArrayDesc textureColorArrayDesc;
+    textureColorArrayDesc.size = 4096;
 
-    _terrainTextureArray = _renderer->CreateTextureArray(textureSetDesc);
+    _terrainColorTextureArray = _renderer->CreateTextureArray(textureColorArrayDesc);
+
+    Renderer::TextureArrayDesc textureAlphaArrayDesc;
+    textureAlphaArrayDesc.size = 196; // Max 196 loaded chunks at a time (7 chunks draw radius, 14x14 chunks),
+
+    _terrainAlphaTextureArray = _renderer->CreateTextureArray(textureAlphaArrayDesc);
+
+    // Create and load a 1x1 pixel RGBA8 unorm texture with zero'ed data so we can use textureArray[0] as "invalid" textures, sampling it will return 0.0f on all channels
+    Renderer::DataTextureDesc zeroAlphaTexture;
+    zeroAlphaTexture.debugName = "TerrainZeroAlpha";
+    zeroAlphaTexture.width = 1;
+    zeroAlphaTexture.height = 1;
+    zeroAlphaTexture.format = Renderer::IMAGE_FORMAT_R8G8B8A8_UNORM;
+    zeroAlphaTexture.data = new u8[4]{ 0 };
+
+    u32 index;
+    _renderer->CreateDataTextureIntoArray(zeroAlphaTexture, _terrainColorTextureArray, index);
 
     // Load map
     Terrain::Map& map = mapSingleton.maps[0];
-    LoadChunksAround(map, ivec2(31, 49), 5); // Goldshire
-    //LoadChunksAround(map, ivec2(40, 32), 5); // Razor Hill
-    //LoadChunksAround(map, ivec2(22, 25), 5); // Borean Thundra
+    LoadChunksAround(map, ivec2(31, 49), 8); // Goldshire
+    //LoadChunksAround(map, ivec2(40, 32), 8); // Razor Hill
+    //LoadChunksAround(map, ivec2(22, 25), 8); // Borean Tundra
 
-    // Sampler
-    Renderer::SamplerDesc samplerDesc;
-    samplerDesc.enabled = true;
-    samplerDesc.filter = Renderer::SamplerFilter::SAMPLER_FILTER_MIN_MAG_MIP_LINEAR;
-    samplerDesc.addressU = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_WRAP;
-    samplerDesc.addressV = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_WRAP;
-    samplerDesc.addressW = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_CLAMP;
-    samplerDesc.shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_PIXEL;
+    // Samplers
+    Renderer::SamplerDesc alphaSamplerDesc;
+    alphaSamplerDesc.enabled = true;
+    alphaSamplerDesc.filter = Renderer::SamplerFilter::SAMPLER_FILTER_MIN_MAG_MIP_LINEAR;
+    alphaSamplerDesc.addressU = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_CLAMP;
+    alphaSamplerDesc.addressV = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_CLAMP;
+    alphaSamplerDesc.addressW = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_CLAMP;
+    alphaSamplerDesc.shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_PIXEL;
 
-    _linearSampler = _renderer->CreateSampler(samplerDesc);
+    _alphaSampler = _renderer->CreateSampler(alphaSamplerDesc);
+
+    Renderer::SamplerDesc colorSamplerDesc;
+    colorSamplerDesc.enabled = true;
+    colorSamplerDesc.filter = Renderer::SamplerFilter::SAMPLER_FILTER_MIN_MAG_MIP_LINEAR;
+    colorSamplerDesc.addressU = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_WRAP;
+    colorSamplerDesc.addressV = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_WRAP;
+    colorSamplerDesc.addressW = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_CLAMP;
+    colorSamplerDesc.shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_PIXEL;
+
+    _colorSampler = _renderer->CreateSampler(colorSamplerDesc);
 
     // Create a chunk model with no vertices but the correct indices
     Renderer::PrimitiveModelDesc modelDesc;
@@ -346,25 +502,11 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
     chunkInstance.SetOptional(terrainInstanceData);
 
     terrainInstanceData->chunkData = _renderer->CreateConstantBuffer<std::array<TerrainChunkData, Terrain::MAP_CELLS_PER_CHUNK>>();
-    
-    // Create and load a 1x1 pixel RGBA8 unorm texture with zero'ed data so we can use textureArray[0] as "invalid" textures, sampling it will return 0.0f on all channels
-    Renderer::DataTextureDesc zeroAlphaTexture;
-    zeroAlphaTexture.debugName = "TerrainZeroAlpha";
-    zeroAlphaTexture.width = 1;
-    zeroAlphaTexture.height = 1;
-    zeroAlphaTexture.format = Renderer::IMAGE_FORMAT_R8G8B8A8_UNORM;
-    zeroAlphaTexture.data = new u8[4]{ 0 };
-
-    u32 index;
-    _renderer->CreateDataTextureIntoArray(zeroAlphaTexture, _terrainTextureArray, index);
 
     // Get the vertices, indices and textureIDs of the chunk
     std::vector<TerrainVertex> chunkVertices;
     const size_t numVertices = Terrain::NUM_VERTICES_PER_CHUNK;
     chunkVertices.resize(numVertices);
-
-    std::vector<u32> textureIds;
-    u32 numAlphaMaps = 0;
 
     StringTable& stringTable = map.stringTables[chunkId];
 
@@ -376,21 +518,19 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
         u8 layerCount = 0;
         for (auto layer : cell.layers)
         {
-            if (layer.textureId != Terrain::LayerData::TextureIdInvalid)
-            {
-                const std::string& texturePath = stringTable.GetString(layer.textureId);
+            if (layer.textureId == Terrain::LayerData::TextureIdInvalid)
+                break;
 
-                Renderer::TextureDesc textureDesc;
-                textureDesc.path = "Data/extracted/Textures/" + texturePath;
+            const std::string& texturePath = stringTable.GetString(layer.textureId);
 
-                u32 diffuseID;
-                _renderer->LoadTextureIntoArray(textureDesc, _terrainTextureArray, diffuseID);
-                assert(diffuseID < 65536); // Because of the way we pack diffuseIDs[3] and alphaID, this should never be bigger than a u16, see where we create the alpha texture below
+            Renderer::TextureDesc textureDesc;
+            textureDesc.path = "Data/extracted/Textures/" + texturePath;
 
-                terrainInstanceData->chunkData->resource[i].diffuseIDs[layerCount] = diffuseID;
-            }
-            
-            layerCount++;
+            u32 diffuseID;
+            _renderer->LoadTextureIntoArray(textureDesc, _terrainColorTextureArray, diffuseID);
+            assert(diffuseID < 65536); // Because of the way we pack diffuseIDs[3] and alphaID, this should never be bigger than a u16, see where we create the alpha texture below
+
+            terrainInstanceData->chunkData->resource[i].diffuseIDs[layerCount++] = diffuseID;
         }
 
         const u32 cellX = i % Terrain::MAP_CELLS_PER_CHUNK_SIDE;
@@ -441,44 +581,31 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
 
     // First we create our per-chunk alpha map descriptor
     Renderer::DataTextureDesc chunkAlphaMapDesc;
-    chunkAlphaMapDesc.debugName = "ChunkAlphaMap";
-    chunkAlphaMapDesc.width = 1024;
-    chunkAlphaMapDesc.height = 1024;
+    chunkAlphaMapDesc.debugName = "ChunkAlphaMapArray";
+    chunkAlphaMapDesc.width = 64;
+    chunkAlphaMapDesc.height = 64;
+    chunkAlphaMapDesc.layers = 256;
     chunkAlphaMapDesc.format = Renderer::ImageFormat::IMAGE_FORMAT_R8G8B8A8_UNORM;
 
     constexpr u32 numChannels = 4;
-    const u32 chunkAlphaMapSize = chunkAlphaMapDesc.width * chunkAlphaMapDesc.height * numChannels; // 4 channels per pixel, 1 byte per channel
+    const u32 chunkAlphaMapSize = chunkAlphaMapDesc.width * chunkAlphaMapDesc.height * chunkAlphaMapDesc.layers * numChannels; // 4 channels per pixel, 1 byte per channel
     chunkAlphaMapDesc.data = new u8[chunkAlphaMapSize]{ 0 }; // Allocate the data needed for it // TODO: Delete this...
 
     const u32 cellAlphaMapSize = 64 * 64; // This is the size of the per-cell alphamap
-
     for (u32 i = 0; i < Terrain::MAP_CELLS_PER_CHUNK; i++)
     {
-        const u32 cellX = i % Terrain::MAP_CELLS_PER_CHUNK_SIDE;
-        const u32 cellY = i / Terrain::MAP_CELLS_PER_CHUNK_SIDE;
-
         std::vector<Terrain::AlphaMap>& alphaMaps = chunk.alphaMaps[i];
         u32 numAlphaMaps = static_cast<u32>(alphaMaps.size());
 
-        // Get the offset needed to point to the top leftmost pixel of the 64x64 "subtexture" for this cell inside our 1024x1024 texture
-        const u32 chunkPixelBaseOffset = (cellX * 64 * numChannels) + (cellY * 1024 * 64 * numChannels);
-        
-        if (numAlphaMaps == 0)
+        if (numAlphaMaps > 0)
         {
-            continue;
-        }
-
-        for (u32 pixel = 0; pixel < cellAlphaMapSize; pixel++)
-        {
-            const u32 pixelX = pixel % 64;
-            const u32 pixelY = pixel / 64;
-
-            u32 chunkPixelOffset = chunkPixelBaseOffset + (pixelX * numChannels) + (pixelY * 1024 * numChannels);
-
-            for (u32 channel = 0; channel < numAlphaMaps; channel++)
+            for (u32 pixel = 0; pixel < cellAlphaMapSize; pixel++)
             {
-                u32 dst = chunkPixelOffset + channel;
-                chunkAlphaMapDesc.data[dst] = alphaMaps[channel].alphaMap[pixel];
+                for (u32 channel = 0; channel < numAlphaMaps; channel++)
+                {
+                    u32 dst = (i * cellAlphaMapSize * numChannels) + (pixel * numChannels) + channel;
+                    chunkAlphaMapDesc.data[dst] = alphaMaps[channel].alphaMap[pixel];
+                }
             }
         }
     }
@@ -491,7 +618,7 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
     // [3333] diffuseIDs[2]
     // [AA44] diffuseIDs[3] Alpha is read from the most significant bits, the fourth diffuseID read from the least 
     u32 alphaID;
-    _renderer->CreateDataTextureIntoArray(chunkAlphaMapDesc, _terrainTextureArray, alphaID);
+    _renderer->CreateDataTextureIntoArray(chunkAlphaMapDesc, _terrainAlphaTextureArray, alphaID);
     assert(alphaID < 65536); // Because of the way we pack diffuseIDs[3] and alphaID, this should never be bigger than a u16
 
     // TODO: alphaID is only needed on a per-chunk basis, not per-cell, so it should not be inside of chunkData I believe
@@ -524,10 +651,24 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
     _chunkModelInstances.push_back(chunkInstance);
 }
 
-void TerrainRenderer::LoadChunksAround(Terrain::Map& map, ivec2 middleChunk, u16 radius)
+void TerrainRenderer::LoadChunksAround(Terrain::Map& map, ivec2 middleChunk, u16 drawDistance)
 {
+    // Middle position has to be within map grid
+    assert(middleChunk.x >= 0);
+    assert(middleChunk.y >= 0);
+    assert(middleChunk.x < 64);
+    assert(middleChunk.y < 64);
+
+    assert(drawDistance > 0);
+    assert(drawDistance <= 64);
+
+    u16 radius = drawDistance-1;
+
     ivec2 startPos = ivec2(middleChunk.x - radius, middleChunk.y - radius);
+    startPos = glm::max(startPos, ivec2(0, 0));
+
     ivec2 endPos = ivec2(middleChunk.x + radius, middleChunk.y + radius);
+    endPos = glm::min(endPos, ivec2(63, 63));
 
     for(i32 y = startPos.y; y < endPos.y; y++)
     {

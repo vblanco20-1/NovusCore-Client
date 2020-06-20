@@ -14,6 +14,7 @@ namespace Renderer
     {
         i32 width = 0;
         i32 height = 0;
+        i32 layers = 1;
 
         ImageFormat format;
         

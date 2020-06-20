@@ -39,13 +39,12 @@ public:
 
     void AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::DepthImageID depthTarget, u8 frameIndex);
     void AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex);
+    void AddTerrainDebugPass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID textureIDTarget, Renderer::ImageID alphaMapTarget, Renderer::DepthImageID depthTarget, u8 frameIndex);
 
 private:
     void CreatePermanentResources();
     void LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY);
-    void LoadChunksAround(Terrain::Map& map, ivec2 middleChunk, u16 radius);
-
-    Renderer::TextureID LoadTerrainTexture(const std::string& path);
+    void LoadChunksAround(Terrain::Map& map, ivec2 middleChunk, u16 drawDistance);
 
     struct TerrainVertex
     {
@@ -72,6 +71,9 @@ private:
 
     Renderer::ConstantBuffer<std::array<u32, Terrain::MAP_CELLS_PER_CHUNK>>* _terrainInstanceIDs = nullptr;
     
-    Renderer::TextureArrayID _terrainTextureArray = Renderer::TextureArrayID::Invalid();
-    Renderer::SamplerID _linearSampler;
+    Renderer::TextureArrayID _terrainColorTextureArray = Renderer::TextureArrayID::Invalid();
+    Renderer::TextureArrayID _terrainAlphaTextureArray = Renderer::TextureArrayID::Invalid();
+
+    Renderer::SamplerID _alphaSampler;
+    Renderer::SamplerID _colorSampler;
 };

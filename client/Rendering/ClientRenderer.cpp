@@ -70,6 +70,16 @@ ClientRenderer::ClientRenderer()
     CreatePermanentResources();
     _uiRenderer = new UIRenderer(_renderer);
     _terrainRenderer = new TerrainRenderer(_renderer);
+
+    _inputManager->RegisterKeybind("ToggleDebugDraw", GLFW_KEY_F1, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [this](Window* window, std::shared_ptr<Keybind> keybind)
+    {
+        _debugDrawingMode++;
+        if (_debugDrawingMode > 2)
+        {
+            _debugDrawingMode = 0;
+        }
+        return true;
+    });
 }
 
 bool ClientRenderer::UpdateWindow(f32 deltaTime)
@@ -336,12 +346,25 @@ void ClientRenderer::Render()
     }
 
     _terrainRenderer->AddTerrainPass(&renderGraph, _viewConstantBuffer, _mainColor, _mainDepth, _frameIndex);
+    _terrainRenderer->AddTerrainDebugPass(&renderGraph, _viewConstantBuffer, _debugTextureID, _debugAlphaMap, _mainDepth, _frameIndex);
     _uiRenderer->AddUIPass(&renderGraph, _mainColor, _frameIndex);
 
     renderGraph.Setup();
     renderGraph.Execute();
     
-    _renderer->Present(_window, _mainColor);
+    if (_debugDrawingMode == 0)
+    {
+        _renderer->Present(_window, _mainColor);
+    }
+    else if (_debugDrawingMode == 1)
+    {
+        _renderer->Present(_window, _debugTextureID);
+    }
+    else
+    {
+        _renderer->Present(_window, _debugAlphaMap);
+    }
+    
 
     // Flip the frameIndex between 0 and 1
     _frameIndex = !_frameIndex;
@@ -357,6 +380,13 @@ void ClientRenderer::CreatePermanentResources()
     mainColorDesc.sampleCount = Renderer::SAMPLE_COUNT_1;
 
     _mainColor = _renderer->CreateImage(mainColorDesc);
+
+    mainColorDesc.debugName = "DebugAlphaMap";
+    _debugAlphaMap = _renderer->CreateImage(mainColorDesc);
+
+    mainColorDesc.format = Renderer::IMAGE_FORMAT_R16G16B16A16_UINT;
+    mainColorDesc.debugName = "DebugTextureID";
+    _debugTextureID = _renderer->CreateImage(mainColorDesc);
 
     // Main depth rendertarget
     Renderer::DepthImageDesc mainDepthDesc;
@@ -396,7 +426,7 @@ void ClientRenderer::CreatePermanentResources()
 
         const f32 fov = 68.0f;
         const f32 nearClip = 0.1f;
-        const f32 farClip = 4096.0f;
+        const f32 farClip = 4000.0f;
         f32 aspectRatio = static_cast<f32>(WIDTH) / static_cast<f32>(HEIGHT);
 
         projMatrix = glm::perspective(fov, aspectRatio, nearClip, farClip);

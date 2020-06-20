@@ -16,6 +16,15 @@ namespace Renderer
             std::vector<VkPresentModeKHR> presentModes;
         };
 
+        struct BlitPipeline
+        {
+            VkPipelineLayout pipelineLayout;
+            VkDescriptorPool descriptorPool;
+            VkDescriptorSetLayout descriptorSetLayout;
+            VkDescriptorSet descriptorSet;
+            VkPipeline pipeline;
+        };
+
         struct SwapChainVK : public SwapChain
         {
             SwapChainVK(RenderDeviceVK* inDevice) 
@@ -96,7 +105,6 @@ namespace Renderer
                     return actualExtent;
                 }
             }
-
         public:
 
             RenderDeviceVK* device;
@@ -106,12 +114,9 @@ namespace Renderer
             u32 bufferCount;
 
             VkRenderPass renderPass;
-            VkPipelineLayout pipelineLayout;
-            VkPipeline pipeline;
+            
+            BlitPipeline blitPipelines[IMAGE_COMPONENT_TYPE_COUNT];
 
-            VkDescriptorPool descriptorPool;
-            VkDescriptorSetLayout descriptorSetLayout;
-            VkDescriptorSet descriptorSet;
             VkSampler sampler;
 
             VkSurfaceKHR surface;

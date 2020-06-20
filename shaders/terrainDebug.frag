@@ -8,7 +8,7 @@
 // Textures
 layout(set = 3, binding = 0) uniform sampler alphaSampler;
 layout(set = 4, binding = 0) uniform sampler colorSampler;
-layout(set = 5, binding = 0) uniform texture2D terrainColorTextures[4096];
+layout(set = 5, binding = 0) uniform texture2D terrainTextures[4096];
 layout(set = 6, binding = 0) uniform texture2DArray terrainAlphaTextures[196];
 
 struct ChunkData
@@ -24,7 +24,8 @@ layout(set = 7, binding = 0, std430) uniform ChunkDataBuffer
 layout(location = 0) flat in uint fragInstanceID;
 layout(location = 1) in vec2 fragTexCoord;
 
-layout(location = 0) out vec4 outColor;
+layout(location = 0) out uvec4 outTextureID;
+layout(location = 1) out vec4 outAlphaMap;
 
 void main() 
 {
@@ -49,21 +50,24 @@ void main()
 	
 	vec3 alphaBlend = texture(sampler2DArray(terrainAlphaTextures[alphaID], alphaSampler), alphaUV).rgb;
 
-	float minusAlphaBlendSum = (1.0 - clamp(dot(alphaBlend, vec3(1.0)), 0.0, 1.0));
+	/*float minusAlphaBlendSum = (1.0 - clamp(dot(alphaBlend, vec3(1.0)), 0.0, 1.0));
 	vec4 weightsVector = vec4(minusAlphaBlendSum, alphaBlend);
 	vec4 weightsTemp = (weightsVector * (vec4(1.0) - clamp((vec4(max(max(weightsVector.x, weightsVector.y), max(weightsVector.z, weightsVector.w))) - weightsVector), 0.0, 1.0)));
 
 	vec4 weightsNormalized = (weightsTemp / vec4(dot(vec4(1.0), weightsTemp)));
 
-	vec4 diffuse0 = texture(sampler2D(terrainColorTextures[diffuse0ID], colorSampler), uv) * weightsNormalized.x;
+	vec4 diffuse0 = texture(sampler2D(terrainTextures[diffuse0ID], terrainSampler), uv) * weightsNormalized.x;
 	outColor = diffuse0;
 	
-	vec4 diffuse1 = texture(sampler2D(terrainColorTextures[diffuse1ID], colorSampler), uv) * weightsNormalized.y;
+	vec4 diffuse1 = texture(sampler2D(terrainTextures[diffuse1ID], terrainSampler), uv) * weightsNormalized.y;
 	outColor += diffuse1;
 
-	vec4 diffuse2 = texture(sampler2D(terrainColorTextures[diffuse2ID], colorSampler), uv) * weightsNormalized.z;
+	vec4 diffuse2 = texture(sampler2D(terrainTextures[diffuse2ID], terrainSampler), uv) * weightsNormalized.z;
 	outColor += diffuse2;
 
-	vec4 diffuse3 = texture(sampler2D(terrainColorTextures[diffuse3ID], colorSampler), uv) * weightsNormalized.w;
-	outColor += diffuse3;
+	vec4 diffuse3 = texture(sampler2D(terrainTextures[diffuse3ID], terrainSampler), uv) * weightsNormalized.w;
+	outColor += diffuse3;*/
+
+	outTextureID = uvec4(diffuse0ID, diffuse1ID, diffuse2ID, diffuse3ID);
+	outAlphaMap = vec4(alphaBlend, 1.0);
 }
