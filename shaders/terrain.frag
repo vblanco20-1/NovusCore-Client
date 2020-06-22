@@ -44,8 +44,8 @@ void main()
 	uint diffuse0ID = chunkDatas[fragInstanceID].diffuseIDs[0];
 	uint diffuse1ID = chunkDatas[fragInstanceID].diffuseIDs[1];
 	uint diffuse2ID = chunkDatas[fragInstanceID].diffuseIDs[2];
-	uint diffuse3ID = (chunkDatas[fragInstanceID].diffuseIDs[3] & 0xFFFF);
-	uint alphaID	= (chunkDatas[fragInstanceID].diffuseIDs[3] & 0xFFFF0000) >> 16;
+	uint diffuse3ID = chunkDatas[fragInstanceID].diffuseIDs[3] & 0xFFFF;
+	uint alphaID	= chunkDatas[fragInstanceID].diffuseIDs[3] >> 16;
 	
 	vec3 alpha = texture(sampler2DArray(terrainAlphaTextures[alphaID], alphaSampler), alphaUV).rgb;
 
