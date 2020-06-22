@@ -47,23 +47,17 @@ void main()
 	uint diffuse3ID = (chunkDatas[fragInstanceID].diffuseIDs[3] & 0xFFFF);
 	uint alphaID	= (chunkDatas[fragInstanceID].diffuseIDs[3] & 0xFFFF0000) >> 16;
 	
-	vec3 alphaBlend = texture(sampler2DArray(terrainAlphaTextures[alphaID], alphaSampler), alphaUV).rgb;
+	vec3 alpha = texture(sampler2DArray(terrainAlphaTextures[alphaID], alphaSampler), alphaUV).rgb;
 
-	float minusAlphaBlendSum = (1.0 - clamp(dot(alphaBlend, vec3(1.0)), 0.0, 1.0));
-	vec4 weightsVector = vec4(minusAlphaBlendSum, alphaBlend);
-	vec4 weightsTemp = (weightsVector * (vec4(1.0) - clamp((vec4(max(max(weightsVector.x, weightsVector.y), max(weightsVector.z, weightsVector.w))) - weightsVector), 0.0, 1.0)));
+	vec4 diffuse0 = texture(sampler2D(terrainColorTextures[diffuse0ID], colorSampler), uv);
+	vec4 diffuse1 = texture(sampler2D(terrainColorTextures[diffuse1ID], colorSampler), uv);
+	vec4 diffuse2 = texture(sampler2D(terrainColorTextures[diffuse2ID], colorSampler), uv);
+	vec4 diffuse3 = texture(sampler2D(terrainColorTextures[diffuse3ID], colorSampler), uv);
 
-	vec4 weightsNormalized = (weightsTemp / vec4(dot(vec4(1.0), weightsTemp)));
+	vec4 color = diffuse0;
+	color = diffuse1 * alpha.r + (1.0 - alpha.r) * color;
+	color = diffuse2 * alpha.g + (1.0 - alpha.g) * color;
+	color = diffuse3 * alpha.b + (1.0 - alpha.b) * color;
 
-	vec4 diffuse0 = texture(sampler2D(terrainColorTextures[diffuse0ID], colorSampler), uv) * weightsNormalized.x;
-	outColor = diffuse0;
-	
-	vec4 diffuse1 = texture(sampler2D(terrainColorTextures[diffuse1ID], colorSampler), uv) * weightsNormalized.y;
-	outColor += diffuse1;
-
-	vec4 diffuse2 = texture(sampler2D(terrainColorTextures[diffuse2ID], colorSampler), uv) * weightsNormalized.z;
-	outColor += diffuse2;
-
-	vec4 diffuse3 = texture(sampler2D(terrainColorTextures[diffuse3ID], colorSampler), uv) * weightsNormalized.w;
-	outColor += diffuse3;
+	outColor = color;
 }
