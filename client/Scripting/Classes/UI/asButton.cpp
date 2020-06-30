@@ -9,7 +9,7 @@
 
 namespace UI
 {
-    asButton::asButton(entt::entity entityId) : asUITransform(entityId, UIElementData::UIElementType::UITYPE_BUTTON) 
+    asButton::asButton(entt::entity entityId) : asUITransform(entityId, UIElementType::UITYPE_BUTTON) 
     {
         _panel = asPanel::CreatePanel();
         _panel->SetParent(this);
@@ -64,7 +64,6 @@ namespace UI
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
-
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([callback, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
@@ -79,7 +78,7 @@ namespace UI
     {
         _label->SetText(text);
     }
-    const std::string& asButton::GetText() const
+    const std::string asButton::GetText() const
     {
         return _label->GetText();
     }
@@ -142,15 +141,14 @@ namespace UI
         UIEntityPoolSingleton& entityPool = registry->ctx<UIEntityPoolSingleton>();
         UIAddElementQueueSingleton& addElementQueue = registry->ctx<UIAddElementQueueSingleton>();
 
-        UIElementData elementData;
-        entityPool.entityIdPool.try_dequeue(elementData.entityId);
-        elementData.type = UIElementData::UIElementType::UITYPE_BUTTON;
+        entt::entity entityId;
+        entityPool.entityIdPool.try_dequeue(entityId);
 
-        asButton* button = new asButton(elementData.entityId);
+        asButton* button = new asButton(entityId);
 
-        elementData.asObject = button;
-
+        UIElementData elementData { entityId, UIElementType::UITYPE_BUTTON, button };
         addElementQueue.elementPool.enqueue(elementData);
+
         return button;
     }
 }

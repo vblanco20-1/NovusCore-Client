@@ -6,6 +6,7 @@
 #include "../../Components/UI/UITransformEvents.h"
 #include "../../Components/UI/UIRenderable.h"
 #include "../../Components/UI/UIText.h"
+#include "../../Components/UI/UIInputField.h"
 
 void AddElementSystem::Update(entt::registry& registry)
 {
@@ -16,18 +17,33 @@ void AddElementSystem::Update(entt::registry& registry)
     UIElementData element;
     while (uiAddElementQueueSingleton.elementPool.try_dequeue(element))
     {
-        registry.assign<UITransform>(element.entityId);
+        UITransform& transform = registry.assign<UITransform>(element.entityId);
+        transform.type = element.type;
+        transform.asObject = element.asObject;
 
-        if (element.type == UIElementData::UIElementType::UITYPE_TEXT)
+        switch (element.type)
+        {
+        case UIElementType::UITYPE_TEXT:
+            registry.assign<UIText>(element.entityId);
+            break;
+        case UIElementType::UITYPE_PANEL:
+            registry.assign<UIRenderable>(element.entityId);
+            break;
+        case UIElementType::UITYPE_INPUTFIELD:
         {
             registry.assign<UIText>(element.entityId);
+            UIInputField& inputField = registry.assign<UIInputField>(element.entityId);
+            inputField.asObject = element.asObject;
+            break;
         }
-        else
+        default:
+            break;
+        }
+
+        if (element.type != UIElementType::UITYPE_TEXT)
         {
             UITransformEvents& events = registry.assign<UITransformEvents>(element.entityId);
             events.asObject = element.asObject;
-
-            registry.assign<UIRenderable>(element.entityId);
         }
     }
 }

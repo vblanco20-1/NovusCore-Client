@@ -11,6 +11,9 @@
 #include "../ECS/Components/UI/UITransformEvents.h"
 #include "../ECS/Components/UI/UIRenderable.h"
 #include "../ECS/Components/UI/UIText.h"
+#include "../ECS/Components/UI/UIInputField.h"
+
+#include "../Scripting/Classes/UI/asInputfield.h"
 
 #include <Renderer/Renderer.h>
 #include <Renderer/Renderers/Vulkan/RendererVK.h>
@@ -48,6 +51,8 @@ UIRenderer::UIRenderer(Renderer::Renderer* renderer)
 
     // Register UI data singleton.
     registry->set<UI::UIDataSingleton>();
+
+    _focusedWidget = entt::null;
 }
 
 void UIRenderer::Update(f32 deltaTime)
@@ -124,7 +129,7 @@ void UIRenderer::Update(f32 deltaTime)
 
             if (text.fontPath.length() == 0)
             {
-                transform.isDirty = false;
+                text.isDirty = false;
                 return;
             }
 
@@ -136,7 +141,7 @@ void UIRenderer::Update(f32 deltaTime)
                 });
 
             size_t glyphCount = text.models.size();
-            if (glyphCount < textLengthWithoutSpaces)
+            if (glyphCount != textLengthWithoutSpaces)
             {
                 text.models.resize(textLengthWithoutSpaces);
                 for (size_t i = glyphCount; i < textLengthWithoutSpaces; i++)
@@ -144,17 +149,19 @@ void UIRenderer::Update(f32 deltaTime)
                     text.models[i] = Renderer::ModelID::Invalid();
                 }
             }
-            if (text.textures.size() < textLengthWithoutSpaces)
+            if (text.textures.size() != textLengthWithoutSpaces)
             {
-                text.textures.resize(textLengthWithoutSpaces);                
+                text.textures.resize(textLengthWithoutSpaces);
                 for (size_t i = glyphCount; i < textLengthWithoutSpaces; i++)
                 {
                     text.textures[i] = Renderer::TextureID::Invalid();
                 }
             }
 
-            size_t glyph = 0;
             vec3 currentPosition = vec3(UITransformUtils::GetMinBounds(transform), transform.depth);
+            currentPosition.y -= text.font->GetChar('A').yOffset * 1.15f; //TODO Get line height in a less hacky way. (This was done to make text anchors also be the top-left as other widgets)
+
+            size_t glyph = 0;
             for (char character : text.text)
             {
                 if (character == ' ')
@@ -319,7 +326,7 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                     commandList.PopMarker();
                 });
             commandList.EndPipeline(pipeline);
-           
+
             // Draw text
             vertexShaderDesc.path = "Data/shaders/text.vert.spv";
             pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
@@ -365,53 +372,66 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
 
 bool UIRenderer::OnMouseClick(Window* window, std::shared_ptr<Keybind> keybind)
 {
+    entt::registry* registry = ServiceLocator::GetUIRegistry();
+
     InputManager* inputManager = ServiceLocator::GetInputManager();
     f32 mouseX = inputManager->GetMousePositionX();
     f32 mouseY = inputManager->GetMousePositionY();
 
-    entt::registry* registry = ServiceLocator::GetUIRegistry();
+    //Unfocus last focused widget.
+    entt::entity lastFocusedWidget = _focusedWidget;
+    if (_focusedWidget != entt::null)
+    {
+        auto& events = registry->get<UITransformEvents>(_focusedWidget);
+        events.OnUnfocused();
+
+        _focusedWidget = entt::null;
+    }
+
+    //TODO IMPROVEMENT: Depth sorting widgets.
     auto eventView = registry->view<UITransform, UITransformEvents>();
     for (auto entity : eventView)
     {
-        auto& events = eventView.get<UITransformEvents>(entity);
-        if (!events.flags)
-            continue;
-
-        auto& transform = eventView.get<UITransform>(entity);
+        const UITransform& transform = eventView.get<UITransform>(entity);
         const vec2 minBounds = UITransformUtils::GetMinBounds(transform);
         const vec2 maxBounds = UITransformUtils::GetMaxBounds(transform);
 
         if ((mouseX > minBounds.x && mouseX < maxBounds.x) &&
             (mouseY > minBounds.y && mouseY < maxBounds.y))
         {
+            UITransformEvents& events = eventView.get<UITransformEvents>(entity);
+
+            // Check if we have any events we can actually call else exit out early. It needs to still block clicking through though.
+            if (!events.flags)
+                return true;
+
+            // Don't interact with the last focused widget directly again. The first click is reserved for unfocusing it. But it still needs to block clicking through it.
+            if (lastFocusedWidget == entity)
+                return true;
+
             if (keybind->state)
             {
                 if (events.IsDraggable())
                 {
-                    //panel->BeingDrag(vec2(mouseX - pos.x, mouseY - pos.y));
+                    // TODO FEATURE: Dragging
                 }
             }
             else
             {
+                if (events.IsFocusable())
+                {
+                    _focusedWidget = entity;
+
+                    events.OnFocused();
+                }
+
                 if (events.IsClickable())
                 {
-                    //if (!panel->DidDrag())
-
                     events.OnClick();
                 }
             }
 
             return true;
-        }
-
-        if (!keybind->state)
-        {
-            if (events.IsDraggable())
-            {
-                //panel->EndDrag();
-
-                return true;
-            }
         }
     }
 
@@ -419,60 +439,79 @@ bool UIRenderer::OnMouseClick(Window* window, std::shared_ptr<Keybind> keybind)
 }
 
 void UIRenderer::OnMousePositionUpdate(Window* window, f32 x, f32 y)
-{ 
+{
+    // TODO FEATURE: Handle Dragging
 }
 
 bool UIRenderer::OnKeyboardInput(Window* window, i32 key, i32 action, i32 modifiers)
 {
-    /*if (!_focusedField)
+    if (_focusedWidget == entt::null)
         return false;
 
-    if (action == GLFW_PRESS)
+    if (action != GLFW_RELEASE)
+        return true;
+
+    entt::registry* registry = ServiceLocator::GetUIRegistry();
+    UITransformEvents& events = registry->get<UITransformEvents>(_focusedWidget);
+
+    if (key == GLFW_KEY_ESCAPE)
     {
+        events.OnUnfocused();
+        _focusedWidget = entt::null;
+
+        return true;
+    }
+
+    UITransform& transform = registry->get<UITransform>(_focusedWidget);
+    if (transform.type == UIElementType::UITYPE_INPUTFIELD)
+    {
+        UI::asInputField* inputFieldAS = reinterpret_cast<UI::asInputField*>(transform.asObject);
+        UIInputField& inputField = registry->get<UIInputField>(_focusedWidget);
+
         switch (key)
         {
-        case GLFW_KEY_ESCAPE:
-            _focusedField->OnSubmit();
-            _focusedField = nullptr;
-            break;
-
-        case GLFW_KEY_ENTER:
-            _focusedField->OnEnter();
-            _focusedField = nullptr;
-            break;
-
         case GLFW_KEY_BACKSPACE:
-            _focusedField->RemovePreviousCharacter();
+            inputFieldAS->RemovePreviousCharacter();
             break;
-
         case GLFW_KEY_DELETE:
-            _focusedField->RemoveNextCharacter();
+            inputFieldAS->RemoveNextCharacter();
             break;
-
         case GLFW_KEY_LEFT:
-            _focusedField->MovePointerLeft();
+            inputFieldAS->MovePointerLeft();
             break;
-
         case GLFW_KEY_RIGHT:
-            _focusedField->MovePointerRight();
+            inputFieldAS->MovePointerRight();
             break;
-
+        case GLFW_KEY_ENTER:
+            inputField.OnSubmit();
+            events.OnUnfocused();
+            _focusedWidget = entt::null;
+            break;
         default:
             break;
         }
     }
-    */
-    return false;
+
+    return true;
 }
 
 bool UIRenderer::OnCharInput(Window* window, u32 unicodeKey)
 {
-    /*if (!_focusedField)
-        return false;
+    entt::registry* registry = ServiceLocator::GetUIRegistry();
 
-    std::string input = "";
-    input.append(1, (char)unicodeKey);
-    _focusedField->AddText(input);*/
+    if (_focusedWidget != entt::null)
+    {
+        UITransform& transform = registry->get<UITransform>(_focusedWidget);
+
+        if (transform.type == UIElementType::UITYPE_INPUTFIELD)
+        {
+            UI::asInputField* inputField = reinterpret_cast<UI::asInputField*>(transform.asObject);
+
+            inputField->AppendInput((char)unicodeKey);
+        }
+
+        return true;
+    }
 
     return false;
 }

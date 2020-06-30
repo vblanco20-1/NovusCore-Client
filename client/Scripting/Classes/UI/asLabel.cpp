@@ -7,7 +7,7 @@
 
 namespace UI
 {
-    asLabel::asLabel(entt::entity entityId) : asUITransform(entityId, UIElementData::UIElementType::UITYPE_TEXT) { }
+    asLabel::asLabel(entt::entity entityId) : asUITransform(entityId, UIElementType::UITYPE_TEXT) { }
     
     void asLabel::RegisterType()
     {
@@ -33,7 +33,6 @@ namespace UI
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
-
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([text, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
@@ -50,7 +49,6 @@ namespace UI
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
-
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([color, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
@@ -67,7 +65,6 @@ namespace UI
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
-
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([outlineColor, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
@@ -84,7 +81,6 @@ namespace UI
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
-
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([outlineWidth, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
@@ -95,13 +91,12 @@ namespace UI
             });
     }
 
-    void asLabel::SetFont(std::string fontPath, f32 fontSize)
+    void asLabel::SetFont(const std::string& fontPath, f32 fontSize)
     {
         _text.fontPath = fontPath;
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
-
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([fontPath, fontSize, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
@@ -119,15 +114,14 @@ namespace UI
         UIEntityPoolSingleton& entityPool = registry->ctx<UIEntityPoolSingleton>();
         UIAddElementQueueSingleton& addElementQueue = registry->ctx<UIAddElementQueueSingleton>();
 
-        UIElementData elementData;
-        entityPool.entityIdPool.try_dequeue(elementData.entityId);
-        elementData.type = UIElementData::UIElementType::UITYPE_TEXT;
+        entt::entity entityId;
+        entityPool.entityIdPool.try_dequeue(entityId);
 
-        asLabel* label = new asLabel(elementData.entityId);
+        asLabel* label = new asLabel(entityId);
 
-        elementData.asObject = label;
-
+        UIElementData elementData { entityId, UIElementType::UITYPE_TEXT, label };
         addElementQueue.elementPool.enqueue(elementData);
+
         return label;
     }
 }

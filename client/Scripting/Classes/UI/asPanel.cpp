@@ -7,7 +7,7 @@
 
 namespace UI
 {
-    asPanel::asPanel(entt::entity entityId) : asUITransform(entityId, UIElementData::UIElementType::UITYPE_PANEL) { }
+    asPanel::asPanel(entt::entity entityId) : asUITransform(entityId, UIElementType::UITYPE_PANEL) { }
 
     void asPanel::RegisterType()
     {
@@ -40,7 +40,6 @@ namespace UI
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
-
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([callback, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
@@ -58,7 +57,6 @@ namespace UI
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
-
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([callback, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
@@ -76,7 +74,6 @@ namespace UI
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
-
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([callback, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
@@ -93,7 +90,6 @@ namespace UI
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
-
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([texture, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
@@ -109,7 +105,6 @@ namespace UI
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
-
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([color, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
@@ -126,15 +121,14 @@ namespace UI
         UIEntityPoolSingleton& entityPool = registry->ctx<UIEntityPoolSingleton>();
         UIAddElementQueueSingleton& addElementQueue = registry->ctx<UIAddElementQueueSingleton>();
 
-        UIElementData elementData;
-        entityPool.entityIdPool.try_dequeue(elementData.entityId);
-        elementData.type = UIElementData::UIElementType::UITYPE_PANEL;
+        entt::entity entityId;
+        entityPool.entityIdPool.try_dequeue(entityId);
 
-        asPanel* panel = new asPanel(elementData.entityId);
+        asPanel* panel = new asPanel(entityId);
 
-        elementData.asObject = panel;
-
+        UIElementData elementData{ entityId, UIElementType::UITYPE_PANEL, panel };
         addElementQueue.elementPool.enqueue(elementData);
+        
         return panel;
     }
 }
