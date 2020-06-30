@@ -31,7 +31,7 @@ bool GameSocket::GameHandlers::SMSG_CREATE_PLAYER(std::shared_ptr<NetworkClient>
 
     // Create ENTT entity
     entt::entity entity = registry->create(localplayerSingleton.entity);
-    Transform& transform = registry->assign<Transform>(entity);
+    Transform& transform = registry->emplace<Transform>(entity);
 
     packet->payload->Get(transform.position);
     packet->payload->Get(transform.rotation);
@@ -60,7 +60,7 @@ bool GameSocket::GameHandlers::SMSG_CREATE_ENTITY(std::shared_ptr<NetworkClient>
 
     // Create ENTT entity
     entt::entity entity = registry->create(entityId);
-    Transform& transform = registry->assign<Transform>(entity);
+    Transform& transform = registry->emplace<Transform>(entity);
 
     packet->payload->Get(transform.position);
     packet->payload->Get(transform.rotation);

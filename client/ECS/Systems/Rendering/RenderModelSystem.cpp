@@ -17,7 +17,7 @@ void RenderModelSystem::Update(entt::registry& registry, ClientRenderer* clientR
     Renderer::RenderLayer& depthLayer = renderer->GetRenderLayer("DepthPrepass"_h);
 
     auto modelView = registry.view<Transform, Model, VisibleModel>();
-    modelView.each([&](const auto, Transform& transform, Model& model, VisibleModel&)
+    modelView.each([&](const auto, Transform& transform, Model& model)
         {
             if (transform.isDirty)
             {
