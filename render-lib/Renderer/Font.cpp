@@ -47,7 +47,7 @@ namespace Renderer
                 NC_LOG_FATAL("Could not open Font file %s", fontPath.c_str());
             }
 
-            std::shared_ptr<ByteBuffer> buffer = ByteBuffer::Borrow<1048576>();
+            std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<1048576>();
             file.Read(*buffer, file.Length());
 
             font->fontInfo = new stbtt_fontinfo();

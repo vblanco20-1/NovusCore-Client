@@ -28,12 +28,18 @@ public:
         return _uiRegistry; 
     }
     static void SetUIRegistry(entt::registry* registry);
-    static MessageHandler* GetNetworkMessageHandler() 
+    static MessageHandler* GetAuthSocketMessageHandler() 
     {
-        assert(_networkMessageHandler != nullptr);
-        return _networkMessageHandler; 
+        assert(_authSocketMessageHandler != nullptr);
+        return _authSocketMessageHandler;
     }
-    static void SetNetworkMessageHandler(MessageHandler* serverMessageHandler);
+    static void SetAuthSocketMessageHandler(MessageHandler* messageHandler);
+    static MessageHandler* GetGameSocketMessageHandler() 
+    {
+        assert(_gameSocketMessageHandler != nullptr);
+        return _gameSocketMessageHandler; 
+    }
+    static void SetGameSocketMessageHandler(MessageHandler* messageHandler);
     static Window* GetWindow() 
     {
         assert(_window != nullptr);
@@ -75,7 +81,8 @@ private:
     ServiceLocator() { }
     static entt::registry* _gameRegistry;
     static entt::registry* _uiRegistry;
-    static MessageHandler* _networkMessageHandler;
+    static MessageHandler* _authSocketMessageHandler;
+    static MessageHandler* _gameSocketMessageHandler;
     static Window* _window;
     static InputManager* _inputManager;
     static Camera* _camera;

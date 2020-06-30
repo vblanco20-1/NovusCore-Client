@@ -80,8 +80,8 @@ bool MapLoader::Load(entt::registry& registry)
 
 bool MapLoader::ExtractChunkData(FileReader& reader, Terrain::Chunk& chunk, StringTable& stringTable)
 {
-    ByteBuffer buffer(nullptr, reader.Length());
-    reader.Read(buffer, buffer.Size);
+    Bytebuffer buffer(nullptr, reader.Length());
+    reader.Read(buffer, buffer.size);
 
     buffer.Get<Terrain::ChunkHeader>(chunk.chunkHeader);
     buffer.Get<Terrain::HeightHeader>(chunk.heightHeader);

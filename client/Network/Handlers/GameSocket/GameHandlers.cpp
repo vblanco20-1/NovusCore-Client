@@ -1,6 +1,5 @@
-#include "GeneralHandlers.h"
+#include "GameHandlers.h"
 #include <entt.hpp>
-#include "Auth/AuthHandlers.h"
 #include <Networking/NetworkPacket.h>
 #include <Networking/MessageHandler.h>
 #include <Networking/NetworkClient.h>
@@ -9,17 +8,16 @@
 #include "../../../ECS/Components/Transform.h"
 #include "../../../ECS/Components/LocalplayerSingleton.h"
 
-void Client::GeneralHandlers::Setup(MessageHandler* messageHandler)
+void GameSocket::GameHandlers::Setup(MessageHandler* messageHandler)
 {
     // Setup other handlers
-    AuthHandlers::Setup(messageHandler);
-    messageHandler->SetMessageHandler(Opcode::SMSG_CREATE_PLAYER, Client::GeneralHandlers::SMSG_CREATE_PLAYER);
-    messageHandler->SetMessageHandler(Opcode::SMSG_CREATE_ENTITY, Client::GeneralHandlers::SMSG_CREATE_ENTITY);
-    messageHandler->SetMessageHandler(Opcode::SMSG_UPDATE_ENTITY, Client::GeneralHandlers::SMSG_UPDATE_ENTITY);
-    messageHandler->SetMessageHandler(Opcode::SMSG_DELETE_ENTITY, Client::GeneralHandlers::SMSG_DELETE_ENTITY);
+    messageHandler->SetMessageHandler(Opcode::SMSG_CREATE_PLAYER, GameSocket::GameHandlers::SMSG_CREATE_PLAYER);
+    messageHandler->SetMessageHandler(Opcode::SMSG_CREATE_ENTITY, GameSocket::GameHandlers::SMSG_CREATE_ENTITY);
+    messageHandler->SetMessageHandler(Opcode::SMSG_UPDATE_ENTITY, GameSocket::GameHandlers::SMSG_UPDATE_ENTITY);
+    messageHandler->SetMessageHandler(Opcode::SMSG_DELETE_ENTITY, GameSocket::GameHandlers::SMSG_DELETE_ENTITY);
 }
 
-bool Client::GeneralHandlers::SMSG_CREATE_PLAYER(std::shared_ptr<NetworkClient> networkClient, NetworkPacket* packet)
+bool GameSocket::GameHandlers::SMSG_CREATE_PLAYER(std::shared_ptr<NetworkClient> networkClient, NetworkPacket* packet)
 {
     entt::registry* registry = ServiceLocator::GetGameRegistry();
     LocalplayerSingleton& localplayerSingleton = registry->ctx<LocalplayerSingleton>();
@@ -43,7 +41,7 @@ bool Client::GeneralHandlers::SMSG_CREATE_PLAYER(std::shared_ptr<NetworkClient> 
     Model& model = EntityUtils::CreateModelComponent(*registry, entity, "Data/models/Cube.novusmodel");
     return true;
 }
-bool Client::GeneralHandlers::SMSG_CREATE_ENTITY(std::shared_ptr<NetworkClient> networkClient, NetworkPacket* packet)
+bool GameSocket::GameHandlers::SMSG_CREATE_ENTITY(std::shared_ptr<NetworkClient> networkClient, NetworkPacket* packet)
 {
     entt::registry* registry = ServiceLocator::GetGameRegistry();
     LocalplayerSingleton& localplayerSingleton = registry->ctx<LocalplayerSingleton>();
@@ -74,7 +72,7 @@ bool Client::GeneralHandlers::SMSG_CREATE_ENTITY(std::shared_ptr<NetworkClient> 
     return true;
 }
 
-bool Client::GeneralHandlers::SMSG_UPDATE_ENTITY(std::shared_ptr<NetworkClient> networkClient, NetworkPacket* packet)
+bool GameSocket::GameHandlers::SMSG_UPDATE_ENTITY(std::shared_ptr<NetworkClient> networkClient, NetworkPacket* packet)
 {
     entt::registry* registry = ServiceLocator::GetGameRegistry();
     LocalplayerSingleton& localplayerSingleton = registry->ctx<LocalplayerSingleton>();
@@ -94,7 +92,7 @@ bool Client::GeneralHandlers::SMSG_UPDATE_ENTITY(std::shared_ptr<NetworkClient> 
     return true;
 }
 
-bool Client::GeneralHandlers::SMSG_DELETE_ENTITY(std::shared_ptr<NetworkClient> networkClient, NetworkPacket* packet)
+bool GameSocket::GameHandlers::SMSG_DELETE_ENTITY(std::shared_ptr<NetworkClient> networkClient, NetworkPacket* packet)
 {
     entt::registry* registry = ServiceLocator::GetGameRegistry();
     LocalplayerSingleton& localplayerSingleton = registry->ctx<LocalplayerSingleton>();

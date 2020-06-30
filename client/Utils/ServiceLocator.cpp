@@ -2,7 +2,8 @@
 
 entt::registry* ServiceLocator::_gameRegistry = nullptr;
 entt::registry* ServiceLocator::_uiRegistry = nullptr;
-MessageHandler* ServiceLocator::_networkMessageHandler = nullptr;
+MessageHandler* ServiceLocator::_authSocketMessageHandler = nullptr;
+MessageHandler* ServiceLocator::_gameSocketMessageHandler = nullptr;
 Window* ServiceLocator::_window = nullptr;
 InputManager* ServiceLocator::_inputManager = nullptr;
 Camera* ServiceLocator::_camera = nullptr;
@@ -21,10 +22,15 @@ void ServiceLocator::SetUIRegistry(entt::registry* registry)
     assert(_uiRegistry == nullptr);
     _uiRegistry = registry;
 }
-void ServiceLocator::SetNetworkMessageHandler(MessageHandler* networkMessageHandler)
+void ServiceLocator::SetAuthSocketMessageHandler(MessageHandler* messageHandler)
 {
-    assert(_networkMessageHandler == nullptr);
-    _networkMessageHandler = networkMessageHandler;
+    assert(_authSocketMessageHandler == nullptr);
+    _authSocketMessageHandler = messageHandler;
+}
+void ServiceLocator::SetGameSocketMessageHandler(MessageHandler* messageHandler)
+{
+    assert(_gameSocketMessageHandler == nullptr);
+    _gameSocketMessageHandler = messageHandler;
 }
 void ServiceLocator::SetWindow(Window* window)
 {

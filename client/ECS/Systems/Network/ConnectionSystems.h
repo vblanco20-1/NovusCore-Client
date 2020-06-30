@@ -8,7 +8,10 @@ public:
     static void Update(entt::registry& registry);
 
     // Handlers for Network Client
-    static void HandleRead(BaseSocket* socket);
-    static void HandleConnect(BaseSocket* socket);
-    static void HandleDisconnect(BaseSocket* socket);
+    static void AuthSocket_HandleConnect(BaseSocket* socket, bool connected);
+    static void AuthSocket_HandleRead(BaseSocket* socket);
+    static void AuthSocket_HandleDisconnect(BaseSocket* socket);
+    static void GameSocket_HandleConnect(BaseSocket* socket, bool connected);
+    static void GameSocket_HandleRead(BaseSocket* socket);
+    static void GameSocket_HandleDisconnect(BaseSocket* socket);
 };

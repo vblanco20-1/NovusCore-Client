@@ -9,26 +9,70 @@
 
 void ConnectionUpdateSystem::Update(entt::registry& registry)
 {
-    MessageHandler* messageHandler = ServiceLocator::GetNetworkMessageHandler();
+    ZoneScopedNC("ConnectionUpdateSystem::Update", tracy::Color::Blue)
     ConnectionSingleton& connectionSingleton = registry.ctx<ConnectionSingleton>();
 
-    ZoneScopedNC("InternalPacketHandlerSystem::Update", tracy::Color::Blue)
-
-        std::shared_ptr<NetworkPacket> packet;
-    while (connectionSingleton.packetQueue.try_dequeue(packet))
+    if (connectionSingleton.authConnection)
     {
-        if (!messageHandler->CallHandler(connectionSingleton.connection, packet.get()))
+        std::shared_ptr<NetworkPacket> packet = nullptr;
+
+        MessageHandler* authSocketMessageHandler = ServiceLocator::GetAuthSocketMessageHandler();
+        while (connectionSingleton.authPacketQueue.try_dequeue(packet))
         {
-            connectionSingleton.packetQueue.enqueue(packet);
-            continue;
+#ifdef NC_Debug
+            NC_LOG_SUCCESS("[Network/Socket]: CMD: %u, Size: %u", packet->header.opcode, packet->header.size);
+#endif // NC_Debug
+
+            if (!authSocketMessageHandler->CallHandler(connectionSingleton.authConnection, packet.get()))
+            {
+                connectionSingleton.authConnection->Close(asio::error::shut_down);
+                connectionSingleton.authConnection = nullptr;
+                return;
+            }
+        }
+    }
+
+    if (connectionSingleton.gameConnection)
+    {
+        std::shared_ptr<NetworkPacket> packet = nullptr;
+
+        MessageHandler* gameSocketMessageHandler = ServiceLocator::GetGameSocketMessageHandler();
+        while (connectionSingleton.gamePacketQueue.try_dequeue(packet))
+        {
+#ifdef NC_Debug
+            NC_LOG_SUCCESS("[Network/Socket]: CMD: %u, Size: %u", packet->header.opcode, packet->header.size);
+#endif // NC_Debug
+
+            if (!gameSocketMessageHandler->CallHandler(connectionSingleton.gameConnection, packet.get()))
+            {
+                connectionSingleton.gameConnection->Close(asio::error::shut_down);
+                connectionSingleton.gameConnection = nullptr;
+                return;
+            }
         }
     }
 }
 
-void ConnectionUpdateSystem::HandleRead(BaseSocket* socket)
+void ConnectionUpdateSystem::AuthSocket_HandleConnect(BaseSocket* socket, bool connected)
+{
+    // The client initially will connect to a region server, from there on the client receives
+    // an IP address / port from that region server to the proper authentication server.
+
+    if (connected)
+    {
+        /* Send Initial Packet */
+        std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<512>();
+        buffer->Put(Opcode::MSG_REQUEST_ADDRESS);
+        buffer->PutU16(0);
+        socket->Send(buffer.get());
+
+        socket->AsyncRead();
+    }
+}
+void ConnectionUpdateSystem::AuthSocket_HandleRead(BaseSocket* socket)
 {
     entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
-    std::shared_ptr<ByteBuffer> buffer = socket->GetReceiveBuffer();
+    std::shared_ptr<Bytebuffer> buffer = socket->GetReceiveBuffer();
 
     ConnectionSingleton* connectionSingleton = &gameRegistry->ctx<ConnectionSingleton>();
 
@@ -58,29 +102,32 @@ void ConnectionUpdateSystem::HandleRead(BaseSocket* socket)
             {
                 if (size)
                 {
-                    packet->payload = ByteBuffer::Borrow<NETWORK_BUFFER_SIZE>();
-                    packet->payload->Size = size;
-                    packet->payload->WrittenData = size;
+                    packet->payload = Bytebuffer::Borrow<NETWORK_BUFFER_SIZE>();
+                    packet->payload->size = size;
+                    packet->payload->writtenData = size;
                     std::memcpy(packet->payload->GetDataPointer(), buffer->GetReadPointer(), size);
                 }
             }
 
-            connectionSingleton->packetQueue.enqueue(packet);
+            connectionSingleton->authPacketQueue.enqueue(packet);
         }
 
-        buffer->ReadData += size;
+        buffer->readData += size;
     }
 
     socket->AsyncRead();
 }
+void ConnectionUpdateSystem::AuthSocket_HandleDisconnect(BaseSocket* socket)
+{
+}
 
-void ConnectionUpdateSystem::HandleConnect(BaseSocket* socket)
+void ConnectionUpdateSystem::GameSocket_HandleConnect(BaseSocket* socket, bool connected)
 {
     entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
     AuthenticationSingleton& authentication = gameRegistry->ctx<AuthenticationSingleton>();
+    
     /* Send Initial Packet */
-
-    std::shared_ptr<ByteBuffer> buffer = ByteBuffer::Borrow<512>();
+    std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<512>();
     ClientLogonChallenge logonChallenge;
     logonChallenge.majorVersion = 3;
     logonChallenge.patchVersion = 3;
@@ -107,7 +154,54 @@ void ConnectionUpdateSystem::HandleConnect(BaseSocket* socket)
     socket->Send(buffer.get());
     socket->AsyncRead();
 }
+void ConnectionUpdateSystem::GameSocket_HandleRead(BaseSocket* socket)
+{
+    entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
+    std::shared_ptr<Bytebuffer> buffer = socket->GetReceiveBuffer();
 
-void ConnectionUpdateSystem::HandleDisconnect(BaseSocket* socket)
+    ConnectionSingleton* connectionSingleton = &gameRegistry->ctx<ConnectionSingleton>();
+
+    while (buffer->GetActiveSize())
+    {
+        Opcode opcode = Opcode::INVALID;
+        u16 size = 0;
+
+        buffer->Get(opcode);
+        buffer->GetU16(size);
+
+        if (size > NETWORK_BUFFER_SIZE)
+        {
+            socket->Close(asio::error::shut_down);
+            return;
+        }
+
+        std::shared_ptr<NetworkPacket> packet = NetworkPacket::Borrow();
+        {
+            // Header
+            {
+                packet->header.opcode = opcode;
+                packet->header.size = size;
+            }
+
+            // Payload
+            {
+                if (size)
+                {
+                    packet->payload = Bytebuffer::Borrow<NETWORK_BUFFER_SIZE>();
+                    packet->payload->size = size;
+                    packet->payload->writtenData = size;
+                    std::memcpy(packet->payload->GetDataPointer(), buffer->GetReadPointer(), size);
+                }
+            }
+
+            connectionSingleton->gamePacketQueue.enqueue(packet);
+        }
+
+        buffer->readData += size;
+    }
+
+    socket->AsyncRead();
+}
+void ConnectionUpdateSystem::GameSocket_HandleDisconnect(BaseSocket* socket)
 {
 }

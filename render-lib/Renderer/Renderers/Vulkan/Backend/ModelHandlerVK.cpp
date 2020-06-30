@@ -127,7 +127,7 @@ namespace Renderer
 
             assert(file.Length() > sizeof(NovusTypeHeader));
 
-            std::shared_ptr<ByteBuffer> buffer = ByteBuffer::Borrow<32768>();
+            std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<32768>();
             file.Read(*buffer, file.Length());
 
             // Read header

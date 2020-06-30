@@ -46,7 +46,8 @@ struct FrameworkRegistryPair
 class NetworkClient;
 struct NetworkPair
 {
-    std::shared_ptr<NetworkClient> client;
+    std::shared_ptr<NetworkClient> authSocket;
+    std::shared_ptr<NetworkClient> gameSocket;
     std::shared_ptr<asio::io_service> asioService;
 };
 

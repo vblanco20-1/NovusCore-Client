@@ -30,7 +30,8 @@
 #include "ECS/Systems/MovementSystem.h"
 
 // Handlers
-#include "Network/Handlers/Client/GeneralHandlers.h"
+#include "Network/Handlers/AuthSocket/AuthHandlers.h"
+#include "Network/Handlers/GameSocket/GameHandlers.h"
 #include "Scripting/ScriptHandler.h"
 
 #include <InputManager.h>
@@ -39,7 +40,8 @@
 EngineLoop::EngineLoop() : _isRunning(false), _inputQueue(256), _outputQueue(256)
 {
     _network.asioService = std::make_shared<asio::io_service>(2);
-    _network.client = std::make_shared<NetworkClient>(new asio::ip::tcp::socket(*_network.asioService.get()));
+    _network.authSocket = std::make_shared<NetworkClient>(new asio::ip::tcp::socket(*_network.asioService.get()));
+    _network.gameSocket = std::make_shared<NetworkClient>(new asio::ip::tcp::socket(*_network.asioService.get()));
 }
 
 EngineLoop::~EngineLoop()
@@ -108,7 +110,8 @@ void EngineLoop::Run()
     ConnectionSingleton& connectionSingleton = _updateFramework.gameRegistry.set<ConnectionSingleton>();
     AuthenticationSingleton& authenticationSingleton = _updateFramework.gameRegistry.set<AuthenticationSingleton>();
     LocalplayerSingleton& localplayerSingleton = _updateFramework.gameRegistry.set<LocalplayerSingleton>();
-    connectionSingleton.connection = _network.client;
+    connectionSingleton.authConnection = _network.authSocket;
+    connectionSingleton.gameConnection = _network.gameSocket;
 
     Timer timer;
     f32 targetDelta = 1.0f / 60.f;
@@ -136,7 +139,7 @@ void EngineLoop::Run()
                 ConnectionSingleton& connectionSingleton = registry->ctx<ConnectionSingleton>();
                 Transform& transform = registry->get<Transform>(localplayerSingleton.entity);
 
-                std::shared_ptr<ByteBuffer> buffer = ByteBuffer::Borrow<128>();
+                std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<128>();
                 buffer->Put(Opcode::MSG_MOVE_ENTITY);
 
                 buffer->PutU16(32);
@@ -148,7 +151,7 @@ void EngineLoop::Run()
                 buffer->Put(transform.moveFlags);
                 buffer->Put(position);
                 buffer->Put(rotation);
-                connectionSingleton.connection->Send(buffer.get());
+                connectionSingleton.gameConnection->Send(buffer.get());
 
                 transform.position = position;
                 transform.rotation = rotation;
@@ -159,10 +162,14 @@ void EngineLoop::Run()
     std::string scriptPath = "./Data/scripts";
     ScriptHandler::LoadScriptDirectory(scriptPath);
     
-    _network.client->SetReadHandler(std::bind(&ConnectionUpdateSystem::HandleRead, std::placeholders::_1));
-    _network.client->SetConnectHandler(std::bind(&ConnectionUpdateSystem::HandleConnect, std::placeholders::_1));
-    _network.client->SetDisconnectHandler(std::bind(&ConnectionUpdateSystem::HandleConnect, std::placeholders::_1));
-    _network.client->Connect("127.0.0.1", 3724);
+    _network.authSocket->SetReadHandler(std::bind(&ConnectionUpdateSystem::AuthSocket_HandleRead, std::placeholders::_1));
+    _network.authSocket->SetConnectHandler(std::bind(&ConnectionUpdateSystem::AuthSocket_HandleConnect, std::placeholders::_1, std::placeholders::_2));
+    _network.authSocket->SetDisconnectHandler(std::bind(&ConnectionUpdateSystem::AuthSocket_HandleDisconnect, std::placeholders::_1));
+    _network.authSocket->Connect("127.0.0.1", 3724); // Realmlist should contain these values
+    
+    _network.gameSocket->SetReadHandler(std::bind(&ConnectionUpdateSystem::GameSocket_HandleRead, std::placeholders::_1));
+    _network.gameSocket->SetConnectHandler(std::bind(&ConnectionUpdateSystem::GameSocket_HandleConnect, std::placeholders::_1, std::placeholders::_2));
+    _network.gameSocket->SetDisconnectHandler(std::bind(&ConnectionUpdateSystem::GameSocket_HandleDisconnect, std::placeholders::_1));
 
     while (true)
     {
@@ -303,10 +310,15 @@ void EngineLoop::SetupUpdateFramework()
 }
 void EngineLoop::SetMessageHandler()
 {
-    auto messageHandler = new MessageHandler();
-    ServiceLocator::SetNetworkMessageHandler(messageHandler);
+    // Setup Auth Message Handler
+    MessageHandler* authSocketMessageHandler = new MessageHandler();
+    AuthSocket::AuthHandlers::Setup(authSocketMessageHandler);
+    ServiceLocator::SetAuthSocketMessageHandler(authSocketMessageHandler);
 
-    Client::GeneralHandlers::Setup(messageHandler);
+    // Setup Game Message Handler
+    MessageHandler* gameSocketMessageHandler = new MessageHandler();
+    ServiceLocator::SetGameSocketMessageHandler(gameSocketMessageHandler);
+    GameSocket::GameHandlers::Setup(gameSocketMessageHandler);
 }
 void EngineLoop::UpdateSystems()
 {

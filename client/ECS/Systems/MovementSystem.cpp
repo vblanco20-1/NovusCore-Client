@@ -99,7 +99,7 @@ void MovementSystem::Update(entt::registry& registry)
             Camera* camera = ServiceLocator::GetCamera();
 
             ConnectionSingleton& connectionSingleton = registry.ctx<ConnectionSingleton>();
-            std::shared_ptr<ByteBuffer> buffer = ByteBuffer::Borrow<128>();
+            std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<128>();
             buffer->Put(Opcode::MSG_MOVE_STOP_ENTITY);
             buffer->PutU16(32);
 
@@ -110,7 +110,7 @@ void MovementSystem::Update(entt::registry& registry)
             buffer->Put(transform.moveFlags);
             buffer->Put(position);
             buffer->Put(rotation);
-            connectionSingleton.connection->Send(buffer.get());
+            connectionSingleton.gameConnection->Send(buffer.get());
 
             transform.position = position;
             transform.rotation = rotation;
@@ -127,7 +127,7 @@ void MovementSystem::Update(entt::registry& registry)
         // Send Packet
         ConnectionSingleton& connectionSingleton = registry.ctx<ConnectionSingleton>();
 
-        std::shared_ptr<ByteBuffer> buffer = ByteBuffer::Borrow<128>();
+        std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<128>();
         if (transform.moveFlags != originalFlags)
         {
             buffer->Put(Opcode::MSG_MOVE_ENTITY);
@@ -146,7 +146,7 @@ void MovementSystem::Update(entt::registry& registry)
         buffer->Put(transform.moveFlags);
         buffer->Put(position);
         buffer->Put(rotation);
-        connectionSingleton.connection->Send(buffer.get());
+        connectionSingleton.gameConnection->Send(buffer.get());
 
         transform.position = position;
         transform.rotation = rotation;

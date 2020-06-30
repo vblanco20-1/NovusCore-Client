@@ -7,8 +7,10 @@
 struct ConnectionSingleton
 {
 public:
-    ConnectionSingleton() : packetQueue(256) { }
+    ConnectionSingleton() : authPacketQueue(256), gamePacketQueue(256) { }
 
-    std::shared_ptr<NetworkClient> connection;
-    moodycamel::ConcurrentQueue<std::shared_ptr<NetworkPacket>> packetQueue;
+    std::shared_ptr<NetworkClient> authConnection;
+    std::shared_ptr<NetworkClient> gameConnection;
+    moodycamel::ConcurrentQueue<std::shared_ptr<NetworkPacket>> authPacketQueue;
+    moodycamel::ConcurrentQueue<std::shared_ptr<NetworkPacket>> gamePacketQueue;
 };

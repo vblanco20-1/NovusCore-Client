@@ -4,9 +4,9 @@
 class MessageHandler;
 class NetworkClient;
 struct NetworkPacket;
-namespace Client
+namespace GameSocket
 {
-    class GeneralHandlers
+    class GameHandlers
     {
     public:
         static void Setup(MessageHandler*);
