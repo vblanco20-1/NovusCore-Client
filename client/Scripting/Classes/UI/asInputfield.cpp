@@ -1,11 +1,11 @@
 #include "asInputfield.h"
-#include "asLabel.h"
-#include "asPanel.h"
 #include "../../ScriptEngine.h"
 #include "../../../Utils/ServiceLocator.h"
-#include "../../../ECS/Components/UI/UIEntityPoolSingleton.h"
+
+#include "../../../ECS/Components/UI/Singletons/UIEntityPoolSingleton.h"
 #include "../../../ECS/Components/Singletons/ScriptSingleton.h"
-#include "../../../ECS/Components/UI/UIAddElementQueueSingleton.h"
+
+#include <GLFW/glfw3.h>
 
 namespace UI
 {
@@ -30,7 +30,7 @@ namespace UI
         r = ScriptEngine::RegisterScriptClassFunction("void OnFocus(InputFieldEventCallback@ cb)", asMETHOD(asInputField, SetOnFocusCallback)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void OnLostFocus(InputFieldEventCallback@ cb)", asMETHOD(asInputField, SetOnUnFocusCallback)); assert(r >= 0);
 
-        //Label Functions
+        //Text Functions
         r = ScriptEngine::RegisterScriptClassFunction("void SetText(string text, bool updateWriteHead = true)", asMETHOD(asInputField, SetText)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("string GetText()", asMETHOD(asInputField, GetText)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetTextColor(Color color)", asMETHOD(asInputField, SetTextColor)); assert(r >= 0);
@@ -42,21 +42,51 @@ namespace UI
         r = ScriptEngine::RegisterScriptClassFunction("void SetFont(string fontPath, float fontSize)", asMETHOD(asInputField, SetTextFont)); assert(r >= 0);
     }
 
-    void asInputField::AppendInput(const std::string& Input)
+    void asInputField::HandleKeyInput(i32 key)
+    {
+        switch (key)
+        {
+        case GLFW_KEY_BACKSPACE:
+            RemovePreviousCharacter();
+            break;
+        case GLFW_KEY_DELETE:
+            RemoveNextCharacter();
+            break;
+        case GLFW_KEY_LEFT:
+            MovePointerLeft();
+            break;
+        case GLFW_KEY_RIGHT:
+            MovePointerRight();
+            break;
+        case GLFW_KEY_ENTER:
+        {
+            entt::registry* registry = ServiceLocator::GetUIRegistry();
+            entt::entity Id = GetEntityId();
+            registry->get<UIInputField>(Id).OnSubmit();
+            registry->get<UITransformEvents>(Id).OnUnfocused();
+
+            registry->ctx<UI::UIDataSingleton>().focusedWidget = entt::null;
+            break;
+        }
+        default:
+            break;
+        }
+    }
+
+    void asInputField::HandleCharInput(const char input)
     {
         std::string newString = GetText();
         if (_inputField.writeHeadIndex == newString.length())
         {
-            newString += Input;
+            newString += input;
         }
         else
         {
-            newString.insert(_inputField.writeHeadIndex, Input);
+            newString.insert(_inputField.writeHeadIndex, 1, input);
         }
 
         SetText(newString, false);
-
-        SetWriteHeadPosition(_inputField.writeHeadIndex + static_cast<u32>(Input.length()));
+        MovePointerRight();
     }
 
     void asInputField::RemovePreviousCharacter()
@@ -195,7 +225,8 @@ namespace UI
                 UIText& uiText = uiRegistry->get<UIText>(entId);
 
                 uiText.text = text;
-                uiText.isDirty = true;
+
+                MarkDirty(uiRegistry, entId);
             });
 
         if(updateWriteHead)
@@ -214,7 +245,7 @@ namespace UI
                 UIText& uiText = uiRegistry->get<UIText>(entId);
 
                 uiText.color = color;
-                uiText.isDirty = true;
+                MarkDirty(uiRegistry, entId);
             });
     }
 
@@ -230,7 +261,7 @@ namespace UI
                 UIText& uiText = uiRegistry->get<UIText>(entId);
 
                 uiText.outlineColor = outlineColor;
-                uiText.isDirty = true;
+                MarkDirty(uiRegistry, entId);
             });
     }
 
@@ -246,7 +277,7 @@ namespace UI
                 UIText& uiText = uiRegistry->get<UIText>(entId);
 
                 uiText.outlineWidth = outlineWidth;
-                uiText.isDirty = true;
+                MarkDirty(uiRegistry, entId);
             });
     }
 
@@ -263,7 +294,7 @@ namespace UI
 
                 uiText.fontPath = fontPath;
                 uiText.fontSize = fontSize;
-                uiText.isDirty = true;
+                MarkDirty(uiRegistry, entId);
             });
     }
 
@@ -271,15 +302,8 @@ namespace UI
     {
         entt::registry* registry = ServiceLocator::GetUIRegistry();
         UIEntityPoolSingleton& entityPool = registry->ctx<UIEntityPoolSingleton>();
-        UIAddElementQueueSingleton& addElementQueue = registry->ctx<UIAddElementQueueSingleton>();
 
-        entt::entity entityId;
-        entityPool.entityIdPool.try_dequeue(entityId);
-
-        asInputField* inputField = new asInputField(entityId);
-
-        UIElementData elementData { entityId, UIElementType::UITYPE_INPUTFIELD, inputField };
-        addElementQueue.elementPool.enqueue(elementData);
+        asInputField* inputField = new asInputField(entityPool.GetId());
 
         return inputField;
     }

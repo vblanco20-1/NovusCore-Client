@@ -1,9 +1,11 @@
 #include "asPanel.h"
 #include "../../ScriptEngine.h"
 #include "../../../Utils/ServiceLocator.h"
-#include "../../../ECS/Components/UI/UIEntityPoolSingleton.h"
+
+#include "../../../ECS/Components/UI/Singletons/UIEntityPoolSingleton.h"
 #include "../../../ECS/Components/Singletons/ScriptSingleton.h"
-#include "../../../ECS/Components/UI/UIAddElementQueueSingleton.h"
+
+#include "../../../ECS/Components/UI/UIDirty.h"
 
 namespace UI
 {
@@ -86,32 +88,32 @@ namespace UI
 
     void asPanel::SetTexture(const std::string& texture)
     {
-        _renderable.texture = texture;
+        _image.texture = texture;
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([texture, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
-                UIRenderable& renderable = uiRegistry->get<UIRenderable>(entId);
+                UIImage& image = uiRegistry->get<UIImage>(entId);
 
-                renderable.isDirty = true;
-                renderable.texture = texture;
+                image.texture = texture;
+                MarkDirty(uiRegistry, entId);
             });
     }
     void asPanel::SetColor(const Color& color)
     {
-        _renderable.color = color;
+        _image.color = color;
 
         entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
         entt::entity entId = _entityId;
         gameRegistry->ctx<ScriptSingleton>().AddTransaction([color, entId]()
             {
                 entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
-                UIRenderable& renderable = uiRegistry->get<UIRenderable>(entId);
+                UIImage& image = uiRegistry->get<UIImage>(entId);
 
-                renderable.isDirty = true;
-                renderable.color = color;
+                image.color = color;
+                MarkDirty(uiRegistry, entId);
             });
     }
 
@@ -119,15 +121,8 @@ namespace UI
     {
         entt::registry* registry = ServiceLocator::GetUIRegistry();
         UIEntityPoolSingleton& entityPool = registry->ctx<UIEntityPoolSingleton>();
-        UIAddElementQueueSingleton& addElementQueue = registry->ctx<UIAddElementQueueSingleton>();
 
-        entt::entity entityId;
-        entityPool.entityIdPool.try_dequeue(entityId);
-
-        asPanel* panel = new asPanel(entityId);
-
-        UIElementData elementData{ entityId, UIElementType::UITYPE_PANEL, panel };
-        addElementQueue.elementPool.enqueue(elementData);
+        asPanel* panel = new asPanel(entityPool.GetId());
         
         return panel;
     }

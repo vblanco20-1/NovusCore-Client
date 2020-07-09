@@ -1,10 +1,9 @@
 #pragma once
 #include <NovusTypes.h>
-#include <entt.hpp>
 
 #include "../../../ECS/Components/UI/UITransform.h"
 #include "../../../ECS/Components/UI/UITransformEvents.h"
-#include "../../../ECS/Components/UI/UIRenderable.h"
+#include "../../../ECS/Components/UI/UIImage.h"
 #include "asUITransform.h"
 
 namespace UI
@@ -30,19 +29,19 @@ namespace UI
         void SetTexture(const std::string& texture);
         const std::string& GetTexture() const
         {
-            return _renderable.texture;
+            return _image.texture;
         }
 
         void SetColor(const Color& color);
         const Color GetColor() const
         {
-            return _renderable.color;
+            return _image.color;
         }
 
         static asPanel* CreatePanel();
 
     private:
         UITransformEvents _events;
-        UIRenderable _renderable;
+        UIImage _image;
     };
 }

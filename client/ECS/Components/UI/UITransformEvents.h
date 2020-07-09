@@ -9,21 +9,20 @@ enum UITransformEventsFlags
     UIEVENTS_FLAG_CLICKABLE = 1 << 1,
     UIEVENTS_FLAG_DRAGGABLE = 1 << 2,
     UIEVENTS_FLAG_FOCUSABLE = 1 << 3
-
 };
 
 // We need to define structs for event data, so we can pass data into callbacks for angelscript
 struct UITransformEvents
 {
 public:
-    UITransformEvents() : flags(), onClickCallback(nullptr), onDraggedCallback(nullptr), onFocusedCallback(nullptr), onUnfocusedCallback(nullptr), asObject(nullptr){ }
+    UITransformEvents() { }
 
-    u8 flags;
-    asIScriptFunction* onClickCallback;
-    asIScriptFunction* onDraggedCallback;
-    asIScriptFunction* onFocusedCallback;
-    asIScriptFunction* onUnfocusedCallback;
-    void* asObject;
+    u8 flags = 0;
+    asIScriptFunction* onClickCallback = nullptr;
+    asIScriptFunction* onDraggedCallback = nullptr;
+    asIScriptFunction* onFocusedCallback = nullptr;
+    asIScriptFunction* onUnfocusedCallback = nullptr;
+    void* asObject = nullptr;
 
     // Usually Components do not store logic, however this is an exception
 private:

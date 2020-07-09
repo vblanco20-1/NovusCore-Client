@@ -1,47 +1,40 @@
 #pragma once
 #include <NovusTypes.h>
+#include "../../../UI/UITypes.h"
 
-enum class UIElementType
+struct UIChild
 {
-    UITYPE_NONE,
-
-    UITYPE_PANEL,
-    UITYPE_TEXT,
-    UITYPE_BUTTON,
-    UITYPE_INPUTFIELD
-};
-
-struct UIElementData
-{
-    entt::entity entityId;
-    UIElementType type;
-    void* asObject;
+    u32 entity;
+    UI::UIElementType type;
 };
 
 struct UITransform
 {
-    struct UIChild
-    {
-        u32 entity;
-        UIElementType type;
-    };
-
-public:
-    UITransform() : position(), localPosition(), anchor(), localAnchor(), size(), depth(), parent(), children(), type(UIElementType::UITYPE_NONE), isDirty(false), asObject(nullptr)
+    UITransform()
     { 
         children.reserve(8);
     }
 
-    vec2 position;
-    vec2 localPosition;
-    vec2 anchor;
-    vec2 localAnchor;
-    vec2 size;
-    u16 depth;
-    u32 parent;
+    vec2 position = vec2(0,0);
+    vec2 localPosition = vec2(0, 0);
+    vec2 anchor = vec2(0, 0);
+    vec2 localAnchor = vec2(0, 0);
+    vec2 size = vec2(0, 0);
+    union
+    {
+        u64 sortKey = 0;
+        struct
+        {
+            u16 depth;
+            UI::UIElementType type;
+            entt::entity entId;
+        } sortData;
+    };
+    u32 parent = 0;
     std::vector<UIChild> children;
-    void* asObject;
+    void* asObject = nullptr;
 
-    UIElementType type;
-    bool isDirty;
+    vec2 minBound = vec2(0, 0);
+    vec2 maxBound = vec2(0, 0);
+    bool includeChildBounds = false;
 };

@@ -1,10 +1,10 @@
 #pragma once
 #include <NovusTypes.h>
-#include <entt.hpp>
+
+#include "asUITransform.h"
 
 #include "../../../ECS/Components/UI/UITransform.h"
 #include "../../../ECS/Components/UI/UITransformEvents.h"
-#include "asUITransform.h"
 
 namespace UI
 {

@@ -1,9 +1,11 @@
 #include "asLabel.h"
 #include "../../ScriptEngine.h"
 #include "../../../Utils/ServiceLocator.h"
-#include "../../../ECS/Components/UI/UIEntityPoolSingleton.h"
+
+#include "../../../ECS/Components/UI/Singletons/UIEntityPoolSingleton.h"
 #include "../../../ECS/Components/Singletons/ScriptSingleton.h"
-#include "../../../ECS/Components/UI/UIAddElementQueueSingleton.h"
+
+#include "../../../ECS/Components/UI/UIDirty.h"
 
 namespace UI
 {
@@ -39,7 +41,7 @@ namespace UI
                 UIText& uiText = uiRegistry->get<UIText>(entId);
 
                 uiText.text = text;
-                uiText.isDirty = true;
+                MarkDirty(uiRegistry, entId);
             });
     }
 
@@ -55,7 +57,7 @@ namespace UI
                 UIText& uiText = uiRegistry->get<UIText>(entId);
 
                 uiText.color = color;
-                uiText.isDirty = true;
+                MarkDirty(uiRegistry, entId);
             });
     }
 
@@ -71,7 +73,7 @@ namespace UI
                 UIText& uiText = uiRegistry->get<UIText>(entId);
 
                 uiText.outlineColor = outlineColor;
-                uiText.isDirty = true;
+                MarkDirty(uiRegistry, entId);
             });
     }
 
@@ -87,7 +89,7 @@ namespace UI
                 UIText& uiText = uiRegistry->get<UIText>(entId);
 
                 uiText.outlineWidth = outlineWidth;
-                uiText.isDirty = true;
+                MarkDirty(uiRegistry, entId);
             });
     }
 
@@ -104,7 +106,7 @@ namespace UI
 
                 uiText.fontPath = fontPath;
                 uiText.fontSize = fontSize;
-                uiText.isDirty = true;
+                MarkDirty(uiRegistry, entId);
             });
     }
 
@@ -112,15 +114,8 @@ namespace UI
     {
         entt::registry* registry = ServiceLocator::GetUIRegistry();
         UIEntityPoolSingleton& entityPool = registry->ctx<UIEntityPoolSingleton>();
-        UIAddElementQueueSingleton& addElementQueue = registry->ctx<UIAddElementQueueSingleton>();
 
-        entt::entity entityId;
-        entityPool.entityIdPool.try_dequeue(entityId);
-
-        asLabel* label = new asLabel(entityId);
-
-        UIElementData elementData { entityId, UIElementType::UITYPE_TEXT, label };
-        addElementQueue.elementPool.enqueue(elementData);
+        asLabel* label = new asLabel(entityPool.GetId());
 
         return label;
     }

@@ -3,11 +3,9 @@
 #include <Utils/Timer.h>
 #include <tracy/Tracy.hpp>
 #include "Utils/ServiceLocator.h"
-#include "Utils/EntityUtils.h"
 #include <Networking/MessageHandler.h>
 #include "Utils/MapLoader.h"
 #include "Rendering/ClientRenderer.h"
-#include "Rendering/UIRenderer.h"
 #include "Rendering/Camera.h"
 #include <Renderer/Renderer.h>
 #include <SceneManager.h>
@@ -17,13 +15,14 @@
 #include "ECS/Components/Singletons/TimeSingleton.h"
 #include "ECS/Components/Singletons/ScriptSingleton.h"
 #include "ECS/Components/Singletons/DataStorageSingleton.h"
+#include "ECS/Components/Singletons/SceneManagerSingleton.h"
 #include "ECS/Components/Network/ConnectionSingleton.h"
 #include "ECS/Components/Network/AuthenticationSingleton.h"
 #include "ECS/Components/LocalplayerSingleton.h"
-#include "ECS/Components/UI/UIDataSingleton.h"
+
+#include "ECS/Components/UI/Singletons/UIDataSingleton.h"
 
 // Components
-#include "ECS/Components/Rendering/Model.h"
 #include "ECS/Components/Transform.h"
 
 // Systems
@@ -36,9 +35,6 @@
 #include "Network/Handlers/AuthSocket/AuthHandlers.h"
 #include "Network/Handlers/GameSocket/GameHandlers.h"
 #include "Scripting/ScriptHandler.h"
-
-// AngelScript
-#include "Scripting/Classes/UI/asUITransform.h"
 
 #include <InputManager.h>
 #include <GLFW/glfw3.h>
@@ -88,22 +84,9 @@ bool EngineLoop::TryGetMessage(Message& message)
     return _outputQueue.try_dequeue(message);
 }
 
-void LoginScreenLoaded(u32 sceneNameHash)
-{
-    NC_LOG_SUCCESS("Scene: LoginScreen was loaded");
-}
-
 void EngineLoop::Run()
 {
     _isRunning = true;
-
-    SceneManager* sceneManager = new SceneManager();
-    sceneManager->SetAvailableScenes({ "LoginScreen"_h, "CharacterSelection"_h, "CharacterCreation"_h });
-    sceneManager->RegisterSceneLoadedCallback("LoginScreen"_h, SceneCallback("Dummy Callback"_h, LoginScreenLoaded));
-    ServiceLocator::SetSceneManager(sceneManager);
-
-    // We want to push this to the end of the first frame so anything that runs during the first frame has time to set itself up
-    sceneManager->LoadScene("LoginScreen"_h);
 
     _updateFramework.gameRegistry.create();
     _updateFramework.uiRegistry.create();
@@ -114,6 +97,7 @@ void EngineLoop::Run()
     TimeSingleton& timeSingleton = _updateFramework.gameRegistry.set<TimeSingleton>();
     ScriptSingleton& scriptSingleton = _updateFramework.gameRegistry.set<ScriptSingleton>();
     DataStorageSingleton& dataStorageSingleton = _updateFramework.gameRegistry.set<DataStorageSingleton>();
+    SceneManagerSingleton& sceneManagerSingleton = _updateFramework.gameRegistry.set<SceneManagerSingleton>();
     ConnectionSingleton& connectionSingleton = _updateFramework.gameRegistry.set<ConnectionSingleton>();
     AuthenticationSingleton& authenticationSingleton = _updateFramework.gameRegistry.set<AuthenticationSingleton>();
     LocalplayerSingleton& localplayerSingleton = _updateFramework.gameRegistry.set<LocalplayerSingleton>();
@@ -122,6 +106,11 @@ void EngineLoop::Run()
 
     Timer timer;
     f32 targetDelta = 1.0f / 60.f;
+
+    // Set up SceneManager. This has to happen before the ClientRenderer is created.
+    SceneManager* sceneManager = new SceneManager();
+    sceneManager->SetAvailableScenes({ "LoginScreen"_h, "CharacterSelection"_h, "CharacterCreation"_h });
+    ServiceLocator::SetSceneManager(sceneManager);
 
     _clientRenderer = new ClientRenderer();
 
@@ -166,13 +155,15 @@ void EngineLoop::Run()
             }
         });
 
+    // Load Scripts
     std::string scriptPath = "./Data/scripts";
     ScriptHandler::LoadScriptDirectory(scriptPath);
-    
+
+    sceneManager->LoadScene("LoginScreen"_h);
+
     _network.authSocket->SetReadHandler(std::bind(&ConnectionUpdateSystem::AuthSocket_HandleRead, std::placeholders::_1));
     _network.authSocket->SetConnectHandler(std::bind(&ConnectionUpdateSystem::AuthSocket_HandleConnect, std::placeholders::_1, std::placeholders::_2));
     _network.authSocket->SetDisconnectHandler(std::bind(&ConnectionUpdateSystem::AuthSocket_HandleDisconnect, std::placeholders::_1));
-    _network.authSocket->Connect("127.0.0.1", 3724); // Realmlist should contain these values
     
     _network.gameSocket->SetReadHandler(std::bind(&ConnectionUpdateSystem::GameSocket_HandleRead, std::placeholders::_1));
     _network.gameSocket->SetConnectHandler(std::bind(&ConnectionUpdateSystem::GameSocket_HandleConnect, std::placeholders::_1, std::placeholders::_2));
@@ -246,15 +237,7 @@ bool EngineLoop::Update(f32 deltaTime)
         else if (message.code == MSG_IN_RELOAD)
         {
             entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
-            UI::UIDataSingleton& uiDataSingleton = uiRegistry->ctx<UI::UIDataSingleton>();
-            for (auto asObject : uiDataSingleton.entityToAsObject)
-            {
-                delete asObject.second;
-            }
-            uiDataSingleton.entityToAsObject.clear();
-            uiRegistry->clear();
-
-            _clientRenderer->GetUIRenderer()->InitRegistry();
+            uiRegistry->ctx<UI::UIDataSingleton>().ClearWidgets();
 
             ScriptHandler::ReloadScripts();
         }
