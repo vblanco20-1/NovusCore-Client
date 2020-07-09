@@ -8,6 +8,7 @@
 #include "ShaderHandlerVK.h"
 #include "../../../Descriptors/VertexShaderDesc.h"
 #include "../../../Descriptors/PixelShaderDesc.h"
+#include "DescriptorSetBuilderVK.h"
 
 #pragma warning (push)
 #pragma warning(disable : 4005)
@@ -41,6 +42,8 @@ namespace Renderer
         RenderDeviceVK::~RenderDeviceVK()
         {
             // TODO: All cleanup
+
+            delete _descriptorMegaPool;
         }
 
         void RenderDeviceVK::Init()
@@ -152,6 +155,9 @@ namespace Renderer
             CreateAllocator();
             CreateCommandPool();
             CreateCommandBuffers();
+
+            _descriptorMegaPool = new DescriptorMegaPoolVK();
+            _descriptorMegaPool->Init(FRAME_INDEX_COUNT, this);
 
             _initialized = true;
         }
@@ -610,11 +616,11 @@ namespace Renderer
 
             // Load shaders
             VertexShaderDesc vertexShaderDesc;
-            vertexShaderDesc.path = "Data/shaders/blit.vert.spv";
+            vertexShaderDesc.path = "Data/shaders/blit.vs.hlsl.spv";
             VertexShaderID vertexShader = shaderHandler->LoadShader(this, vertexShaderDesc);
 
             PixelShaderDesc pixelShaderDesc;
-            pixelShaderDesc.path = "Data/shaders/" + fragShaderName + ".frag.spv";
+            pixelShaderDesc.path = "Data/shaders/" + fragShaderName + ".ps.hlsl.spv";
             PixelShaderID pixelShader = shaderHandler->LoadShader(this, pixelShaderDesc);
 
             // Create shader stage infos
@@ -634,18 +640,35 @@ namespace Renderer
 
             VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
-            // Descriptor set layout
-            VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
-            samplerLayoutBinding.binding = 0;
-            samplerLayoutBinding.descriptorCount = 1;
-            samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            samplerLayoutBinding.pImmutableSamplers = nullptr;
-            samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            // Create Descriptor Set Layout from reflected SPIR-V
+            std::vector<BindInfo> bindInfos;
+            {
+                const BindReflection& bindReflection = shaderHandler->GetBindReflection(vertexShader);
+                bindInfos.insert(bindInfos.end(), bindReflection.dataBindings.begin(), bindReflection.dataBindings.end());
+            }
+            {
+                const BindReflection& bindReflection = shaderHandler->GetBindReflection(pixelShader);
+                bindInfos.insert(bindInfos.end(), bindReflection.dataBindings.begin(), bindReflection.dataBindings.end());
+            }
+
+            std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+            for (BindInfo& bindInfo : bindInfos)
+            {
+                VkDescriptorSetLayoutBinding layoutBinding = {};
+
+                layoutBinding.binding = bindInfo.binding;
+                layoutBinding.descriptorType = bindInfo.descriptorType;
+                layoutBinding.descriptorCount = bindInfo.count;
+                layoutBinding.stageFlags = bindInfo.stageFlags;
+
+                bindings.push_back(layoutBinding);
+            }
 
             VkDescriptorSetLayoutCreateInfo layoutInfo = {};
             layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            layoutInfo.bindingCount = 1;
-            layoutInfo.pBindings = &samplerLayoutBinding;
+            layoutInfo.bindingCount = static_cast<u32>(bindings.size());
+            layoutInfo.pBindings = bindings.data();
 
             if (vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &pipeline.descriptorSetLayout) != VK_SUCCESS)
             {
@@ -653,14 +676,16 @@ namespace Renderer
             }
 
             // Create descriptor pool
-            VkDescriptorPoolSize descriptorPoolSize = {}; 
-            descriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorPoolSize.descriptorCount = 1;
+            VkDescriptorPoolSize descriptorPoolSizes[2] = {};
+            descriptorPoolSizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+            descriptorPoolSizes[0].descriptorCount = 1;
+            descriptorPoolSizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            descriptorPoolSizes[1].descriptorCount = 1;
 
             VkDescriptorPoolCreateInfo descriptorPoolInfo = {};
             descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-            descriptorPoolInfo.poolSizeCount = 1;
-            descriptorPoolInfo.pPoolSizes = &descriptorPoolSize;
+            descriptorPoolInfo.poolSizeCount = 2;
+            descriptorPoolInfo.pPoolSizes = descriptorPoolSizes;
             descriptorPoolInfo.maxSets = 1;
 
             if (vkCreateDescriptorPool(_device, &descriptorPoolInfo, nullptr, &pipeline.descriptorPool) != VK_SUCCESS)

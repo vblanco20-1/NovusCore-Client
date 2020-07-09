@@ -85,8 +85,7 @@ void UIRenderer::Update(f32 deltaTime)
                 image.constantBuffer = constantBuffer;
             }
             constantBuffer->resource.color = image.color;
-            constantBuffer->Apply(0);
-            constantBuffer->Apply(1);
+            constantBuffer->ApplyAll();
 
             // Transform Updates.
             const vec2& pos = vec2(UITransformUtils::GetMinBounds(transform));
@@ -282,20 +281,20 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
 
             // Panel Shaders
             Renderer::VertexShaderDesc vertexShaderDesc;
-            vertexShaderDesc.path = "Data/shaders/panel.vert.spv";
+            vertexShaderDesc.path = "Data/shaders/panel.vs.hlsl.spv";
             pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
 
             Renderer::PixelShaderDesc pixelShaderDesc;
-            pixelShaderDesc.path = "Data/shaders/panel.frag.spv";
+            pixelShaderDesc.path = "Data/shaders/panel.ps.hlsl.spv";
             pipelineDesc.states.pixelShader = _renderer->LoadShader(pixelShaderDesc);
 
             Renderer::GraphicsPipelineID panelPipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
 
             // Text Shaders
-            vertexShaderDesc.path = "Data/shaders/text.vert.spv";
+            vertexShaderDesc.path = "Data/shaders/text.vs.hlsl.spv";
             pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
 
-            pixelShaderDesc.path = "Data/shaders/text.frag.spv";
+            pixelShaderDesc.path = "Data/shaders/text.ps.hlsl.spv";
             pipelineDesc.states.pixelShader = _renderer->LoadShader(pixelShaderDesc);
 
             Renderer::GraphicsPipelineID textPipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
@@ -304,7 +303,7 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
             commandList.BeginPipeline(panelPipeline);
             Renderer::GraphicsPipelineID activePipeline = panelPipeline;
 
-            commandList.SetSampler(1, _linearSampler);
+            commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, frameIndex);
 
             ZoneScopedNC("UIRenderer::AddUIPass - Render", tracy::Color::Red)
 
@@ -331,15 +330,17 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
 
                         commandList.PushMarker("Text", Color(0.0f, 0.1f, 0.0f));
 
-                        // Set constant buffer
-                        commandList.SetConstantBuffer(0, text.constantBuffer->GetDescriptor(frameIndex), frameIndex);
+                        // Bind textdata descriptor
+                        _drawDescriptorSet.Bind("_textData"_h, text.constantBuffer);
 
                         // Each glyph in the label has it's own plane and texture, this could be optimized in the future.
                         size_t glyphs = text.models.size();
                         for (u32 i = 0; i < glyphs; i++)
                         {
-                            // Set texture
-                            commandList.SetTexture(2, text.textures[i]);
+                            // Bind texture descriptor
+                            _drawDescriptorSet.Bind("_texture"_h, text.textures[i]);
+
+                            commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_DRAW, &_drawDescriptorSet, frameIndex);
 
                             // Draw
                             commandList.Draw(text.models[i]);
@@ -363,11 +364,11 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
 
                         commandList.PushMarker("Image", Color(0.0f, 0.1f, 0.0f));
 
-                        // Set constant buffer
-                        commandList.SetConstantBuffer(0, image.constantBuffer->GetDescriptor(frameIndex), frameIndex);
+                        // Bind descriptors
+                        _drawDescriptorSet.Bind("_panelData"_h, image.constantBuffer);
+                        _drawDescriptorSet.Bind("_texture"_h, image.textureID);
 
-                        // Set texture.
-                        commandList.SetTexture(2, image.textureID);
+                        commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_DRAW, &_drawDescriptorSet, frameIndex);
 
                         // Draw
                         commandList.Draw(image.modelID);
@@ -521,6 +522,12 @@ void UIRenderer::CreatePermanentResources()
     samplerDesc.shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_PIXEL;
 
     _linearSampler = _renderer->CreateSampler(samplerDesc);
+
+    // Create descriptor sets
+    _passDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
+    _passDescriptorSet.Bind("_sampler"_h, _linearSampler);
+
+    _drawDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
 }
 
 Renderer::TextureID UIRenderer::ReloadTexture(const std::string& texturePath)

@@ -19,6 +19,12 @@ namespace Renderer
         _renderer->EndCommandList(commandList);
     }
 
+    void CommandList::MarkFrameStart(u32 frameIndex)
+    {
+        Commands::MarkFrameStart* command = AddCommand<Commands::MarkFrameStart>();
+        command->frameIndex = frameIndex;
+    }
+
     void CommandList::PushMarker(std::string marker, Color color)
     {
         Commands::PushMarker* command = AddCommand<Commands::PushMarker>();
@@ -47,6 +53,22 @@ namespace Renderer
     {
         Commands::EndGraphicsPipeline* command = AddCommand<Commands::EndGraphicsPipeline>();
         command->pipeline = pipelineID;
+    }
+
+    void CommandList::BindDescriptorSet(DescriptorSetSlot slot, DescriptorSet* descriptorSet, u32 frameIndex)
+    {
+        const std::vector<Descriptor>& descriptors = descriptorSet->GetDescriptors();
+        size_t numDescriptors = descriptors.size();
+
+        Commands::BindDescriptorSet* command = AddCommand<Commands::BindDescriptorSet>();
+        command->slot = slot;
+
+        // Make a copy of the current state of this DescriptorSets descriptors, this uses our per-frame stack allocator so it's gonna be fast and not leak
+        command->descriptors = Memory::Allocator::NewArray<Descriptor>(_allocator, numDescriptors);
+        memcpy(command->descriptors, descriptors.data(), sizeof(Descriptor) * numDescriptors);
+
+        command->numDescriptors = static_cast<u32>(numDescriptors);
+        command->frameIndex = frameIndex;
     }
 
     void CommandList::SetScissorRect(u32 left, u32 right, u32 top, u32 bottom)

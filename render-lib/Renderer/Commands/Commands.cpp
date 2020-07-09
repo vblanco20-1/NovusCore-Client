@@ -16,6 +16,8 @@
 #include "SetVertexBuffer.h"
 #include "SetIndexBuffer.h"
 #include "SetBuffer.h"
+#include "BindDescriptorSet.h"
+#include "MarkFrameStart.h"
 
 namespace Renderer
 {
@@ -41,5 +43,7 @@ namespace Renderer
         const BackendDispatchFunction SetVertexBuffer::DISPATCH_FUNCTION = &BackendDispatch::SetVertexBuffer;
         const BackendDispatchFunction SetIndexBuffer::DISPATCH_FUNCTION = &BackendDispatch::SetIndexBuffer;
         const BackendDispatchFunction SetBuffer::DISPATCH_FUNCTION = &BackendDispatch::SetBuffer;
+        const BackendDispatchFunction BindDescriptorSet::DISPATCH_FUNCTION = &BackendDispatch::BindDescriptorSet;
+        const BackendDispatchFunction MarkFrameStart::DISPATCH_FUNCTION = &BackendDispatch::MarkFrameStart;
     }
 }

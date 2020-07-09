@@ -136,6 +136,7 @@ namespace Renderer
 
             TextureArray textureArray;
             textureArray.textures.reserve(desc.size);
+            textureArray.size = desc.size;
 
             // Create descriptor set layout
             VkDescriptorSetLayoutBinding descriptorLayout = {};
@@ -272,6 +273,15 @@ namespace Renderer
             return textureID;
         }
 
+        const std::vector<TextureID>& TextureHandlerVK::GetTextureIDsInArray(const TextureArrayID id)
+        {
+            using type = type_safe::underlying_type<TextureArrayID>;
+
+            // Lets make sure this id exists
+            assert(_textureArrays.size() > static_cast<type>(id));
+            return _textureArrays[static_cast<type>(id)].textures;
+        }
+
         VkImageView TextureHandlerVK::GetImageView(const TextureID id)
         {
             using type = type_safe::underlying_type<TextureID>;
@@ -297,6 +307,20 @@ namespace Renderer
             // Lets make sure this id exists
             assert(_textureArrays.size() > static_cast<type>(id));
             return _textureArrays[static_cast<type>(id)].descriptorSet;
+        }
+
+        VkImageView TextureHandlerVK::GetDebugTextureImageView()
+        {
+            return _debugTexture.imageView;
+        }
+
+        u32 TextureHandlerVK::GetTextureArraySize(const TextureArrayID id)
+        {
+            using type = type_safe::underlying_type<TextureArrayID>;
+
+            // Lets make sure this id exists
+            assert(_textureArrays.size() > static_cast<type>(id));
+            return _textureArrays[static_cast<type>(id)].size;
         }
 
         u64 TextureHandlerVK::CalculateDescHash(const TextureDesc& desc)

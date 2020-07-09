@@ -10,6 +10,7 @@
 #include "StorageBuffer.h"
 #include "RenderStates.h"
 #include "Font.h"
+#include "DescriptorSet.h"
 
 // Descriptors
 #include "Descriptors/CommandListDesc.h"
@@ -75,6 +76,8 @@ namespace Renderer
         virtual TextureID CreateDataTexture(DataTextureDesc& desc) = 0;
         virtual TextureID CreateDataTextureIntoArray(DataTextureDesc& desc, TextureArrayID textureArray, u32& arrayIndex) = 0;
         
+        virtual DescriptorSetBackend* CreateDescriptorSetBackend() = 0;
+
         // Loading
         virtual ModelID LoadModel(ModelDesc& desc) = 0;
 
@@ -87,27 +90,29 @@ namespace Renderer
 
         // Command List Functions
         virtual CommandListID BeginCommandList() = 0;
-        virtual void EndCommandList(CommandListID commandList) = 0;
-        virtual void Clear(CommandListID commandList, ImageID image, Color color) = 0;
-        virtual void Clear(CommandListID commandList, DepthImageID image, DepthClearFlags clearFlags, f32 depth, u8 stencil) = 0;
-        virtual void Draw(CommandListID commandList, ModelID modelID) = 0;
-        virtual void DrawBindless(CommandListID commandList, u32 numVertices, u32 numInstances) = 0;
-        virtual void DrawIndexedBindless(CommandListID commandList, ModelID modelID, u32 numVertices, u32 numInstances) = 0;
-        virtual void PopMarker(CommandListID commandList) = 0;
-        virtual void PushMarker(CommandListID commandList, Color color, std::string name) = 0;
+        virtual void EndCommandList(CommandListID commandListID) = 0;
+        virtual void Clear(CommandListID commandListID, ImageID image, Color color) = 0;
+        virtual void Clear(CommandListID commandListID, DepthImageID image, DepthClearFlags clearFlags, f32 depth, u8 stencil) = 0;
+        virtual void Draw(CommandListID commandListID, ModelID modelID) = 0;
+        virtual void DrawBindless(CommandListID commandListID, u32 numVertices, u32 numInstances) = 0;
+        virtual void DrawIndexedBindless(CommandListID commandListID, ModelID modelID, u32 numVertices, u32 numInstances) = 0;
+        virtual void PopMarker(CommandListID commandListID) = 0;
+        virtual void PushMarker(CommandListID commandListID, Color color, std::string name) = 0;
         virtual void SetConstantBuffer(CommandListID commandListID, u32 slot, void* descriptor, size_t frameIndex) = 0;
         virtual void SetStorageBuffer(CommandListID commandListID, u32 slot, void* descriptor, size_t frameIndex) = 0;
-        virtual void BeginPipeline(CommandListID commandList, GraphicsPipelineID pipeline) = 0;
-        virtual void EndPipeline(CommandListID commandList, GraphicsPipelineID pipeline) = 0;
-        virtual void SetPipeline(CommandListID commandList, ComputePipelineID pipeline) = 0;
-        virtual void SetScissorRect(CommandListID commandList, ScissorRect scissorRect) = 0;
-        virtual void SetViewport(CommandListID commandList, Viewport viewport) = 0;
-        virtual void SetSampler(CommandListID commandList, u32 slot, SamplerID sampler) = 0;
-        virtual void SetTexture(CommandListID commandList, u32 slot, TextureID texture) = 0;
-        virtual void SetTextureArray(CommandListID commandList, u32 slot, TextureArrayID textureArray) = 0;
-        virtual void SetVertexBuffer(CommandListID commandList, u32 slot, ModelID modelID) = 0;
-        virtual void SetIndexBuffer(CommandListID commandList, ModelID modelID) = 0;
-        virtual void SetBuffer(CommandListID commandList, u32 slot, void* buffer) = 0;
+        virtual void BeginPipeline(CommandListID commandListID, GraphicsPipelineID pipeline) = 0;
+        virtual void EndPipeline(CommandListID commandListID, GraphicsPipelineID pipeline) = 0;
+        virtual void SetPipeline(CommandListID commandListID, ComputePipelineID pipeline) = 0;
+        virtual void SetScissorRect(CommandListID commandListID, ScissorRect scissorRect) = 0;
+        virtual void SetViewport(CommandListID commandListID, Viewport viewport) = 0;
+        virtual void SetSampler(CommandListID commandListID, u32 slot, SamplerID sampler) = 0;
+        virtual void SetTexture(CommandListID commandListID, u32 slot, TextureID texture) = 0;
+        virtual void SetTextureArray(CommandListID commandListID, u32 slot, TextureArrayID textureArray) = 0;
+        virtual void SetVertexBuffer(CommandListID commandListID, u32 slot, ModelID modelID) = 0;
+        virtual void SetIndexBuffer(CommandListID commandListID, ModelID modelID) = 0;
+        virtual void SetBuffer(CommandListID commandListID, u32 slot, void* buffer) = 0;
+        virtual void BindDescriptorSet(CommandListID commandListID, DescriptorSetSlot slot, Descriptor* descriptors, u32 numDescriptors, u32 frameIndex) = 0;
+        virtual void MarkFrameStart(CommandListID commandListID, u32 frameIndex) = 0;
 
         // Non-commandlist based present functions
         virtual void Present(Window* window, ImageID image) = 0;

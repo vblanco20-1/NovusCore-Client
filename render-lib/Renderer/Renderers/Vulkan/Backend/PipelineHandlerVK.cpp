@@ -6,6 +6,7 @@
 #include "ShaderHandlerVK.h"
 #include "ImageHandlerVK.h"
 #include "SpirvReflect.h"
+#include "DescriptorSetBuilderVK.h"
 
 
 namespace Renderer
@@ -170,69 +171,29 @@ namespace Renderer
             }
             
             // -- Create Descriptor Set Layout from reflected SPIR-V --
-            std::vector<const ShaderBinary*> shaderBinaries;
+            std::vector<BindInfo> bindInfos;
             if (desc.states.vertexShader != VertexShaderID::Invalid())
             {
-                shaderBinaries.push_back(shaderHandler->GetSPIRV(desc.states.vertexShader));
+                const BindReflection& bindReflection = shaderHandler->GetBindReflection(desc.states.vertexShader);
+                bindInfos.insert(bindInfos.end(), bindReflection.dataBindings.begin(), bindReflection.dataBindings.end());
             }
             if (desc.states.pixelShader != PixelShaderID::Invalid())
             {
-                shaderBinaries.push_back(shaderHandler->GetSPIRV(desc.states.pixelShader));
+                const BindReflection& bindReflection = shaderHandler->GetBindReflection(desc.states.pixelShader);
+                bindInfos.insert(bindInfos.end(), bindReflection.dataBindings.begin(), bindReflection.dataBindings.end());
             }
 
-            for (auto& shaderBinary : shaderBinaries)
+            for (BindInfo& bindInfo : bindInfos)
             {
-                SpvReflectShaderModule reflectModule = {};
-                SpvReflectResult result = spvReflectCreateShaderModule(shaderBinary->size(), shaderBinary->data(), &reflectModule);
+                DescriptorSetLayoutData& layout = GetDescriptorSet(bindInfo.set, pipeline.descriptorSetLayoutDatas);
+                VkDescriptorSetLayoutBinding layoutBinding = {};
 
-                if (result != SPV_REFLECT_RESULT_SUCCESS)
-                {
-                    NC_LOG_FATAL("We failed to reflect the spirv");
-                }
+                layoutBinding.binding = bindInfo.binding;
+                layoutBinding.descriptorType = bindInfo.descriptorType;
+                layoutBinding.descriptorCount = bindInfo.count;
+                layoutBinding.stageFlags = bindInfo.stageFlags;
 
-                uint32_t count = 0;
-                result = spvReflectEnumerateDescriptorSets(&reflectModule, &count, NULL);
-                
-                if (result != SPV_REFLECT_RESULT_SUCCESS)
-                {
-                    NC_LOG_FATAL("We failed to reflect the spirv descriptor set count");
-                }
-
-                std::vector<SpvReflectDescriptorSet*> sets(count);
-                result = spvReflectEnumerateDescriptorSets(&reflectModule, &count, sets.data());
-                
-                if (result != SPV_REFLECT_RESULT_SUCCESS)
-                {
-                    NC_LOG_FATAL("We failed to reflect the spirv descriptor sets");
-                }
-
-                for (size_t set = 0; set < sets.size(); set++)
-                {
-                    const SpvReflectDescriptorSet& reflectionSet = *(sets[set]);
-
-                    DescriptorSetLayoutData& layout = GetDescriptorSet(reflectionSet.set, pipeline.descriptorSetLayoutDatas);
-
-                    for (uint32_t binding = 0; binding < reflectionSet.binding_count; binding++)
-                    {
-                        const SpvReflectDescriptorBinding& reflectionBinding = *(reflectionSet.bindings[binding]);
-
-                        layout.bindings.push_back(VkDescriptorSetLayoutBinding());
-                        VkDescriptorSetLayoutBinding& layoutBinding = layout.bindings.back();
-                        layoutBinding.binding = reflectionBinding.binding;
-                        layoutBinding.descriptorType = static_cast<VkDescriptorType>(reflectionBinding.descriptor_type);
-                        layoutBinding.descriptorCount = 1;
-
-                        for (uint32_t dim = 0; dim < reflectionBinding.array.dims_count; dim++)
-                        {
-                            layoutBinding.descriptorCount *= reflectionBinding.array.dims[dim];
-                        }
-                        layoutBinding.stageFlags = static_cast<VkShaderStageFlagBits>(reflectModule.shader_stage);
-                    }
-                    layout.setNumber = reflectionSet.set;
-                    layout.createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-                    layout.createInfo.bindingCount = static_cast<u32>(layout.bindings.size());
-                    layout.createInfo.pBindings = layout.bindings.data();
-                }
+                layout.bindings.push_back(layoutBinding);
             }
 
             size_t numDescriptorSets = pipeline.descriptorSetLayoutDatas.size();
@@ -240,6 +201,9 @@ namespace Renderer
 
             for (size_t i = 0; i < numDescriptorSets; i++)
             {
+                pipeline.descriptorSetLayoutDatas[i].createInfo.bindingCount = static_cast<u32>(pipeline.descriptorSetLayoutDatas[i].bindings.size());
+                pipeline.descriptorSetLayoutDatas[i].createInfo.pBindings = pipeline.descriptorSetLayoutDatas[i].bindings.data();
+
                 if (vkCreateDescriptorSetLayout(device->_device, &pipeline.descriptorSetLayoutDatas[i].createInfo, nullptr, &pipeline.descriptorSetLayouts[i]) != VK_SUCCESS)
                 {
                     NC_LOG_FATAL("Failed to create descriptor set layout!");
@@ -496,8 +460,15 @@ namespace Renderer
                 NC_LOG_FATAL("Failed to create graphics pipeline!");
             }
 
+            GraphicsPipelineID pipelineID = GraphicsPipelineID(static_cast<gIDType>(nextID));
+            pipeline.descriptorSetBuilder = new DescriptorSetBuilderVK(pipelineID, this, shaderHandler, device->_descriptorMegaPool);
+
             _graphicsPipelines.push_back(pipeline);
-            return GraphicsPipelineID(static_cast<gIDType>(nextID));
+
+            pipeline.descriptorSetBuilder->InitReflectData(); // Needs to happen after push_back
+
+
+            return pipelineID;
         }
 
         ComputePipelineID PipelineHandlerVK::CreatePipeline(RenderDeviceVK* device, ShaderHandlerVK* shaderHandler, ImageHandlerVK* imageHandler, const ComputePipelineDesc& desc)
@@ -569,8 +540,22 @@ namespace Renderer
             return false;
         }
 
-        DescriptorSetLayoutData& PipelineHandlerVK::GetDescriptorSet(u32 setNumber, std::vector<DescriptorSetLayoutData>& sets)
+        DescriptorSetLayoutData& PipelineHandlerVK::GetDescriptorSet(i32 setNumber, std::vector<DescriptorSetLayoutData>& sets)
         {
+            while (static_cast<i32>(sets.size())-1 < setNumber)
+            {
+                DescriptorSetLayoutData setLayoutData = {};
+                setLayoutData.createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+                setLayoutData.createInfo.bindingCount = 0;
+                setLayoutData.createInfo.pBindings = nullptr;
+
+                sets.push_back(setLayoutData);
+            }
+
+            return sets[setNumber];
+
+            /*
+            // Check if it has been created
             for (DescriptorSetLayoutData& set : sets)
             {
                 if (set.setNumber == setNumber)
@@ -579,8 +564,41 @@ namespace Renderer
                 }
             }
 
-            sets.push_back(DescriptorSetLayoutData());
-            return sets.back();
+            // If not we need to create it, but we are not allowed to have gaps, so we need to check each set from 0 to setNumber as well...
+            // TODO: This can probably be optimized
+            for (u32 i = 0; i < setNumber; i++)
+            {
+                bool found = false;
+                for (DescriptorSetLayoutData& set : sets)
+                {
+                    if (set.setNumber == setNumber)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    DescriptorSetLayoutData setLayoutData = {};
+                    setLayoutData.setNumber = i;
+
+                    setLayoutData.createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+                    setLayoutData.createInfo.bindingCount = 0;
+                    setLayoutData.createInfo.pBindings = nullptr;
+
+                    sets.push_back(setLayoutData);
+                }
+            }
+
+            DescriptorSetLayoutData setLayoutData = {};
+            setLayoutData.setNumber = setNumber;
+            setLayoutData.createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            setLayoutData.createInfo.bindingCount = 0;
+            setLayoutData.createInfo.pBindings = nullptr;
+
+            sets.push_back(setLayoutData);
+            return sets.back();*/
         }
     }
 }

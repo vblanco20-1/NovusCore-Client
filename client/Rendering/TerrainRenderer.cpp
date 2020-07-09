@@ -50,7 +50,7 @@ void TerrainRenderer::AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph,
 
             // Shader
             Renderer::VertexShaderDesc vertexShaderDesc;
-            vertexShaderDesc.path = "Data/shaders/terrain.vert.spv";
+            vertexShaderDesc.path = "Data/shaders/terrain.vs.hlsl.spv";
             pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
 
             // Constant buffers  TODO: Improve on this, if I set state 0 and 3 it won't work etc...
@@ -100,8 +100,11 @@ void TerrainRenderer::AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph,
             // Set instance buffer
             commandList.SetBuffer(0, _terrainInstanceIDs->GetBuffer(frameIndex));
 
-            // Set view constant buffer
-            commandList.SetConstantBuffer(0, viewConstantBuffer->GetDescriptor(frameIndex), frameIndex);
+            // Bind viewbuffer
+            _passDescriptorSet.Bind("ViewData"_h, viewConstantBuffer);
+
+            // Bind descriptorset
+            commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, frameIndex);
 
             // Render main layer
             Renderer::RenderLayer& mainLayer = _renderer->GetRenderLayer("Terrain"_h);
@@ -112,13 +115,13 @@ void TerrainRenderer::AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph,
 
                 for (auto const& instance : instances)
                 {
-                    // Set model constant buffer
-                    commandList.SetConstantBuffer(1, instance->GetDescriptor(frameIndex), frameIndex);
-
                     TerrainInstanceData* terrainInstanceData = instance->GetOptional<TerrainInstanceData>();
 
-                    // Set vertex storage buffer
-                    commandList.SetStorageBuffer(2, terrainInstanceData->vertexBuffer->GetDescriptor(frameIndex), frameIndex);
+                    _drawDescriptorSet.Bind("ModelData"_h, instance->GetConstantBuffer());
+                    _drawDescriptorSet.Bind("_vertexData"_h, terrainInstanceData->vertexBuffer);
+                    _drawDescriptorSet.Bind("ChunkData"_h, terrainInstanceData->chunkData);
+
+                    commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_DRAW, &_drawDescriptorSet, frameIndex);
 
                     // Draw
                     commandList.DrawIndexedBindless(_chunkModel, Terrain::NUM_INDICES_PER_CHUNK, Terrain::MAP_CELLS_PER_CHUNK);
@@ -129,7 +132,7 @@ void TerrainRenderer::AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph,
     }
 }
 
-void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex)
+void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, u8 debugMode)
 {
     // Terrain Pass
     {
@@ -154,11 +157,11 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
 
             // Shaders
             Renderer::VertexShaderDesc vertexShaderDesc;
-            vertexShaderDesc.path = "Data/shaders/terrain.vert.spv";
+            vertexShaderDesc.path = "Data/shaders/terrain.vs.hlsl.spv";
             pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
 
             Renderer::PixelShaderDesc pixelShaderDesc;
-            pixelShaderDesc.path = "Data/shaders/terrain.frag.spv";
+            pixelShaderDesc.path = (debugMode == 0) ? "Data/shaders/terrain.ps.hlsl.spv" : "Data/shaders/terrainDebug.ps.hlsl.spv";
             pipelineDesc.states.pixelShader = _renderer->LoadShader(pixelShaderDesc);
 
             // Constant buffers  TODO: Improve on this, if I set state 0 and 3 it won't work etc...
@@ -210,143 +213,15 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
             // Set instance buffer
             commandList.SetBuffer(0, _terrainInstanceIDs->GetBuffer(frameIndex));
 
-            // Set view constant buffer
-            commandList.SetConstantBuffer(0, viewConstantBuffer->GetDescriptor(frameIndex), frameIndex);
+            // Update debug data buffer
+            _terrainDebugData->resource.debugMode = debugMode;
+            _terrainDebugData->Apply(frameIndex);
 
-            // Set sampler
-            commandList.SetSampler(3, _alphaSampler);
-            commandList.SetSampler(4, _colorSampler);
+            // Bind viewbuffer
+            _passDescriptorSet.Bind("ViewData"_h, viewConstantBuffer);
 
-            // Set texture arrays
-            commandList.SetTextureArray(5, _terrainColorTextureArray);
-            commandList.SetTextureArray(6, _terrainAlphaTextureArray);
-
-            // Render main layer
-            Renderer::RenderLayer& mainLayer = _renderer->GetRenderLayer("Terrain"_h);
-
-            for (auto const& model : mainLayer.GetModels())
-            {
-                auto const& instances = model.second;
-
-                for (auto const& instance : instances)
-                {
-                    // Set model constant buffer
-                    commandList.SetConstantBuffer(1, instance->GetDescriptor(frameIndex), frameIndex);
-
-                    TerrainInstanceData* terrainInstanceData = instance->GetOptional<TerrainInstanceData>();
-
-                    // Set vertex storage buffer
-                    commandList.SetStorageBuffer(2, terrainInstanceData->vertexBuffer->GetDescriptor(frameIndex), frameIndex);
-                    
-                    // Set constant buffer
-                    commandList.SetConstantBuffer(7, terrainInstanceData->chunkData->GetDescriptor(frameIndex), frameIndex);
-
-                    // Draw
-                    commandList.DrawIndexedBindless(_chunkModel, Terrain::NUM_INDICES_PER_CHUNK, Terrain::MAP_CELLS_PER_CHUNK);
-                }
-            }
-            commandList.EndPipeline(pipeline);
-        });
-    }
-}
-
-void TerrainRenderer::AddTerrainDebugPass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID textureIDTarget, Renderer::ImageID alphaMapTarget, Renderer::DepthImageID depthTarget, u8 frameIndex)
-{
-    // Terrain Debug Pass
-    {
-        struct TerrainPassData
-        {
-            Renderer::RenderPassMutableResource textureIDTarget;
-            Renderer::RenderPassMutableResource alphaMapTarget;
-            Renderer::RenderPassMutableResource mainDepth;
-        };
-
-        renderGraph->AddPass<TerrainPassData>("TerrainDebug",
-            [=](TerrainPassData& data, Renderer::RenderGraphBuilder& builder) // Setup
-        {
-            data.textureIDTarget = builder.Write(textureIDTarget, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
-            data.alphaMapTarget = builder.Write(alphaMapTarget, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
-            data.mainDepth = builder.Write(depthTarget, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
-
-            return true; // Return true from setup to enable this pass, return false to disable it
-        },
-            [=, &renderGraph](TerrainPassData& data, Renderer::CommandList& commandList) // Execute
-        {
-            commandList.Clear(textureIDTarget, Color(0,0,0,0));
-            commandList.Clear(alphaMapTarget, Color(0, 0, 0, 0));
-
-            Renderer::GraphicsPipelineDesc pipelineDesc;
-            renderGraph->InitializePipelineDesc(pipelineDesc);
-
-            // Shaders
-            Renderer::VertexShaderDesc vertexShaderDesc;
-            vertexShaderDesc.path = "Data/shaders/terrain.vert.spv";
-            pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
-
-            Renderer::PixelShaderDesc pixelShaderDesc;
-            pixelShaderDesc.path = "Data/shaders/terrainDebug.frag.spv";
-            pipelineDesc.states.pixelShader = _renderer->LoadShader(pixelShaderDesc);
-
-            // Constant buffers  TODO: Improve on this, if I set state 0 and 3 it won't work etc...
-            pipelineDesc.states.constantBufferStates[0].enabled = true; // ViewCB
-            pipelineDesc.states.constantBufferStates[0].shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_VERTEX;
-            pipelineDesc.states.constantBufferStates[1].enabled = true; // ModelCB
-            pipelineDesc.states.constantBufferStates[1].shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_VERTEX;
-
-            // Input layouts TODO: Improve on this, if I set state 0 and 3 it won't work etc... Maybe responsibility for this should be moved to ModelHandler and the cooker?
-            pipelineDesc.states.inputLayouts[0].enabled = true;
-            pipelineDesc.states.inputLayouts[0].SetName("INSTANCEID");
-            pipelineDesc.states.inputLayouts[0].format = Renderer::InputFormat::INPUT_FORMAT_R32_UINT;
-            pipelineDesc.states.inputLayouts[0].inputClassification = Renderer::InputClassification::INPUT_CLASSIFICATION_PER_INSTANCE;
-
-            // Viewport
-            pipelineDesc.states.viewport.topLeftX = 0;
-            pipelineDesc.states.viewport.topLeftY = 0;
-            pipelineDesc.states.viewport.width = static_cast<f32>(WIDTH);
-            pipelineDesc.states.viewport.height = static_cast<f32>(HEIGHT);
-            pipelineDesc.states.viewport.minDepth = 0.0f;
-            pipelineDesc.states.viewport.maxDepth = 1.0f;
-
-            // ScissorRect
-            pipelineDesc.states.scissorRect.left = 0;
-            pipelineDesc.states.scissorRect.right = WIDTH;
-            pipelineDesc.states.scissorRect.top = 0;
-            pipelineDesc.states.scissorRect.bottom = HEIGHT;
-
-            // Depth state
-            pipelineDesc.states.depthStencilState.depthEnable = true;
-            pipelineDesc.states.depthStencilState.depthFunc = Renderer::ComparisonFunc::COMPARISON_FUNC_EQUAL;
-
-            // Rasterizer state
-            pipelineDesc.states.rasterizerState.cullMode = Renderer::CullMode::CULL_MODE_BACK;
-            pipelineDesc.states.rasterizerState.frontFaceMode = Renderer::FrontFaceState::FRONT_FACE_STATE_COUNTERCLOCKWISE;
-
-            // Samplers TODO: We don't care which samplers we have here, we just need the number of samplers
-            pipelineDesc.states.samplers[0].enabled = true;
-
-            // Render targets
-            pipelineDesc.renderTargets[0] = data.textureIDTarget;
-            pipelineDesc.renderTargets[1] = data.alphaMapTarget;
-
-            pipelineDesc.depthStencil = data.mainDepth;
-
-            // Set pipeline
-            Renderer::GraphicsPipelineID pipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
-            commandList.BeginPipeline(pipeline);
-
-            // Set instance buffer
-            commandList.SetBuffer(0, _terrainInstanceIDs->GetBuffer(frameIndex));
-
-            // Set view constant buffer
-            commandList.SetConstantBuffer(0, viewConstantBuffer->GetDescriptor(frameIndex), frameIndex);
-
-            // Set sampler
-            commandList.SetSampler(3, _alphaSampler);
-            commandList.SetSampler(4, _colorSampler);
-
-            // Set texture arrays
-            commandList.SetTextureArray(5, _terrainColorTextureArray);
-            commandList.SetTextureArray(6, _terrainAlphaTextureArray);
+            // Bind descriptorset
+            commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, frameIndex);
 
             // Render main layer
             Renderer::RenderLayer& mainLayer = _renderer->GetRenderLayer("Terrain"_h);
@@ -357,16 +232,13 @@ void TerrainRenderer::AddTerrainDebugPass(Renderer::RenderGraph* renderGraph, Re
 
                 for (auto const& instance : instances)
                 {
-                    // Set model constant buffer
-                    commandList.SetConstantBuffer(1, instance->GetDescriptor(frameIndex), frameIndex);
-
                     TerrainInstanceData* terrainInstanceData = instance->GetOptional<TerrainInstanceData>();
 
-                    // Set vertex storage buffer
-                    commandList.SetStorageBuffer(2, terrainInstanceData->vertexBuffer->GetDescriptor(frameIndex), frameIndex);
+                    _drawDescriptorSet.Bind("ModelData"_h, instance->GetConstantBuffer());
+                    _drawDescriptorSet.Bind("_vertexData"_h, terrainInstanceData->vertexBuffer);
+                    _drawDescriptorSet.Bind("ChunkData"_h, terrainInstanceData->chunkData);
 
-                    // Set constant buffer
-                    commandList.SetConstantBuffer(7, terrainInstanceData->chunkData->GetDescriptor(frameIndex), frameIndex);
+                    commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_DRAW, &_drawDescriptorSet, frameIndex);
 
                     // Draw
                     commandList.DrawIndexedBindless(_chunkModel, Terrain::NUM_INDICES_PER_CHUNK, Terrain::MAP_CELLS_PER_CHUNK);
@@ -430,6 +302,20 @@ void TerrainRenderer::CreatePermanentResources()
     colorSamplerDesc.shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_PIXEL;
 
     _colorSampler = _renderer->CreateSampler(colorSamplerDesc);
+
+    // Debug data constant buffer
+    _terrainDebugData = _renderer->CreateConstantBuffer<TerrainDebugData>();
+    _terrainDebugData->ApplyAll();
+
+    // Descriptor sets
+    _passDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
+    _passDescriptorSet.Bind("_alphaSampler"_h, _alphaSampler);
+    _passDescriptorSet.Bind("_colorSampler"_h, _colorSampler);
+    _passDescriptorSet.Bind("_terrainColorTextures"_h, _terrainColorTextureArray);
+    _passDescriptorSet.Bind("_terrainAlphaTextures"_h, _terrainAlphaTextureArray);
+    _passDescriptorSet.Bind("DebugData"_h, _terrainDebugData);
+
+    _drawDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
 
     // Create a chunk model with no vertices but the correct indices
     Renderer::PrimitiveModelDesc modelDesc;

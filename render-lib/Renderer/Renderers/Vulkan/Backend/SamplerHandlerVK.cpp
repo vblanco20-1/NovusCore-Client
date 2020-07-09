@@ -249,6 +249,15 @@ namespace Renderer
             return _samplers[static_cast<type>(samplerID)].descriptorSet;
         }
 
+        VkSampler& SamplerHandlerVK::GetSampler(const SamplerID samplerID)
+        {
+            using type = type_safe::underlying_type<SamplerID>;
+
+            // Lets make sure this id exists
+            assert(_samplers.size() > static_cast<type>(samplerID));
+            return _samplers[static_cast<type>(samplerID)].sampler;
+        }
+
         const SamplerDesc& SamplerHandlerVK::GetSamplerDesc(const SamplerID samplerID)
         {
             using type = type_safe::underlying_type<SamplerID>;

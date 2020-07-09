@@ -8,6 +8,7 @@ namespace Renderer
     namespace Backend
     {
         class RenderDeviceVK;
+        class DescriptorSetBuilderVK;
 
         struct SwapChainSupportDetails
         {
@@ -105,7 +106,6 @@ namespace Renderer
                     return actualExtent;
                 }
             }
-        public:
 
             RenderDeviceVK* device;
 

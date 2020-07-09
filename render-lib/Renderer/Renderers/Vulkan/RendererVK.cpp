@@ -15,6 +15,8 @@
 #include "Backend/SwapChainVK.h"
 #include "Backend/DebugMarkerUtilVK.h"
 #include "Backend/BufferBackendVK.h"
+#include "Backend/DescriptorSetBackendVK.h"
+#include "Backend/DescriptorSetBuilderVK.h"
 
 namespace Renderer
 {
@@ -101,6 +103,11 @@ namespace Renderer
     TextureID RendererVK::CreateDataTextureIntoArray(DataTextureDesc& desc, TextureArrayID textureArray, u32& arrayIndex)
     {
         return _textureHandler->CreateDataTextureIntoArray(_device, desc, textureArray, arrayIndex);
+    }
+
+    DescriptorSetBackend* RendererVK::CreateDescriptorSetBackend()
+    {
+        return new Backend::DescriptorSetBackendVK();
     }
 
     ModelID RendererVK::LoadModel(ModelDesc& desc)
@@ -220,9 +227,14 @@ namespace Renderer
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
 
-        // Bind index buffer
-        VkBuffer indexBuffer = _modelHandler->GetIndexBuffer(modelID);
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        if (_boundModelIndexBuffer != modelID)
+        {
+            // Bind index buffer
+            VkBuffer indexBuffer = _modelHandler->GetIndexBuffer(modelID);
+            vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+            _boundModelIndexBuffer = modelID;
+        }
 
         // Draw
         u32 numIndices = _modelHandler->GetNumIndices(modelID);
@@ -241,10 +253,15 @@ namespace Renderer
     {
         VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
 
-        // Bind index buffer
-        VkBuffer indexBuffer = _modelHandler->GetIndexBuffer(modelID);
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        if (_boundModelIndexBuffer != modelID)
+        {
+            // Bind index buffer
+            VkBuffer indexBuffer = _modelHandler->GetIndexBuffer(modelID);
+            vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
+            _boundModelIndexBuffer = modelID;
+        }
+        
         // Draw
         vkCmdDrawIndexed(commandBuffer, numVertices, numInstances, 0, 0, 0);
     }
@@ -421,6 +438,8 @@ namespace Renderer
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
         _commandListHandler->SetBoundGraphicsPipeline(commandListID, pipelineID);
+
+        _boundModelIndexBuffer = ModelID::Invalid();
     }
 
     void RendererVK::EndPipeline(CommandListID commandListID, GraphicsPipelineID /*pipelineID*/)
@@ -516,6 +535,150 @@ namespace Renderer
         vkCmdBindVertexBuffers(commandBuffer, slot, 1, &vkBuffer, offsets);
     }
 
+    bool RendererVK::ReflectDescriptorSet(const std::string& name, u32 nameHash, u32 type, i32& set, const std::vector<Backend::BindInfo>& bindInfos, u32& outBindInfoIndex, VkDescriptorSetLayoutBinding* outDescriptorLayoutBinding)
+    {
+        // Try to find a BindInfo with a matching name
+        for(u32 i = 0; i < bindInfos.size(); i++)
+        {
+            auto& bindInfo = bindInfos[i];
+
+            // If the name and type matches
+            if (nameHash == bindInfo.nameHash && type == bindInfo.descriptorType)
+            {
+                // If we have a set, make sure it's the correct one
+                if (set != -1)
+                {
+                    if (set != bindInfo.set)
+                    {
+                        NC_LOG_ERROR("While creating DescriptorSet, we found BindInfo with matching name (%s) and type (%u), but it didn't match the location (%i != %i)", bindInfo.name, bindInfo.descriptorType, bindInfo.set, set);
+                    }
+                }
+                else
+                {
+                    set = bindInfo.set;
+                }
+
+                // Fill out descriptor set layout
+                outDescriptorLayoutBinding->binding = bindInfo.binding;
+                outDescriptorLayoutBinding->descriptorType = bindInfo.descriptorType;
+                outDescriptorLayoutBinding->descriptorCount = bindInfo.count;
+                outDescriptorLayoutBinding->stageFlags = bindInfo.stageFlags;
+                outDescriptorLayoutBinding->pImmutableSamplers = NULL;
+
+                outBindInfoIndex = i;
+
+                return true;
+            }
+        }
+
+        NC_LOG_ERROR("While creating DescriptorSet we encountered binding (%s) of type (%u) which did not have a matching BindInfo in the bound shaders", name.c_str(), type);
+        return false;
+    }
+
+    void RendererVK::BindDescriptor(Backend::DescriptorSetBuilderVK* builder, void* imageInfosArraysVoid, Descriptor& descriptor, u32 frameIndex)
+    {
+        std::vector<std::vector<VkDescriptorImageInfo>>& imageInfosArrays = *static_cast<std::vector<std::vector<VkDescriptorImageInfo>>*>(imageInfosArraysVoid);
+
+        if (descriptor.descriptorType == DescriptorType::DESCRIPTOR_TYPE_SAMPLER)
+        {
+            VkDescriptorImageInfo imageInfo = {};
+            imageInfo.sampler = _samplerHandler->GetSampler(descriptor.samplerID);
+
+            builder->BindSampler(descriptor.nameHash, imageInfo);
+        }
+        else if (descriptor.descriptorType == DescriptorType::DESCRIPTOR_TYPE_TEXTURE)
+        {
+            VkDescriptorImageInfo imageInfo = {};
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView = _textureHandler->GetImageView(descriptor.textureID);
+
+            builder->BindImage(descriptor.nameHash, imageInfo);
+        }
+        else if (descriptor.descriptorType == DescriptorType::DESCRIPTOR_TYPE_TEXTURE_ARRAY)
+        {
+            const std::vector<TextureID>& textureIDs = _textureHandler->GetTextureIDsInArray(descriptor.textureArrayID);
+            std::vector<VkDescriptorImageInfo>& imageInfos = imageInfosArrays.emplace_back();
+
+            u32 textureArraySize = _textureHandler->GetTextureArraySize(descriptor.textureArrayID);
+            imageInfos.reserve(textureArraySize);
+            
+            u32 numTextures = static_cast<u32>(textureIDs.size());
+
+            // From 0 to numTextures, add our actual textures
+            for (auto textureID : textureIDs)
+            {
+                VkDescriptorImageInfo& imageInfo = imageInfos.emplace_back();
+                imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                imageInfo.imageView = _textureHandler->GetImageView(textureID);
+                imageInfo.sampler = VK_NULL_HANDLE;
+            }
+
+            // from numTextures to textureArraySize, add debug texture
+            VkDescriptorImageInfo imageInfoDebugTexture;
+            imageInfoDebugTexture.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfoDebugTexture.imageView = _textureHandler->GetDebugTextureImageView();
+            imageInfoDebugTexture.sampler = VK_NULL_HANDLE;
+
+            for (u32 i = numTextures; i < textureArraySize; i++)
+            {
+                imageInfos.push_back(imageInfoDebugTexture);
+            }
+            
+            builder->BindImageArray(descriptor.nameHash, imageInfos.data(), static_cast<i32>(imageInfos.size()));
+        }
+        else if (descriptor.descriptorType == DescriptorType::DESCRIPTOR_TYPE_CONSTANT_BUFFER)
+        {
+            VkDescriptorBufferInfo bufferInfo = {};
+            bufferInfo.buffer = *static_cast<VkBuffer*>(descriptor.constantBuffer->GetBuffer(frameIndex));
+            bufferInfo.range = descriptor.constantBuffer->GetSize();
+
+            builder->BindBuffer(descriptor.nameHash, bufferInfo);
+        }
+        else if (descriptor.descriptorType == DescriptorType::DESCRIPTOR_TYPE_STORAGE_BUFFER)
+        {
+            VkDescriptorBufferInfo bufferInfo = {};
+            bufferInfo.buffer = *static_cast<VkBuffer*>(descriptor.storageBuffer->GetBuffer(frameIndex));
+            bufferInfo.range = descriptor.storageBuffer->GetSize();
+
+            builder->BindBuffer(descriptor.nameHash, bufferInfo);
+        }
+    }
+
+    void RendererVK::BindDescriptorSet(CommandListID commandListID, DescriptorSetSlot slot,Descriptor* descriptors, u32 numDescriptors, u32 frameIndex)
+    {
+        VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
+        GraphicsPipelineID graphicsPipelineID = _commandListHandler->GetBoundGraphicsPipeline(commandListID);
+
+        using type = type_safe::underlying_type<GraphicsPipelineID>;
+        
+        std::vector<std::vector<VkDescriptorImageInfo>> imageInfosArrays; // These need to live until builder->BuildDescriptor()
+        imageInfosArrays.reserve(8);
+
+        Backend::DescriptorSetBuilderVK* builder = _pipelineHandler->GetDescriptorSetBuilder(graphicsPipelineID);
+        assert(slot != DescriptorSetSlot::GLOBAL); // TODO: this won't need or have a graphicspipelineID, not sure how to do that yet
+
+        for (u32 i = 0; i < numDescriptors; i++)
+        {
+            Descriptor& descriptor = descriptors[i];
+            BindDescriptor(builder, &imageInfosArrays, descriptor, frameIndex);
+        }
+
+        VkDescriptorSet descriptorSet = builder->BuildDescriptor(static_cast<i32>(slot), Backend::DescriptorLifetime::PerFrame);
+                
+        VkPipelineLayout pipelineLayout = _pipelineHandler->GetPipelineLayout(graphicsPipelineID);
+
+        // Bind descriptor set
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, slot, 1, &descriptorSet, 0, nullptr);
+    }
+
+    void RendererVK::MarkFrameStart(CommandListID commandListID, u32 frameIndex)
+    {
+        VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
+        Backend::DebugMarkerUtilVK::PushMarker(commandBuffer, Color(1,1,1,1), std::to_string(frameIndex));
+
+        _device->_descriptorMegaPool->SetFrame(frameIndex);
+    }
+
     void RendererVK::Present(Window* window, ImageID imageID)
     {
         CommandListID commandListID = _commandListHandler->BeginCommandList(_device);
@@ -528,6 +691,7 @@ namespace Renderer
 
         // Acquire next swapchain image
         u32 frameIndex;
+
         vkAcquireNextImageKHR(_device->_device, swapChain->swapChain, UINT64_MAX, swapChain->imageAvailableSemaphores[semaphoreIndex], VK_NULL_HANDLE, &frameIndex);
         _commandListHandler->SetWaitSemaphore(commandListID, swapChain->imageAvailableSemaphores[semaphoreIndex]);
 
@@ -539,23 +703,34 @@ namespace Renderer
         VkImage image = _imageHandler->GetImage(imageID);
 
         // Update SRV descriptor
-        VkDescriptorImageInfo imageInfo = {};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = _imageHandler->GetColorView(imageID);
-        imageInfo.sampler = swapChain->sampler;
+        VkDescriptorImageInfo imageInfos[2] = {};
+        imageInfos[0].sampler = swapChain->sampler;
 
-        VkWriteDescriptorSet descriptorWrite = {};
-        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = pipeline.descriptorSet;
-        descriptorWrite.dstBinding = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pBufferInfo = nullptr;
-        descriptorWrite.pImageInfo = &imageInfo;
-        descriptorWrite.pTexelBufferView = nullptr;
+        imageInfos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfos[1].imageView = _imageHandler->GetColorView(imageID);
 
-        vkUpdateDescriptorSets(_device->_device, 1, &descriptorWrite, 0, nullptr);
+        VkWriteDescriptorSet descriptorWrites[2] = {};
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = pipeline.descriptorSet;
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = nullptr;
+        descriptorWrites[0].pImageInfo = &imageInfos[0];
+        descriptorWrites[0].pTexelBufferView = nullptr;
+
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstSet = pipeline.descriptorSet;
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pBufferInfo = nullptr;
+        descriptorWrites[1].pImageInfo = &imageInfos[1];
+        descriptorWrites[1].pTexelBufferView = nullptr;
+
+        vkUpdateDescriptorSets(_device->_device, 2, descriptorWrites, 0, nullptr);
 
         // Set up renderpass
         VkRenderPassBeginInfo renderPassInfo = {};

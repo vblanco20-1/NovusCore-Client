@@ -34,6 +34,8 @@ namespace Renderer
 
             void* GetDescriptor(u32 frameIndex) override;
             void* GetBuffer(u32 frameIndex) override;
+
+            friend class RendererVK;
         };
     }
 }

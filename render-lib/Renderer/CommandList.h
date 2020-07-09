@@ -24,6 +24,8 @@
 #include "Commands/SetVertexBuffer.h"
 #include "Commands/SetIndexBuffer.h"
 #include "Commands/SetBuffer.h"
+#include "Commands/BindDescriptorSet.h"
+#include "Commands/MarkFrameStart.h"
 
 namespace Renderer
 {
@@ -40,11 +42,15 @@ namespace Renderer
 
         }
 
+        void MarkFrameStart(u32 frameIndex);
+
         void PushMarker(std::string marker, Color color);
         void PopMarker();
 
         void BeginPipeline(GraphicsPipelineID pipelineID);
         void EndPipeline(GraphicsPipelineID pipelineID);
+
+        void BindDescriptorSet(DescriptorSetSlot slot, DescriptorSet* descriptorSet, u32 frameIndex);
 
         void SetScissorRect(u32 left, u32 right, u32 top, u32 bottom);
         void SetViewport(f32 topLeftX, f32 topLeftY, f32 width, f32 height, f32 minDepth, f32 maxDepth);

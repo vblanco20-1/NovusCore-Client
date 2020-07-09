@@ -21,6 +21,7 @@ namespace Renderer
         struct BufferBackendVK;
         struct SwapChainVK;
         class ShaderHandlerVK;
+        struct DescriptorMegaPoolVK;
 
         struct QueueFamilyIndices
         {
@@ -104,6 +105,8 @@ namespace Renderer
 
             VmaAllocator _allocator;
 
+            DescriptorMegaPoolVK* _descriptorMegaPool;
+
             friend class RendererVK;
             friend struct BufferBackendVK;
             friend class ImageHandlerVK;
@@ -113,6 +116,9 @@ namespace Renderer
             friend class PipelineHandlerVK;
             friend class CommandListHandlerVK;
             friend class SamplerHandlerVK;
+            friend struct DescriptorAllocatorHandleVK;
+            friend class DescriptorAllocatorPoolVKImpl;
+            friend class DescriptorSetBuilderVK;
         };
     }
 }

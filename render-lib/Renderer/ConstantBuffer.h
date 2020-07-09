@@ -3,12 +3,19 @@
 
 namespace Renderer
 {
+    struct IConstantBuffer
+    {
+        virtual size_t GetSize() = 0;
+        virtual void* GetDescriptor(u32 frameIndex) = 0;
+        virtual void* GetBuffer(u32 frameIndex) = 0;
+    };
+
     template <typename T>
-    struct ConstantBuffer
+    struct ConstantBuffer : IConstantBuffer
     {
         T resource;
 
-        constexpr size_t GetSize()
+        virtual size_t GetSize() override
         {
             return sizeof(T);
         }
@@ -26,12 +33,12 @@ namespace Renderer
             }
         }
 
-        void* GetDescriptor(u32 frameIndex)
+        virtual void* GetDescriptor(u32 frameIndex) override
         {
             return backend->GetDescriptor(frameIndex);
         }
 
-        void* GetBuffer(u32 frameIndex)
+        virtual void* GetBuffer(u32 frameIndex) override
         {
             return backend->GetBuffer(frameIndex);
         }

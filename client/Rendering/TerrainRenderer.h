@@ -11,6 +11,7 @@
 #include <Renderer/Descriptors/SamplerDesc.h>
 #include <Renderer/ConstantBuffer.h>
 #include <Renderer/StorageBuffer.h>
+#include <Renderer/DescriptorSet.h>
 
 #include "../Gameplay/Map/Chunk.h"
 #include "Renderer/InstanceData.h"
@@ -28,6 +29,7 @@ namespace Renderer
 {
     class RenderGraph;
     class Renderer;
+    class DescriptorSet;
 }
 
 class TerrainRenderer
@@ -38,8 +40,7 @@ public:
     void Update(f32 deltaTime);
 
     void AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::DepthImageID depthTarget, u8 frameIndex);
-    void AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex);
-    void AddTerrainDebugPass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID textureIDTarget, Renderer::ImageID alphaMapTarget, Renderer::DepthImageID depthTarget, u8 frameIndex);
+    void AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, u8 debugMode);
 
 private:
     void CreatePermanentResources();
@@ -57,6 +58,11 @@ private:
         u32 diffuseIDs[4] = { 0 };
     };
 
+    struct TerrainDebugData
+    {
+        u32 debugMode = 0;
+    };
+
     struct TerrainInstanceData
     {
         Renderer::StorageBuffer<std::array<TerrainVertex, Terrain::NUM_VERTICES_PER_CHUNK>>* vertexBuffer = nullptr;
@@ -69,6 +75,8 @@ private:
     Renderer::ModelID _chunkModel = Renderer::ModelID::Invalid();
     std::vector<Renderer::InstanceData> _chunkModelInstances;
 
+    Renderer::ConstantBuffer<TerrainDebugData>* _terrainDebugData = nullptr;
+
     Renderer::ConstantBuffer<std::array<u32, Terrain::MAP_CELLS_PER_CHUNK>>* _terrainInstanceIDs = nullptr;
     
     Renderer::TextureArrayID _terrainColorTextureArray = Renderer::TextureArrayID::Invalid();
@@ -76,4 +84,7 @@ private:
 
     Renderer::SamplerID _alphaSampler;
     Renderer::SamplerID _colorSampler;
+
+    Renderer::DescriptorSet _passDescriptorSet;
+    Renderer::DescriptorSet _drawDescriptorSet;
 };

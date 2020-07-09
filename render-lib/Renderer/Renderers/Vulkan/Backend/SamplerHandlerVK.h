@@ -26,9 +26,10 @@ namespace Renderer
             //VkDescriptorSet GetCombinedSampler(RenderDeviceVK* device, TextureHandlerVK* textureHandler, PipelineHandlerVK* pipelineHandler, const SamplerID samplerID, const u32 slot, const TextureID textureID, const GraphicsPipelineID pipelineID);
 
             VkDescriptorSet GetDescriptorSet(const SamplerID samplerID);
+            VkSampler& GetSampler(const SamplerID samplerID);
 
             const SamplerDesc& GetSamplerDesc(const SamplerID samplerID);
-
+            
         private:
 
             using _SamplerID = type_safe::underlying_type<SamplerID>;

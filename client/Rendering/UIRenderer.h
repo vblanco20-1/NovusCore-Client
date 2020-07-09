@@ -6,6 +6,7 @@
 #include <Renderer/Descriptors/ModelDesc.h>
 #include <Renderer/Descriptors/SamplerDesc.h>
 #include <Renderer/ConstantBuffer.h>
+#include <Renderer/DescriptorSet.h>
 
 namespace Renderer
 {
@@ -39,4 +40,7 @@ private:
     Renderer::Renderer* _renderer;
 
     Renderer::SamplerID _linearSampler;
+
+    Renderer::DescriptorSet _passDescriptorSet;
+    Renderer::DescriptorSet _drawDescriptorSet;
 };

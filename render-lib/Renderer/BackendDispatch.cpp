@@ -15,6 +15,8 @@
 #include "Commands/SetVertexBuffer.h"
 #include "Commands/SetIndexBuffer.h"
 #include "Commands/SetBuffer.h"
+#include "Commands/BindDescriptorSet.h"
+#include "Commands/MarkFrameStart.h"
 
 namespace Renderer
 {
@@ -45,6 +47,12 @@ namespace Renderer
     {
         const Commands::DrawIndexedBindless* actualData = static_cast<const Commands::DrawIndexedBindless*>(data);
         renderer->DrawIndexedBindless(commandList, actualData->modelID, actualData->numVertices, actualData->numInstances);
+    }
+
+    void BackendDispatch::MarkFrameStart(Renderer* renderer, CommandListID commandList, const void* data)
+    {
+        const Commands::MarkFrameStart* actualData = static_cast<const Commands::MarkFrameStart*>(data);
+        renderer->MarkFrameStart(commandList, actualData->frameIndex);
     }
 
     void BackendDispatch::PopMarker(Renderer* renderer, CommandListID commandList, const void* /*data*/)
@@ -86,6 +94,12 @@ namespace Renderer
     {
         const Commands::SetComputePipeline* actualData = static_cast<const Commands::SetComputePipeline*>(data);
         renderer->SetPipeline(commandList, actualData->pipeline);
+    }
+
+    void BackendDispatch::BindDescriptorSet(Renderer* renderer, CommandListID commandList, const void* data)
+    {
+        const Commands::BindDescriptorSet* actualData = static_cast<const Commands::BindDescriptorSet*>(data);
+        renderer->BindDescriptorSet(commandList, actualData->slot, actualData->descriptors, actualData->numDescriptors, actualData->frameIndex);
     }
 
     void BackendDispatch::SetScissorRect(Renderer* renderer, CommandListID commandList, const void* data)

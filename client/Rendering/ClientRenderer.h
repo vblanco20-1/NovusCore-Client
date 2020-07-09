@@ -7,6 +7,7 @@
 #include <Renderer/Descriptors/ModelDesc.h>
 #include <Renderer/Descriptors/SamplerDesc.h>
 #include <Renderer/InstanceData.h>
+#include <Renderer/DescriptorSet.h>
 
 #include "ViewConstantBuffer.h"
 
@@ -51,8 +52,6 @@ private:
 
     // Permanent resources
     Renderer::ImageID _mainColor;
-    Renderer::ImageID _debugTextureID;
-    Renderer::ImageID _debugAlphaMap;
 
     Renderer::DepthImageID _mainDepth;
 
@@ -62,6 +61,9 @@ private:
     Renderer::SamplerID _linearSampler;
 
     Renderer::ConstantBuffer<ViewConstantBuffer>* _viewConstantBuffer;
+
+    Renderer::DescriptorSet _passDescriptorSet;
+    Renderer::DescriptorSet _drawDescriptorSet;
 
     // Sub renderers
     UIRenderer* _uiRenderer;

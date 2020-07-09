@@ -14,10 +14,10 @@ namespace Renderer
         class RenderDeviceVK;
         class ShaderHandlerVK;
         class ImageHandlerVK;
+        class DescriptorSetBuilderVK;
 
         struct DescriptorSetLayoutData
         {
-            uint32_t setNumber;
             VkDescriptorSetLayoutCreateInfo createInfo;
             std::vector<VkDescriptorSetLayoutBinding> bindings;
         };
@@ -44,6 +44,8 @@ namespace Renderer
             VkDescriptorSetLayout& GetDescriptorSetLayout(GraphicsPipelineID id, u32 index) { return _graphicsPipelines[static_cast<gIDType>(id)].descriptorSetLayouts[index]; }
             VkPipelineLayout& GetPipelineLayout(GraphicsPipelineID id) { return _graphicsPipelines[static_cast<gIDType>(id)].pipelineLayout; }
 
+            DescriptorSetBuilderVK* GetDescriptorSetBuilder(GraphicsPipelineID id) { return _graphicsPipelines[static_cast<gIDType>(id)].descriptorSetBuilder; }
+
         private:
 
             struct GraphicsPipeline
@@ -62,6 +64,8 @@ namespace Renderer
 
                 VkDescriptorPool descriptorPool;
                 std::vector<VkDescriptorSet> descriptorSets;
+
+                DescriptorSetBuilderVK* descriptorSetBuilder;
             };
 
             struct GraphicsPipelineCacheDesc
@@ -82,7 +86,7 @@ namespace Renderer
             u64 CalculateCacheDescHash(const GraphicsPipelineDesc& desc);
             bool TryFindExistingGPipeline(u64 descHash, size_t& id);
             bool TryFindExistingCPipeline(u64 descHash, size_t& id);
-            DescriptorSetLayoutData& GetDescriptorSet(u32 setNumber, std::vector<DescriptorSetLayoutData>& sets);
+            DescriptorSetLayoutData& GetDescriptorSet(i32 setNumber, std::vector<DescriptorSetLayoutData>& sets);
             
         private:
             std::vector<GraphicsPipeline> _graphicsPipelines;

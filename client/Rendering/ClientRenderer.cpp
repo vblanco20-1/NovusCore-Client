@@ -41,9 +41,9 @@ void cursor_position_callback(GLFWwindow* window, f64 x, f64 y)
 
 ClientRenderer::ClientRenderer()
 {
-    //_camera = new Camera(vec3(-8000.0f, 0.0f, 1600.0f)); // Goldshire
+    _camera = new Camera(vec3(-8000.0f, 0.0f, 1600.0f)); // Goldshire
     //_camera = new Camera(vec3(300.0f, 0.0f, -4700.0f)); // Razor Hill
-    _camera = new Camera(vec3(3308.0f, 0.0f, 5316.0f)); // Borean Tundra
+    //_camera = new Camera(vec3(3308.0f, 0.0f, 5316.0f)); // Borean Tundra
 
     _window = new Window();
     _window->Init(WIDTH, HEIGHT);
@@ -135,12 +135,14 @@ void ClientRenderer::Render()
         },
             [&](DepthPrepassData& data, Renderer::CommandList& commandList) // Execute
         {
+            commandList.MarkFrameStart(_frameIndex);
+
             Renderer::GraphicsPipelineDesc pipelineDesc;
             renderGraph.InitializePipelineDesc(pipelineDesc);
 
             // Shaders
             Renderer::VertexShaderDesc vertexShaderDesc;
-            vertexShaderDesc.path = "Data/shaders/depthprepass.vert.spv";
+            vertexShaderDesc.path = "Data/shaders/depthprepass.vs.hlsl.spv";
             pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
 
             // Constant buffers  TODO: Improve on this, if I set state 0 and 3 it won't work etc...
@@ -196,8 +198,7 @@ void ClientRenderer::Render()
             Renderer::GraphicsPipelineID pipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
             commandList.BeginPipeline(pipeline);
 
-            // Set view constant buffer
-            commandList.SetConstantBuffer(0, _viewConstantBuffer->GetDescriptor(_frameIndex), _frameIndex);
+            commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, _frameIndex);
 
             // Render depth prepass layer
             Renderer::RenderLayer& layer = _renderer->GetRenderLayer(DEPTH_PREPASS_RENDER_LAYER);
@@ -211,8 +212,8 @@ void ClientRenderer::Render()
                 {
                     instance->Apply(_frameIndex);
 
-                    // Set model constant buffer
-                    commandList.SetConstantBuffer(1, instance->GetDescriptor(_frameIndex), _frameIndex);
+                    _drawDescriptorSet.Bind("_modelData", instance->GetConstantBuffer());
+                    commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_DRAW, &_drawDescriptorSet, _frameIndex);
 
                     // Draw
                     commandList.Draw(modelID);
@@ -250,11 +251,11 @@ void ClientRenderer::Render()
 
             // Shaders
             Renderer::VertexShaderDesc vertexShaderDesc;
-            vertexShaderDesc.path = "Data/shaders/test.vert.spv";
+            vertexShaderDesc.path = "Data/shaders/test.vs.hlsl.spv";
             pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
 
             Renderer::PixelShaderDesc pixelShaderDesc;
-            pixelShaderDesc.path = "Data/shaders/test.frag.spv";
+            pixelShaderDesc.path = "Data/shaders/test.ps.hlsl.spv";
             pipelineDesc.states.pixelShader = _renderer->LoadShader(pixelShaderDesc);
 
             // Constant buffers  TODO: Improve on this, if I set state 0 and 3 it won't work etc...
@@ -317,12 +318,9 @@ void ClientRenderer::Render()
             Renderer::GraphicsPipelineID pipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
             commandList.BeginPipeline(pipeline);
 
-            // Set view constant buffer
-            commandList.SetConstantBuffer(0, _viewConstantBuffer->GetDescriptor(_frameIndex), _frameIndex);
+            _drawDescriptorSet.Bind("_texture", _cubeTexture); // TODO: Actually select textures etc per draw
 
-            // Set sampler and texture
-            commandList.SetSampler(2, _linearSampler);
-            commandList.SetTexture(3, _cubeTexture);
+            commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, _frameIndex);
 
             // Render main layer
             Renderer::RenderLayer& mainLayer = _renderer->GetRenderLayer(MAIN_RENDER_LAYER);
@@ -334,8 +332,8 @@ void ClientRenderer::Render()
 
                 for (auto const& instance : instances)
                 {
-                    // Set model constant buffer
-                    commandList.SetConstantBuffer(1, instance->GetDescriptor(_frameIndex), _frameIndex);
+                    _drawDescriptorSet.Bind("_modelData", instance->GetConstantBuffer());
+                    commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_DRAW, &_drawDescriptorSet, _frameIndex);
 
                     // Draw
                     commandList.Draw(modelID);
@@ -345,26 +343,14 @@ void ClientRenderer::Render()
         });
     }
 
-    _terrainRenderer->AddTerrainPass(&renderGraph, _viewConstantBuffer, _mainColor, _mainDepth, _frameIndex);
-    _terrainRenderer->AddTerrainDebugPass(&renderGraph, _viewConstantBuffer, _debugTextureID, _debugAlphaMap, _mainDepth, _frameIndex);
+    _terrainRenderer->AddTerrainPass(&renderGraph, _viewConstantBuffer, _mainColor, _mainDepth, _frameIndex, _debugDrawingMode);
+    
     _uiRenderer->AddUIPass(&renderGraph, _mainColor, _frameIndex);
 
     renderGraph.Setup();
     renderGraph.Execute();
     
-    if (_debugDrawingMode == 0)
-    {
-        _renderer->Present(_window, _mainColor);
-    }
-    else if (_debugDrawingMode == 1)
-    {
-        _renderer->Present(_window, _debugTextureID);
-    }
-    else
-    {
-        _renderer->Present(_window, _debugAlphaMap);
-    }
-    
+    _renderer->Present(_window, _mainColor);
 
     // Flip the frameIndex between 0 and 1
     _frameIndex = !_frameIndex;
@@ -380,13 +366,6 @@ void ClientRenderer::CreatePermanentResources()
     mainColorDesc.sampleCount = Renderer::SAMPLE_COUNT_1;
 
     _mainColor = _renderer->CreateImage(mainColorDesc);
-
-    mainColorDesc.debugName = "DebugAlphaMap";
-    _debugAlphaMap = _renderer->CreateImage(mainColorDesc);
-
-    mainColorDesc.format = Renderer::IMAGE_FORMAT_R16G16B16A16_UINT;
-    mainColorDesc.debugName = "DebugTextureID";
-    _debugTextureID = _renderer->CreateImage(mainColorDesc);
 
     // Main depth rendertarget
     Renderer::DepthImageDesc mainDepthDesc;
@@ -431,12 +410,18 @@ void ClientRenderer::CreatePermanentResources()
 
         projMatrix = glm::perspective(fov, aspectRatio, nearClip, farClip);
 
-        _viewConstantBuffer->Apply(0);
-        _viewConstantBuffer->Apply(1);
+        _viewConstantBuffer->ApplyAll();
     }
 
     // Model Constant Buffer (for per-model data)
     _cubeModelInstance.Init(_renderer);
+
+    // Create descriptor sets
+    _passDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
+    _passDescriptorSet.Bind("_viewData"_h, _viewConstantBuffer);
+    _passDescriptorSet.Bind("_sampler"_h, _linearSampler);
+
+    _drawDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
 
     // Frame allocator, this is a fast allocator for data that is only needed this frame
     _frameAllocator = new Memory::StackAllocator(FRAME_ALLOCATOR_SIZE);

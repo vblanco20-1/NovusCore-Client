@@ -1,6 +1,8 @@
 #pragma once
 #include "../../Renderer.h"
 
+struct VkDescriptorSetLayoutBinding;
+
 namespace Renderer
 {
     namespace Backend
@@ -13,6 +15,9 @@ namespace Renderer
         class PipelineHandlerVK;
         class CommandListHandlerVK;
         class SamplerHandlerVK;
+        struct BindInfo;
+        class DescriptorSetBuilderVK;
+        
     }
     
     class RendererVK : public Renderer
@@ -40,6 +45,8 @@ namespace Renderer
         TextureID CreateDataTexture(DataTextureDesc& desc) override;
         TextureID CreateDataTextureIntoArray(DataTextureDesc& desc, TextureArrayID textureArray, u32& arrayIndex) override;
 
+        DescriptorSetBackend* CreateDescriptorSetBackend() override;
+
         // Loading
         ModelID LoadModel(ModelDesc& desc) override;
 
@@ -56,8 +63,8 @@ namespace Renderer
         void Clear(CommandListID commandListID, ImageID image, Color color) override;
         void Clear(CommandListID commandListID, DepthImageID image, DepthClearFlags clearFlags, f32 depth, u8 stencil) override;
         void Draw(CommandListID commandListID, ModelID modelID) override;
-        void DrawBindless(CommandListID commandList, u32 numVertices, u32 numInstances) override;
-        void DrawIndexedBindless(CommandListID commandList, ModelID modelID, u32 numVertices, u32 numInstances) override;
+        void DrawBindless(CommandListID commandListID, u32 numVertices, u32 numInstances) override;
+        void DrawIndexedBindless(CommandListID commandListID, ModelID modelID, u32 numVertices, u32 numInstances) override;
         void PopMarker(CommandListID commandListID) override;
         void PushMarker(CommandListID commandListID, Color color, std::string name) override;
         void SetConstantBuffer(CommandListID commandListID, u32 slot, void* descriptor, size_t frameIndex) override;
@@ -68,11 +75,13 @@ namespace Renderer
         void SetScissorRect(CommandListID commandListID, ScissorRect scissorRect) override;
         void SetViewport(CommandListID commandListID, Viewport viewport) override;
         void SetSampler(CommandListID commandListID, u32 slot, SamplerID samplerID) override;
-        void SetTexture(CommandListID commandList, u32 slot, TextureID texture) override;
-        void SetTextureArray(CommandListID commandList, u32 slot, TextureArrayID textureArray) override;
-        void SetVertexBuffer(CommandListID commandList, u32 slot, ModelID modelID) override;
-        void SetIndexBuffer(CommandListID commandList, ModelID modelID) override;
-        void SetBuffer(CommandListID commandList, u32 slot, void* buffer) override;
+        void SetTexture(CommandListID commandListID, u32 slot, TextureID texture) override;
+        void SetTextureArray(CommandListID commandListID, u32 slot, TextureArrayID textureArray) override;
+        void SetVertexBuffer(CommandListID commandListID, u32 slot, ModelID modelID) override;
+        void SetIndexBuffer(CommandListID commandListID, ModelID modelID) override;
+        void SetBuffer(CommandListID commandListID, u32 slot, void* buffer) override;
+        void BindDescriptorSet(CommandListID commandListID, DescriptorSetSlot slot, Descriptor* descriptors, u32 numDescriptors, u32 frameIndex) override;
+        void MarkFrameStart(CommandListID commandListID, u32 frameIndex) override;
 
         // Non-commandlist based present functions
         void Present(Window* window, ImageID image) override;
@@ -80,6 +89,10 @@ namespace Renderer
         
     protected:
         Backend::BufferBackend* CreateBufferBackend(size_t size, Backend::BufferBackend::Type type) override;
+
+    private:
+        bool ReflectDescriptorSet(const std::string& name, u32 nameHash, u32 type, i32& set, const std::vector<Backend::BindInfo>& bindInfos, u32& outBindInfoIndex, VkDescriptorSetLayoutBinding* outDescriptorLayoutBinding);
+        void BindDescriptor(Backend::DescriptorSetBuilderVK* builder, void* imageInfosArraysVoid, Descriptor& descriptor, u32 frameIndex);
 
     private:
         Backend::RenderDeviceVK* _device = nullptr;
@@ -91,6 +104,8 @@ namespace Renderer
         Backend::CommandListHandlerVK* _commandListHandler = nullptr;
         Backend::SamplerHandlerVK* _samplerHandler = nullptr;
 
-        i8 _renderPassOpenCount = 0;
+        ModelID _boundModelIndexBuffer = ModelID::Invalid(); // TODO: Move these into CommandListHandler I guess?
+
+        i8 _renderPassOpenCount = 0; // TODO: Move these into CommandListHandler I guess?
     };
 }

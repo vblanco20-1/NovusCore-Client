@@ -17,6 +17,8 @@ namespace Renderer
         static void DrawBindless(Renderer* renderer, CommandListID commandList, const void* data);
         static void DrawIndexedBindless(Renderer* renderer, CommandListID commandList, const void* data);
 
+        static void MarkFrameStart(Renderer* renderer, CommandListID commandList, const void* data);
+
         static void PopMarker(Renderer* renderer, CommandListID commandList, const void* data);
         static void PushMarker(Renderer* renderer, CommandListID commandList, const void* data);
 
@@ -26,6 +28,8 @@ namespace Renderer
         static void BeginGraphicsPipeline(Renderer* renderer, CommandListID commandList, const void* data);
         static void EndGraphicsPipeline(Renderer* renderer, CommandListID commandList, const void* data);
         static void SetComputePipeline(Renderer* renderer, CommandListID commandList, const void* data);
+
+        static void BindDescriptorSet(Renderer* renderer, CommandListID commandList, const void* data);
 
         static void SetScissorRect(Renderer* renderer, CommandListID commandList, const void* data);
         static void SetViewport(Renderer* renderer, CommandListID commandList, const void* data);

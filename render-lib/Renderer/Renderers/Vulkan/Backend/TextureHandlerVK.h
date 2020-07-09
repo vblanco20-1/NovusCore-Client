@@ -29,9 +29,15 @@ namespace Renderer
             TextureID CreateDataTexture(RenderDeviceVK* device, const DataTextureDesc& desc);
             TextureID CreateDataTextureIntoArray(RenderDeviceVK* device, const DataTextureDesc& desc, TextureArrayID textureArray, u32& arrayIndex);
 
+            const std::vector<TextureID>& GetTextureIDsInArray(const TextureArrayID id);
+
             VkImageView GetImageView(const TextureID id);
             VkDescriptorSet GetDescriptorSet(const TextureID id);
             VkDescriptorSet GetDescriptorSet(const TextureArrayID id);
+
+            VkImageView GetDebugTextureImageView();
+
+            u32 GetTextureArraySize(const TextureArrayID id);
 
         private:
             struct Texture
@@ -57,6 +63,7 @@ namespace Renderer
 
             struct TextureArray
             {
+                u32 size;
                 std::vector<TextureID> textures;
                 std::vector<u64> textureHashes;
 
