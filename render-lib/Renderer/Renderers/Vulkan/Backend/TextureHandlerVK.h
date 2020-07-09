@@ -32,9 +32,6 @@ namespace Renderer
             const std::vector<TextureID>& GetTextureIDsInArray(const TextureArrayID id);
 
             VkImageView GetImageView(const TextureID id);
-            VkDescriptorSet GetDescriptorSet(const TextureID id);
-            VkDescriptorSet GetDescriptorSet(const TextureArrayID id);
-
             VkImageView GetDebugTextureImageView();
 
             u32 GetTextureArraySize(const TextureArrayID id);
@@ -54,10 +51,6 @@ namespace Renderer
                 VkImage image;
                 VkImageView imageView;
 
-                VkDescriptorSetLayout descriptorSetLayout;
-                VkDescriptorPool descriptorPool;
-                VkDescriptorSet descriptorSet;
-
                 std::string debugName = "";
             };
 
@@ -66,10 +59,6 @@ namespace Renderer
                 u32 size;
                 std::vector<TextureID> textures;
                 std::vector<u64> textureHashes;
-
-                VkDescriptorSetLayout descriptorSetLayout;
-                VkDescriptorPool descriptorPool;
-                VkDescriptorSet descriptorSet;
             };
 
         private:

@@ -10,8 +10,6 @@
 #include "Commands/SetPipeline.h"
 #include "Commands/SetScissorRect.h"
 #include "Commands/SetViewport.h"
-#include "Commands/SetSampler.h"
-#include "Commands/SetTextureArray.h"
 #include "Commands/SetVertexBuffer.h"
 #include "Commands/SetIndexBuffer.h"
 #include "Commands/SetBuffer.h"
@@ -66,18 +64,6 @@ namespace Renderer
         renderer->PushMarker(commandList, actualData->color, actualData->marker);
     }
 
-    void BackendDispatch::SetConstantBuffer(Renderer* renderer, CommandListID commandList, const void* data)
-    {
-        const Commands::SetConstantBuffer* actualData = static_cast<const Commands::SetConstantBuffer*>(data);
-        renderer->SetConstantBuffer(commandList, actualData->slot, actualData->descriptor, actualData->frameIndex);
-    }
-
-    void BackendDispatch::SetStorageBuffer(Renderer* renderer, CommandListID commandList, const void* data)
-    {
-        const Commands::SetStorageBuffer* actualData = static_cast<const Commands::SetStorageBuffer*>(data);
-        renderer->SetStorageBuffer(commandList, actualData->slot, actualData->descriptor, actualData->frameIndex);
-    }
-
     void BackendDispatch::BeginGraphicsPipeline(Renderer* renderer, CommandListID commandList, const void* data)
     {
         const Commands::BeginGraphicsPipeline* actualData = static_cast<const Commands::BeginGraphicsPipeline*>(data);
@@ -112,24 +98,6 @@ namespace Renderer
     {
         const Commands::SetViewport* actualData = static_cast<const Commands::SetViewport*>(data);
         renderer->SetViewport(commandList, actualData->viewport);
-    }
-
-    void BackendDispatch::SetSampler(Renderer* renderer, CommandListID commandList, const void* data)
-    {
-        const Commands::SetSampler* actualData = static_cast<const Commands::SetSampler*>(data);
-        renderer->SetSampler(commandList, actualData->slot, actualData->sampler);
-    }
-
-    void BackendDispatch::SetTexture(Renderer* renderer, CommandListID commandList, const void* data)
-    {
-        const Commands::SetTexture* actualData = static_cast<const Commands::SetTexture*>(data);
-        renderer->SetTexture(commandList, actualData->slot, actualData->texture);
-    }
-    
-    void BackendDispatch::SetTextureArray(Renderer* renderer, CommandListID commandList, const void* data)
-    {
-        const Commands::SetTextureArray* actualData = static_cast<const Commands::SetTextureArray*>(data);
-        renderer->SetTextureArray(commandList, actualData->slot, actualData->textureArray);
     }
 
     void BackendDispatch::SetVertexBuffer(Renderer* renderer, CommandListID commandList, const void* data)

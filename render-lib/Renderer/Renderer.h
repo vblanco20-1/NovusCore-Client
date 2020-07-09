@@ -98,16 +98,11 @@ namespace Renderer
         virtual void DrawIndexedBindless(CommandListID commandListID, ModelID modelID, u32 numVertices, u32 numInstances) = 0;
         virtual void PopMarker(CommandListID commandListID) = 0;
         virtual void PushMarker(CommandListID commandListID, Color color, std::string name) = 0;
-        virtual void SetConstantBuffer(CommandListID commandListID, u32 slot, void* descriptor, size_t frameIndex) = 0;
-        virtual void SetStorageBuffer(CommandListID commandListID, u32 slot, void* descriptor, size_t frameIndex) = 0;
         virtual void BeginPipeline(CommandListID commandListID, GraphicsPipelineID pipeline) = 0;
         virtual void EndPipeline(CommandListID commandListID, GraphicsPipelineID pipeline) = 0;
         virtual void SetPipeline(CommandListID commandListID, ComputePipelineID pipeline) = 0;
         virtual void SetScissorRect(CommandListID commandListID, ScissorRect scissorRect) = 0;
         virtual void SetViewport(CommandListID commandListID, Viewport viewport) = 0;
-        virtual void SetSampler(CommandListID commandListID, u32 slot, SamplerID sampler) = 0;
-        virtual void SetTexture(CommandListID commandListID, u32 slot, TextureID texture) = 0;
-        virtual void SetTextureArray(CommandListID commandListID, u32 slot, TextureArrayID textureArray) = 0;
         virtual void SetVertexBuffer(CommandListID commandListID, u32 slot, ModelID modelID) = 0;
         virtual void SetIndexBuffer(CommandListID commandListID, ModelID modelID) = 0;
         virtual void SetBuffer(CommandListID commandListID, u32 slot, void* buffer) = 0;

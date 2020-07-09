@@ -146,11 +146,6 @@ namespace Renderer
                             bindInfo.name = reflectionBinding->name;
                             bindInfo.nameHash = StringUtils::fnv1a_32(bindInfo.name.c_str(), bindInfo.name.length());
 
-                            /*for (uint32_t dim = 0; dim < reflectionBinding->array.dims_count; dim++)
-                            {
-                                bindInfo.count *= reflectionBinding->array.dims[dim];
-                            }*/
-
                             shader.bindReflection.dataBindings.push_back(bindInfo);
                         }
                     }
@@ -158,7 +153,6 @@ namespace Renderer
                 
                 return T(static_cast<idType>(id));
             }
-
             
             void ReadFile(const std::string& filename, ShaderBinary& binary);
             VkShaderModule CreateShaderModule(RenderDeviceVK* device, const ShaderBinary& binary);

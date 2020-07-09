@@ -105,22 +105,6 @@ namespace Renderer
             textureArray.textures.push_back(textureID);
             textureArray.textureHashes.push_back(descHash);
 
-            VkDescriptorImageInfo descriptorInfo = {};
-            descriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            descriptorInfo.imageView = texture.imageView;
-
-            VkWriteDescriptorSet descriptorWrite = {};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.pNext = NULL;
-            descriptorWrite.dstSet = textureArray.descriptorSet;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            descriptorWrite.pImageInfo = &descriptorInfo;
-            descriptorWrite.dstArrayElement = arrayIndex;
-            descriptorWrite.dstBinding = 0;
-
-            vkUpdateDescriptorSets(device->_device, 1, &descriptorWrite, 0, NULL);
-
             return textureID;
         }
 
@@ -137,76 +121,6 @@ namespace Renderer
             TextureArray textureArray;
             textureArray.textures.reserve(desc.size);
             textureArray.size = desc.size;
-
-            // Create descriptor set layout
-            VkDescriptorSetLayoutBinding descriptorLayout = {};
-            descriptorLayout.binding = 0;
-            descriptorLayout.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            descriptorLayout.descriptorCount = desc.size;
-            descriptorLayout.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-            descriptorLayout.pImmutableSamplers = NULL;
-
-            VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo = {};
-            descriptorLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            descriptorLayoutInfo.pNext = NULL;
-            descriptorLayoutInfo.bindingCount = 1;
-            descriptorLayoutInfo.pBindings = &descriptorLayout;
-
-            if (vkCreateDescriptorSetLayout(device->_device, &descriptorLayoutInfo, NULL, &textureArray.descriptorSetLayout) != VK_SUCCESS)
-            {
-                NC_LOG_FATAL("Failed to create descriptor set layout for texture!");
-            }
-
-            // Create descriptor pool
-            VkDescriptorPoolSize poolSize = {};
-            poolSize.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            poolSize.descriptorCount = desc.size;
-
-            VkDescriptorPoolCreateInfo poolInfo = {};
-            poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-            poolInfo.poolSizeCount = 1;
-            poolInfo.pPoolSizes = &poolSize;
-            poolInfo.maxSets = 1;
-
-            if (vkCreateDescriptorPool(device->_device, &poolInfo, nullptr, &textureArray.descriptorPool) != VK_SUCCESS)
-            {
-                NC_LOG_FATAL("Failed to create descriptor pool for texture!");
-            }
-
-            // Create descriptor set
-            VkDescriptorSetAllocateInfo descriptorAllocInfo;
-            descriptorAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            descriptorAllocInfo.pNext = NULL;
-            descriptorAllocInfo.descriptorPool = textureArray.descriptorPool;
-            descriptorAllocInfo.descriptorSetCount = 1;
-            descriptorAllocInfo.pSetLayouts = &textureArray.descriptorSetLayout;
-
-            if (vkAllocateDescriptorSets(device->_device, &descriptorAllocInfo, &textureArray.descriptorSet) != VK_SUCCESS)
-            {
-                NC_LOG_FATAL("Failed to create descriptor set for texture!");
-            }
-
-            // Now we need to update each descriptor set of the array to point to our debug texture
-            // This is needed because if we bind an array where only some indices of the descriptor set has been updated it will complain, even if we promise really honestly never to use the non-updated ones
-            std::vector<VkDescriptorImageInfo> descriptorInfos(desc.size);
-            for (u32 i = 0; i < desc.size; i++)
-            {
-                descriptorInfos[i].sampler = nullptr;
-                descriptorInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                descriptorInfos[i].imageView = _debugTexture.imageView;
-            }
-
-            VkWriteDescriptorSet descriptorWrite = {};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.pNext = NULL;
-            descriptorWrite.dstSet = textureArray.descriptorSet;
-            descriptorWrite.descriptorCount = desc.size;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            descriptorWrite.pImageInfo = descriptorInfos.data();
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.dstBinding = 0;
-
-            vkUpdateDescriptorSets(device->_device, 1, &descriptorWrite, 0, NULL);
 
             _textureArrays.push_back(textureArray);
             return TextureArrayID(static_cast<type>(nextHandle));
@@ -254,22 +168,6 @@ namespace Renderer
             textureArray.textures.push_back(textureID);
             textureArray.textureHashes.push_back(0);
 
-            VkDescriptorImageInfo descriptorInfo = {};
-            descriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            descriptorInfo.imageView = texture.imageView;
-
-            VkWriteDescriptorSet descriptorWrite = {};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.pNext = NULL;
-            descriptorWrite.dstSet = textureArray.descriptorSet;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            descriptorWrite.pImageInfo = &descriptorInfo;
-            descriptorWrite.dstArrayElement = arrayIndex;
-            descriptorWrite.dstBinding = 0;
-
-            vkUpdateDescriptorSets(device->_device, 1, &descriptorWrite, 0, NULL);
-
             return textureID;
         }
 
@@ -289,24 +187,6 @@ namespace Renderer
             // Lets make sure this id exists
             assert(_textures.size() > static_cast<type>(id));
             return _textures[static_cast<type>(id)].imageView;
-        }
-
-        VkDescriptorSet TextureHandlerVK::GetDescriptorSet(const TextureID id)
-        {
-            using type = type_safe::underlying_type<TextureID>;
-
-            // Lets make sure this id exists
-            assert(_textures.size() > static_cast<type>(id));
-            return _textures[static_cast<type>(id)].descriptorSet;
-        }
-
-        VkDescriptorSet TextureHandlerVK::GetDescriptorSet(const TextureArrayID id)
-        {
-            using type = type_safe::underlying_type<TextureArrayID>;
-
-            // Lets make sure this id exists
-            assert(_textureArrays.size() > static_cast<type>(id));
-            return _textureArrays[static_cast<type>(id)].descriptorSet;
         }
 
         VkImageView TextureHandlerVK::GetDebugTextureImageView()
@@ -468,70 +348,6 @@ namespace Renderer
             }
 
             DebugMarkerUtilVK::SetObjectName(device->_device, (u64)texture.imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, texture.debugName.c_str());
-
-            // Create descriptor set layout
-            VkDescriptorSetLayoutBinding descriptorLayout = {};
-            descriptorLayout.binding = 0;
-            descriptorLayout.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            descriptorLayout.descriptorCount = 1;
-            descriptorLayout.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-            descriptorLayout.pImmutableSamplers = NULL;
-
-            VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo = {};
-            descriptorLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            descriptorLayoutInfo.pNext = NULL;
-            descriptorLayoutInfo.bindingCount = 1;
-            descriptorLayoutInfo.pBindings = &descriptorLayout;
-
-            if (vkCreateDescriptorSetLayout(device->_device, &descriptorLayoutInfo, NULL, &texture.descriptorSetLayout) != VK_SUCCESS)
-            {
-                NC_LOG_FATAL("Failed to create descriptor set layout for texture!");
-            }
-
-            // Create descriptor pool
-            VkDescriptorPoolSize poolSize = {};
-            poolSize.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            poolSize.descriptorCount = 1;
-
-            VkDescriptorPoolCreateInfo poolInfo = {};
-            poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-            poolInfo.poolSizeCount = 1;
-            poolInfo.pPoolSizes = &poolSize;
-            poolInfo.maxSets = 1;
-
-            if (vkCreateDescriptorPool(device->_device, &poolInfo, nullptr, &texture.descriptorPool) != VK_SUCCESS)
-            {
-                NC_LOG_FATAL("Failed to create descriptor pool for texture!");
-            }
-
-            // Create descriptor set
-            VkDescriptorSetAllocateInfo descriptorAllocInfo;
-            descriptorAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            descriptorAllocInfo.pNext = NULL;
-            descriptorAllocInfo.descriptorPool = texture.descriptorPool;
-            descriptorAllocInfo.descriptorSetCount = 1;
-            descriptorAllocInfo.pSetLayouts = &texture.descriptorSetLayout;
-
-            if (vkAllocateDescriptorSets(device->_device, &descriptorAllocInfo, &texture.descriptorSet) != VK_SUCCESS)
-            {
-                NC_LOG_FATAL("Failed to create descriptor set for texture!");
-            }
-
-            VkDescriptorImageInfo descriptorInfo = {};
-            descriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            descriptorInfo.imageView = texture.imageView;
-
-            VkWriteDescriptorSet descriptorWrite = {};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.pNext = NULL;
-            descriptorWrite.dstSet = texture.descriptorSet;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            descriptorWrite.pImageInfo = &descriptorInfo;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.dstBinding = 0;
-
-            vkUpdateDescriptorSets(device->_device, 1, &descriptorWrite, 0, NULL);
         }
 
     }

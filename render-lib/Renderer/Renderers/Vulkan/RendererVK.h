@@ -17,7 +17,6 @@ namespace Renderer
         class SamplerHandlerVK;
         struct BindInfo;
         class DescriptorSetBuilderVK;
-        
     }
     
     class RendererVK : public Renderer
@@ -67,16 +66,11 @@ namespace Renderer
         void DrawIndexedBindless(CommandListID commandListID, ModelID modelID, u32 numVertices, u32 numInstances) override;
         void PopMarker(CommandListID commandListID) override;
         void PushMarker(CommandListID commandListID, Color color, std::string name) override;
-        void SetConstantBuffer(CommandListID commandListID, u32 slot, void* descriptor, size_t frameIndex) override;
-        void SetStorageBuffer(CommandListID commandListID, u32 slot, void* descriptor, size_t frameIndex) override;
         void BeginPipeline(CommandListID commandListID, GraphicsPipelineID pipeline) override;
         void EndPipeline(CommandListID commandListID, GraphicsPipelineID pipeline) override;
         void SetPipeline(CommandListID commandListID, ComputePipelineID pipeline) override;
         void SetScissorRect(CommandListID commandListID, ScissorRect scissorRect) override;
         void SetViewport(CommandListID commandListID, Viewport viewport) override;
-        void SetSampler(CommandListID commandListID, u32 slot, SamplerID samplerID) override;
-        void SetTexture(CommandListID commandListID, u32 slot, TextureID texture) override;
-        void SetTextureArray(CommandListID commandListID, u32 slot, TextureArrayID textureArray) override;
         void SetVertexBuffer(CommandListID commandListID, u32 slot, ModelID modelID) override;
         void SetIndexBuffer(CommandListID commandListID, ModelID modelID) override;
         void SetBuffer(CommandListID commandListID, u32 slot, void* buffer) override;

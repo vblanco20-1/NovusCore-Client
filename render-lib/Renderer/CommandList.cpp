@@ -91,43 +91,6 @@ namespace Renderer
         command->viewport.maxDepth = maxDepth;
     }
 
-    void CommandList::SetConstantBuffer(u32 slot, void* descriptor, size_t frameIndex)
-    {
-        Commands::SetConstantBuffer* command = AddCommand<Commands::SetConstantBuffer>();
-        command->slot = slot;
-        command->descriptor = descriptor;
-        command->frameIndex = frameIndex;
-    }
-
-    void CommandList::SetStorageBuffer(u32 slot, void* descriptor, size_t frameIndex)
-    {
-        Commands::SetStorageBuffer* command = AddCommand<Commands::SetStorageBuffer>();
-        command->slot = slot;
-        command->descriptor = descriptor;
-        command->frameIndex = frameIndex;
-    }
-
-    void CommandList::SetSampler(u32 slot, SamplerID sampler)
-    {
-        Commands::SetSampler* command = AddCommand<Commands::SetSampler>();
-        command->slot = slot;
-        command->sampler = sampler;
-    }
-
-    void CommandList::SetTexture(u32 slot, TextureID texture)
-    {
-        Commands::SetTexture* command = AddCommand<Commands::SetTexture>();
-        command->slot = slot;
-        command->texture = texture;
-    }
-
-    void CommandList::SetTextureArray(u32 slot, TextureArrayID textureArray)
-    {
-        Commands::SetTextureArray* command = AddCommand<Commands::SetTextureArray>();
-        command->slot = slot;
-        command->textureArray = textureArray;
-    }
-
     void CommandList::SetVertexBuffer(u32 slot, ModelID model)
     {
         Commands::SetVertexBuffer* command = AddCommand<Commands::SetVertexBuffer>();

@@ -344,6 +344,142 @@ namespace Renderer
 
                 return VK_STENCIL_OP_KEEP;
             }
+
+            static inline VkFilter ToVkFilterMag(SamplerFilter filter)
+            {
+                switch (filter)
+                {
+                case SamplerFilter::SAMPLER_FILTER_MIN_MAG_MIP_POINT:                           return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MIN_MAG_POINT_MIP_LINEAR:                    return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT:              return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MIN_POINT_MAG_MIP_LINEAR:                    return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MIN_LINEAR_MAG_MIP_POINT:                    return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR:             return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MIN_MAG_LINEAR_MIP_POINT:                    return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MIN_MAG_MIP_LINEAR:                          return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_ANISOTROPIC:                                 return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_MAG_MIP_POINT:                return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR:         return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT:   return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR:         return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT:         return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR:  return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT:         return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR:               return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_ANISOTROPIC:                      return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_MAG_MIP_POINT:                   return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR:            return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:      return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR:            return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT:            return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:     return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:            return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:                  return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_ANISOTROPIC:                         return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_MAG_MIP_POINT:                   return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:            return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:      return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:            return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:            return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:     return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:            return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:                  return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_ANISOTROPIC:                         return VK_FILTER_LINEAR;
+                default:
+                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more filters?");
+                }
+
+                return VK_FILTER_NEAREST;
+            }
+
+            static inline VkFilter ToVkFilterMin(SamplerFilter filter)
+            {
+                switch (filter)
+                {
+                case SamplerFilter::SAMPLER_FILTER_MIN_MAG_MIP_POINT:                           return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MIN_MAG_POINT_MIP_LINEAR:                    return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT:              return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MIN_POINT_MAG_MIP_LINEAR:                    return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MIN_LINEAR_MAG_MIP_POINT:                    return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR:             return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MIN_MAG_LINEAR_MIP_POINT:                    return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MIN_MAG_MIP_LINEAR:                          return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_ANISOTROPIC:                                 return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_MAG_MIP_POINT:                return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR:         return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT:   return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR:         return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT:         return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR:  return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT:         return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR:               return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_ANISOTROPIC:                      return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_MAG_MIP_POINT:                   return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR:            return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:      return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR:            return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT:            return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:     return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:            return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:                  return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_ANISOTROPIC:                         return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_MAG_MIP_POINT:                   return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:            return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:      return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:            return VK_FILTER_NEAREST;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:            return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:     return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:            return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:                  return VK_FILTER_LINEAR;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_ANISOTROPIC:                         return VK_FILTER_LINEAR;
+                default:
+                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more filters?");
+                }
+
+                return VK_FILTER_NEAREST;
+            }
+
+            static inline bool ToAnisotropyEnabled(SamplerFilter filter)
+            {
+                switch (filter)
+                {
+                case SamplerFilter::SAMPLER_FILTER_ANISOTROPIC:             return true;
+                case SamplerFilter::SAMPLER_FILTER_COMPARISON_ANISOTROPIC:  return true;
+                case SamplerFilter::SAMPLER_FILTER_MINIMUM_ANISOTROPIC:     return true;
+                case SamplerFilter::SAMPLER_FILTER_MAXIMUM_ANISOTROPIC:     return true;
+                }
+                return false;
+            }
+
+            static inline VkSamplerAddressMode ToVkSamplerAddressMode(TextureAddressMode mode)
+            {
+                switch (mode)
+                {
+                case TextureAddressMode::TEXTURE_ADDRESS_MODE_WRAP:         return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+                case TextureAddressMode::TEXTURE_ADDRESS_MODE_MIRROR:       return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+                case TextureAddressMode::TEXTURE_ADDRESS_MODE_CLAMP:        return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+                case TextureAddressMode::TEXTURE_ADDRESS_MODE_BORDER:       return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+                case TextureAddressMode::TEXTURE_ADDRESS_MODE_MIRROR_ONCE:  return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+                default:
+                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more modes?");
+                }
+
+                return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            }
+
+            static inline VkBorderColor ToVkBorderColor(StaticBorderColor borderColor)
+            {
+                switch (borderColor)
+                {
+                case StaticBorderColor::STATIC_BORDER_COLOR_TRANSPARENT_BLACK:  return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+                case StaticBorderColor::STATIC_BORDER_COLOR_OPAQUE_BLACK:       return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+                case StaticBorderColor::STATIC_BORDER_COLOR_OPAQUE_WHITE:       return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+                default:
+                    NC_LOG_FATAL("This should never hit, did we forget to update this function after adding more colors?");
+                }
+
+                return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+            }
         };
     }
 }

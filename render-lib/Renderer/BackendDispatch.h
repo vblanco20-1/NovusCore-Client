@@ -22,9 +22,6 @@ namespace Renderer
         static void PopMarker(Renderer* renderer, CommandListID commandList, const void* data);
         static void PushMarker(Renderer* renderer, CommandListID commandList, const void* data);
 
-        static void SetConstantBuffer(Renderer* renderer, CommandListID commandList, const void* data);
-        static void SetStorageBuffer(Renderer* renderer, CommandListID commandList, const void* data);
-
         static void BeginGraphicsPipeline(Renderer* renderer, CommandListID commandList, const void* data);
         static void EndGraphicsPipeline(Renderer* renderer, CommandListID commandList, const void* data);
         static void SetComputePipeline(Renderer* renderer, CommandListID commandList, const void* data);
@@ -33,9 +30,7 @@ namespace Renderer
 
         static void SetScissorRect(Renderer* renderer, CommandListID commandList, const void* data);
         static void SetViewport(Renderer* renderer, CommandListID commandList, const void* data);
-        static void SetSampler(Renderer* renderer, CommandListID commandList, const void* data);
-        static void SetTexture(Renderer* renderer, CommandListID commandList, const void* data);
-        static void SetTextureArray(Renderer* renderer, CommandListID commandList, const void* data);
+
         static void SetVertexBuffer(Renderer* renderer, CommandListID commandList, const void* data);
         static void SetIndexBuffer(Renderer* renderer, CommandListID commandList, const void* data);
         static void SetBuffer(Renderer* renderer, CommandListID commandList, const void* data);
