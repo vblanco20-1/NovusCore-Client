@@ -1,6 +1,7 @@
 #include "RenderDeviceVK.h"
 #include <Utils/DebugHandler.h>
 #include <vector>
+#include "vk_format_utils.h"
 
 #include "../../../../Window/Window.h"
 #include "DebugMarkerUtilVK.h"
@@ -1102,49 +1103,83 @@ namespace Renderer
             EndSingleTimeCommands(commandBuffer);
         }
 
-        void RenderDeviceVK::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, u32 width, u32 height, u32 numLayers)
+        void RenderDeviceVK::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, VkFormat format, u32 width, u32 height, u32 numLayers, u32 numMipLevels)
         {
+            VkDeviceSize bufferOffset = 0;
+
             VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
-            VkBufferImageCopy region = {};
-            region.bufferOffset = 0;
-            region.bufferRowLength = 0;
-            region.bufferImageHeight = 0;
+            std::vector<VkBufferImageCopy> regions;
+            regions.reserve(numMipLevels);
 
-            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            region.imageSubresource.mipLevel = 0;
-            region.imageSubresource.baseArrayLayer = 0;
-            region.imageSubresource.layerCount = numLayers;
+            u32 curWidth = width;
+            u32 curHeight = height;
 
-            region.imageOffset = { 0, 0, 0 };
-            region.imageExtent = {
-                width,
-                height,
-                1
-            };
+            for (u32 i = 0; i < numMipLevels; i++)
+            {
+                VkBufferImageCopy& region = regions.emplace_back();
 
+                region.bufferOffset = bufferOffset;
+                region.bufferRowLength = 0;
+                region.bufferImageHeight = 0;
+
+                region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.imageSubresource.mipLevel = i;
+                region.imageSubresource.baseArrayLayer = 0;
+                region.imageSubresource.layerCount = numLayers;
+
+                region.imageOffset = { 0, 0, 0 };
+                region.imageExtent = {
+                    curWidth,
+                    curHeight,
+                    1
+                };
+
+                if (!FormatIsCompressed(format)) // Uncompressed
+                {
+                    bufferOffset += static_cast<VkDeviceSize>(glm::ceil(curWidth * curHeight * FormatTexelSize(format)));
+                }
+                else if (FormatIsCompressed_BC(format)) // BC compression
+                {
+                    VkExtent3D texelExtent = FormatTexelBlockExtent(format);
+
+                    vec2 blocks = vec2(curWidth, curHeight) / vec2(texelExtent.width, texelExtent.height); // Calculate how many blocks we have 
+                    blocks = glm::ceil(blocks); // If we have fractional blocks, ceil it
+                    u32 blockSize = FormatElementSize(format, VK_IMAGE_ASPECT_COLOR_BIT); // Get size in bytes per block
+
+                    bufferOffset += static_cast<VkDeviceSize>(blocks.x * blocks.y * blockSize);
+                }
+                else
+                {
+                    NC_LOG_FATAL("Tried to use a format that wasn't uncompressed or used BC compression, what is this? id: %u", format)
+                }
+
+                curWidth /= 2;
+                curHeight /= 2;
+            }
+            
             vkCmdCopyBufferToImage(
                 commandBuffer,
                 srcBuffer,
                 dstImage,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                1,
-                &region
+                numMipLevels,
+                regions.data()
             );
 
             EndSingleTimeCommands(commandBuffer);
         }
 
-        void RenderDeviceVK::TransitionImageLayout(VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout, u32 numLayers)
+        void RenderDeviceVK::TransitionImageLayout(VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout, u32 numLayers, u32 numMipLevels)
         {
             VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
-            TransitionImageLayout(commandBuffer, image, aspects, oldLayout, newLayout, numLayers);
+            TransitionImageLayout(commandBuffer, image, aspects, oldLayout, newLayout, numLayers, numMipLevels);
 
             EndSingleTimeCommands(commandBuffer);
         }
 
-        void RenderDeviceVK::TransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout, u32 numLayers)
+        void RenderDeviceVK::TransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImageAspectFlags aspects, VkImageLayout oldLayout, VkImageLayout newLayout, u32 numLayers, u32 numMipLevels)
         {
             VkImageMemoryBarrier imageBarrier = {};
             imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1154,7 +1189,7 @@ namespace Renderer
             imageBarrier.image = image;
             imageBarrier.subresourceRange.aspectMask = aspects;
             imageBarrier.subresourceRange.baseMipLevel = 0;
-            imageBarrier.subresourceRange.levelCount = 1;
+            imageBarrier.subresourceRange.levelCount = numMipLevels;
             imageBarrier.subresourceRange.layerCount = numLayers;
 
             VkPipelineStageFlagBits srcFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
