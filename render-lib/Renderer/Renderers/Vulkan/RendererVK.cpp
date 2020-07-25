@@ -3,6 +3,7 @@
 #include <Utils/StringUtils.h>
 #include <Utils/DebugHandler.h>
 #include "../../../Window/Window.h"
+#include <tracy/Tracy.hpp>
 
 #include "Backend/RenderDeviceVK.h"
 #include "Backend/ImageHandlerVK.h"
@@ -513,8 +514,10 @@ namespace Renderer
         _imageHandler->OnWindowResize();
     }
 
-    void RendererVK::BindDescriptorSet(CommandListID commandListID, DescriptorSetSlot slot,Descriptor* descriptors, u32 numDescriptors, u32 frameIndex)
+    void RendererVK::BindDescriptorSet(CommandListID commandListID, DescriptorSetSlot slot, Descriptor* descriptors, u32 numDescriptors, u32 frameIndex)
     {
+        ZoneScopedNC("RendererVK::BindDescriptorSet", tracy::Color::Red3);
+
         VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
         GraphicsPipelineID graphicsPipelineID = _commandListHandler->GetBoundGraphicsPipeline(commandListID);
 
@@ -528,6 +531,7 @@ namespace Renderer
 
         for (u32 i = 0; i < numDescriptors; i++)
         {
+            ZoneScopedNC("BindDescriptor", tracy::Color::Red3);
             Descriptor& descriptor = descriptors[i];
             BindDescriptor(builder, &imageInfosArrays, descriptor, frameIndex);
         }

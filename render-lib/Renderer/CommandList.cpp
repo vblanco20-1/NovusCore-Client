@@ -1,6 +1,7 @@
 #pragma once
 #include "CommandList.h"
 #include "Renderer.h"
+#include <tracy/Tracy.hpp>
 
 namespace Renderer
 {
@@ -10,10 +11,13 @@ namespace Renderer
 
         CommandListID commandList = _renderer->BeginCommandList();
 
-        // Execute each command
-        for (int i = 0; i < _functions.Count(); i++)
         {
-            _functions[i](_renderer, commandList, _data[i]);
+            ZoneScopedNC("Record commandlist", tracy::Color::Red2)
+            // Execute each command
+            for (int i = 0; i < _functions.Count(); i++)
+            {
+                _functions[i](_renderer, commandList, _data[i]);
+            }
         }
 
         _renderer->EndCommandList(commandList);

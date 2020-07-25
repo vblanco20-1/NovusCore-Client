@@ -2,6 +2,7 @@
 #include <Utils/DebugHandler.h>
 #include <cassert>
 #include "RenderDeviceVK.h"
+#include <tracy/Tracy.hpp>
 
 namespace Renderer
 {
@@ -49,46 +50,56 @@ namespace Renderer
 
         void CommandListHandlerVK::EndCommandList(CommandListID id)
         {
+            ZoneScopedC(tracy::Color::Red3)
+
             using type = type_safe::underlying_type<CommandListID>;
             CommandList& commandList = _commandLists[static_cast<type>(id)];
 
-            // Close command list
-            if (vkEndCommandBuffer(commandList.commandBuffer) != VK_SUCCESS)
             {
-                NC_LOG_FATAL("Failed to record command buffer!");
+                ZoneScopedNC("Submit", tracy::Color::Red3)
+
+                // Close command list
+                if (vkEndCommandBuffer(commandList.commandBuffer) != VK_SUCCESS)
+                {
+                    NC_LOG_FATAL("Failed to record command buffer!");
+                }
+
+                // Execute command list
+                VkSubmitInfo submitInfo = {};
+                submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+                submitInfo.commandBufferCount = 1;
+                submitInfo.pCommandBuffers = &commandList.commandBuffer;
+
+                if (commandList.waitSemaphore != NULL)
+                {
+                    VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+                    submitInfo.waitSemaphoreCount = 1;
+                    submitInfo.pWaitSemaphores = &commandList.waitSemaphore;
+                    submitInfo.pWaitDstStageMask = &dstStageMask;
+                }
+
+                if (commandList.signalSemaphore != NULL)
+                {
+                    submitInfo.signalSemaphoreCount = 1;
+                    submitInfo.pSignalSemaphores = &commandList.signalSemaphore;
+                }
+
+                vkQueueSubmit(_device->_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
             }
 
-            // Execute command list
-            VkSubmitInfo submitInfo = {};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &commandList.commandBuffer;
-
-            if (commandList.waitSemaphore != NULL)
             {
-                VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                ZoneScopedNC("WaitIdle", tracy::Color::Red3)
 
-                submitInfo.waitSemaphoreCount = 1;
-                submitInfo.pWaitSemaphores = &commandList.waitSemaphore;
-                submitInfo.pWaitDstStageMask = &dstStageMask;
+                // Do syncing stuff
+                vkQueueWaitIdle(_device->_graphicsQueue);
+
+                commandList.waitSemaphore = NULL;
+                commandList.signalSemaphore = NULL;
+                commandList.boundGraphicsPipeline = GraphicsPipelineID::Invalid();
+
+                _availableCommandLists.push(id);
             }
-
-            if (commandList.signalSemaphore != NULL)
-            {
-                submitInfo.signalSemaphoreCount = 1;
-                submitInfo.pSignalSemaphores = &commandList.signalSemaphore;
-            }
-
-            vkQueueSubmit(_device->_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-            
-            // Do syncing stuff
-            vkQueueWaitIdle(_device->_graphicsQueue);
-
-            commandList.waitSemaphore = NULL;
-            commandList.signalSemaphore = NULL;
-            commandList.boundGraphicsPipeline = GraphicsPipelineID::Invalid();
-
-            _availableCommandLists.push(id);
         }
 
         VkCommandBuffer CommandListHandlerVK::GetCommandBuffer(CommandListID id)

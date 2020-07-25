@@ -9,6 +9,7 @@
 #include <Window/Window.h>
 #include <InputManager.h>
 #include <GLFW/glfw3.h>
+#include <tracy/Tracy.hpp>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -124,6 +125,8 @@ void ClientRenderer::Update(f32 deltaTime)
 
 void ClientRenderer::Render()
 {
+    ZoneScopedNC("ClientRenderer::Render", tracy::Color::Red2)
+
     // If the window is minimized we want to pause rendering
     if (_window->IsMinimized())
         return;
@@ -321,7 +324,10 @@ void ClientRenderer::Render()
     renderGraph.Setup();
     renderGraph.Execute();
     
-    _renderer->Present(_window, _mainColor);
+    {
+        ZoneScopedNC("Present", tracy::Color::Red2)
+        _renderer->Present(_window, _mainColor);
+    }
 
     // Flip the frameIndex between 0 and 1
     _frameIndex = !_frameIndex;

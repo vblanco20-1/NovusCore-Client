@@ -20,6 +20,9 @@ namespace Renderer
         virtual bool Setup(RenderGraphBuilder* renderGraphBuilder) = 0;
         virtual void Execute(CommandList& commandList) = 0;
         virtual void DeInit() = 0;
+
+        char _name[16];
+        u8 _nameLength = 0;
     };
 
     template <typename PassData>
@@ -39,6 +42,7 @@ namespace Renderer
             }
 
             strcpy_s(_name, name.c_str());
+            _nameLength = static_cast<u8>(name.length());
         }
 
     private:
@@ -64,7 +68,6 @@ namespace Renderer
     private:
 
     private:
-        char _name[16];
         SetupFunction _onSetup;
         ExecuteFunction _onExecute;
 
