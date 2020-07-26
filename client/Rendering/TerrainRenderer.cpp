@@ -6,6 +6,7 @@
 
 #include <Renderer/Renderer.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <tracy/TracyVulkan.hpp>
 
 const int WIDTH = 1920;
 const int HEIGHT = 1080;
@@ -43,10 +44,13 @@ void TerrainRenderer::AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph,
             
             return true;// Return true from setup to enable this pass, return false to disable it
         },
-            [=, &renderGraph](TerrainDepthPrepassData& data, Renderer::CommandList& commandList) // Execute
+            [=](TerrainDepthPrepassData& data, Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList) // Execute
         {
+            TracySourceLocation(terrainDepth, "TerrainDepth", tracy::Color::Yellow2);
+            commandList.BeginTrace(&terrainDepth);
+
             Renderer::GraphicsPipelineDesc pipelineDesc;
-            renderGraph->InitializePipelineDesc(pipelineDesc);
+            resources.InitializePipelineDesc(pipelineDesc);
 
             // Shader
             Renderer::VertexShaderDesc vertexShaderDesc;
@@ -105,6 +109,7 @@ void TerrainRenderer::AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph,
                 }
             }
             commandList.EndPipeline(pipeline);
+            commandList.EndTrace();
         });
     }
 }
@@ -127,10 +132,13 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
 
             return true; // Return true from setup to enable this pass, return false to disable it
         },
-            [=, &renderGraph](TerrainPassData& data, Renderer::CommandList& commandList) // Execute
+            [=](TerrainPassData& data, Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList) // Execute
         {
+            TracySourceLocation(terrainPass, "TerrainPass", tracy::Color::Yellow2);
+            commandList.BeginTrace(&terrainPass);
+
             Renderer::GraphicsPipelineDesc pipelineDesc;
-            renderGraph->InitializePipelineDesc(pipelineDesc);
+            resources.InitializePipelineDesc(pipelineDesc);
 
             // Shaders
             Renderer::VertexShaderDesc vertexShaderDesc;
@@ -199,6 +207,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
                 }
             }
             commandList.EndPipeline(pipeline);
+            commandList.EndTrace();
         });
     }
 }

@@ -29,6 +29,17 @@ namespace Renderer
         command->frameIndex = frameIndex;
     }
 
+    void CommandList::BeginTrace(const tracy::SourceLocationData* sourceLocation)
+    {
+        Commands::BeginTrace* command = AddCommand<Commands::BeginTrace>();
+        command->sourceLocation = sourceLocation;
+    }
+
+    void CommandList::EndTrace()
+    {
+        AddCommand<Commands::EndTrace>();
+    }
+
     void CommandList::PushMarker(std::string marker, Color color)
     {
         Commands::PushMarker* command = AddCommand<Commands::PushMarker>();
@@ -156,5 +167,17 @@ namespace Renderer
         command->modelID = modelID;
         command->numVertices = numVertices;
         command->numInstances = numInstances;
+    }
+
+    void CommandList::AddSignalSemaphore(GPUSemaphoreID semaphoreID)
+    {
+        Commands::AddSignalSemaphore* command = AddCommand<Commands::AddSignalSemaphore>();
+        command->semaphore = semaphoreID;
+    }
+
+    void CommandList::AddWaitSemaphore(GPUSemaphoreID semaphoreID)
+    {
+        Commands::AddWaitSemaphore* command = AddCommand<Commands::AddWaitSemaphore>();
+        command->semaphore = semaphoreID;
     }
 }

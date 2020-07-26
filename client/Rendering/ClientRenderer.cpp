@@ -10,6 +10,7 @@
 #include <InputManager.h>
 #include <GLFW/glfw3.h>
 #include <tracy/Tracy.hpp>
+#include <tracy/TracyVulkan.hpp>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -136,6 +137,8 @@ void ClientRenderer::Render()
     renderGraphDesc.allocator = _frameAllocator; // We need to give our rendergraph an allocator to use
     Renderer::RenderGraph renderGraph = _renderer->CreateRenderGraph(renderGraphDesc);
 
+    _renderer->FlipFrame(_frameIndex);
+
     // Depth Prepass
     {
         struct DepthPrepassData
@@ -143,19 +146,22 @@ void ClientRenderer::Render()
             Renderer::RenderPassMutableResource mainDepth;
         };
 
-        renderGraph.AddPass<DepthPrepassData>("Depth Prepass",
+        renderGraph.AddPass<DepthPrepassData>("DepthPrepass",
             [=](DepthPrepassData& data, Renderer::RenderGraphBuilder& builder) // Setup
         {
             data.mainDepth = builder.Write(_mainDepth, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
 
             return true;
         },
-            [&](DepthPrepassData& data, Renderer::CommandList& commandList) // Execute
+            [&](DepthPrepassData& data, Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList) // Execute
         {
+            TracySourceLocation(depthPrepass, "DepthPrepass", tracy::Color::Yellow2);
+            commandList.BeginTrace(&depthPrepass);
+
             commandList.MarkFrameStart(_frameIndex);
 
             Renderer::GraphicsPipelineDesc pipelineDesc;
-            renderGraph.InitializePipelineDesc(pipelineDesc);
+            resources.InitializePipelineDesc(pipelineDesc);
 
             // Shaders
             Renderer::VertexShaderDesc vertexShaderDesc;
@@ -220,6 +226,7 @@ void ClientRenderer::Render()
                 }
             }
             commandList.EndPipeline(pipeline);
+            commandList.EndTrace();
         });
     }
 
@@ -235,7 +242,7 @@ void ClientRenderer::Render()
             Renderer::RenderPassResource cubeTexture;
         };
 
-        renderGraph.AddPass<MainPassData>("Main Pass",
+        renderGraph.AddPass<MainPassData>("MainPass",
             [=](MainPassData& data, Renderer::RenderGraphBuilder& builder) // Setup
         {
             data.mainColor = builder.Write(_mainColor, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
@@ -244,10 +251,13 @@ void ClientRenderer::Render()
 
             return true; // Return true from setup to enable this pass, return false to disable it
         },
-            [&](MainPassData& data, Renderer::CommandList& commandList) // Execute
+            [&](MainPassData& data, Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList) // Execute
         {
+            TracySourceLocation(mainPass, "MainPass", tracy::Color::Yellow2);
+            commandList.BeginTrace(&mainPass);
+
             Renderer::GraphicsPipelineDesc pipelineDesc;
-            renderGraph.InitializePipelineDesc(pipelineDesc);
+            resources.InitializePipelineDesc(pipelineDesc);
 
             // Shaders
             Renderer::VertexShaderDesc vertexShaderDesc;
@@ -314,6 +324,7 @@ void ClientRenderer::Render()
                 }
             }
             commandList.EndPipeline(pipeline);
+            commandList.EndTrace();
         });
     }
 
@@ -321,12 +332,25 @@ void ClientRenderer::Render()
     
     _uiRenderer->AddUIPass(&renderGraph, _mainColor, _frameIndex);
 
+    renderGraph.AddSignalSemaphore(_sceneRenderedSemaphore); // Signal that we are ready to present
+    renderGraph.AddSignalSemaphore(_frameSyncSemaphores.Get(_frameIndex)); // Signal that this frame has finished, for next frames sake
+
+    static bool firstFrame = true;
+    if (firstFrame)
+    {
+        firstFrame = false;
+    }
+    else
+    {
+        renderGraph.AddWaitSemaphore(_frameSyncSemaphores.Get(!_frameIndex)); // Wait for previous frame to finish
+    }
+
     renderGraph.Setup();
     renderGraph.Execute();
     
     {
         ZoneScopedNC("Present", tracy::Color::Red2)
-        _renderer->Present(_window, _mainColor);
+        _renderer->Present(_window, _mainColor, _sceneRenderedSemaphore); // Wait for the frame to render
     }
 
     // Flip the frameIndex between 0 and 1
@@ -405,4 +429,10 @@ void ClientRenderer::CreatePermanentResources()
     // Frame allocator, this is a fast allocator for data that is only needed this frame
     _frameAllocator = new Memory::StackAllocator(FRAME_ALLOCATOR_SIZE);
     _frameAllocator->Init();
+
+    _sceneRenderedSemaphore = _renderer->CreateGPUSemaphore();
+    for (u32 i = 0; i < _frameSyncSemaphores.Num; i++)
+    {
+        _frameSyncSemaphores.Get(i) = _renderer->CreateGPUSemaphore();
+    }
 }

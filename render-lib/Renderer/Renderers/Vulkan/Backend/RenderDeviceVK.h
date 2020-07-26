@@ -13,6 +13,11 @@
 class Window;
 struct GLFWwindow;
 
+namespace tracy
+{
+    class VkCtx;
+}
+
 namespace Renderer
 {
     namespace Backend
@@ -59,6 +64,7 @@ namespace Renderer
             void CreateLogicalDevice();
             void CreateAllocator();
             void CreateCommandPool();
+            void CreateTracyContext();
 
             // InitWindow helper functions
             void CreateSurface(GLFWwindow* window, SwapChainVK* swapChain);
@@ -111,6 +117,8 @@ namespace Renderer
 
             DescriptorMegaPoolVK* _descriptorMegaPool;
 
+            tracy::VkCtx* _tracyContext = nullptr;
+
             friend class RendererVK;
             friend struct BufferBackendVK;
             friend class ImageHandlerVK;
@@ -120,6 +128,7 @@ namespace Renderer
             friend class PipelineHandlerVK;
             friend class CommandListHandlerVK;
             friend class SamplerHandlerVK;
+            friend class SemaphoreHandlerVK;
             friend struct DescriptorAllocatorHandleVK;
             friend class DescriptorAllocatorPoolVKImpl;
             friend class DescriptorSetBuilderVK;

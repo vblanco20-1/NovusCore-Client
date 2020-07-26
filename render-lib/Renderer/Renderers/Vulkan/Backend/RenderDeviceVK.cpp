@@ -2,6 +2,7 @@
 #include <Utils/DebugHandler.h>
 #include <vector>
 #include "vk_format_utils.h"
+#include <tracy/TracyVulkan.hpp>
 
 #include "../../../../Window/Window.h"
 #include "DebugMarkerUtilVK.h"
@@ -19,6 +20,7 @@
 #include <map>
 #include <set>
 
+#define NOVUSCORE_RENDERER_DEBUG_OVERRIDE 1
 #define NOVUSCORE_RENDERER_GPU_VALIDATION 1
 
 namespace Renderer
@@ -149,7 +151,7 @@ namespace Renderer
 
         void RenderDeviceVK::InitOnce()
         {
-#ifdef _DEBUG
+#if _DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE
             DebugMarkerUtilVK::SetDebugMarkersEnabled(true);
 #endif
             InitVulkan();
@@ -158,6 +160,7 @@ namespace Renderer
             CreateLogicalDevice();
             CreateAllocator();
             CreateCommandPool();
+            CreateTracyContext();
 
             _descriptorMegaPool = new DescriptorMegaPoolVK();
             _descriptorMegaPool->Init(FRAME_INDEX_COUNT, this);
@@ -167,7 +170,7 @@ namespace Renderer
 
         void RenderDeviceVK::InitVulkan()
         {
-#if _DEBUG
+#if _DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE
             // Check validation layer support
             CheckValidationLayerSupport();
 #endif
@@ -181,7 +184,7 @@ namespace Renderer
             appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
             appInfo.apiVersion = VK_API_VERSION_1_0;
 
-#if NOVUSCORE_RENDERER_GPU_VALIDATION
+#if (_DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE) && NOVUSCORE_RENDERER_GPU_VALIDATION
             VkValidationFeatureEnableEXT gpuValidationFeature = VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT;
 
             VkValidationFeaturesEXT validationFeatures = {};
@@ -211,8 +214,8 @@ namespace Renderer
             createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
             createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
+#if _DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE
             VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
-#ifdef _DEBUG
             createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
             createInfo.ppEnabledLayerNames = validationLayers.data();
 
@@ -260,7 +263,7 @@ namespace Renderer
 
         void RenderDeviceVK::SetupDebugMessenger()
         {
-#if _DEBUG
+#if _DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE
             VkDebugUtilsMessengerCreateInfoEXT createInfo;
             PopulateDebugMessengerCreateInfo(createInfo);
 
@@ -352,7 +355,7 @@ namespace Renderer
             createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
             createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
-#if _DEBUG
+#if _DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE
             std::vector<const char*> enabledLayers;
             for (const char* layer : validationLayers)
             {
@@ -394,12 +397,29 @@ namespace Renderer
             VkCommandPoolCreateInfo poolInfo = {};
             poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
             poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-            poolInfo.flags = 0; // Optional
+            poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // Optional
 
             if (vkCreateCommandPool(_device, &poolInfo, nullptr, &_commandPool) != VK_SUCCESS)
             {
                 NC_LOG_FATAL("Failed to create command pool!");
             }
+        }
+
+        void RenderDeviceVK::CreateTracyContext()
+        {
+            VkCommandBufferAllocateInfo allocInfo = {};
+            allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            allocInfo.commandPool = _commandPool;
+            allocInfo.commandBufferCount = 1;
+
+            VkCommandBuffer tracyBuffer;
+            vkAllocateCommandBuffers(_device, &allocInfo, &tracyBuffer);
+
+            _tracyContext = TracyVkContext(_physicalDevice, _device, _graphicsQueue, tracyBuffer);
+
+            vkQueueWaitIdle(_graphicsQueue);
+            vkFreeCommandBuffers(_device, _commandPool, 1, &tracyBuffer);
         }
 
         void RenderDeviceVK::CreateSurface(GLFWwindow* window, SwapChainVK* swapChain)
@@ -505,6 +525,11 @@ namespace Renderer
                 if (vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &swapChain->imageAvailableSemaphores.Get(i)) != VK_SUCCESS)
                 {
                     NC_LOG_FATAL("Failed to create image available semaphore!");
+                }
+
+                if (vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &swapChain->blitFinishedSemaphores.Get(i)) != VK_SUCCESS)
+                {
+                    NC_LOG_FATAL("Failed to create blit finished semaphore!");
                 }
             }
         }
@@ -664,15 +689,15 @@ namespace Renderer
             // Create descriptor pool
             VkDescriptorPoolSize descriptorPoolSizes[2] = {};
             descriptorPoolSizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLER;
-            descriptorPoolSizes[0].descriptorCount = 1;
+            descriptorPoolSizes[0].descriptorCount = 3;
             descriptorPoolSizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            descriptorPoolSizes[1].descriptorCount = 1;
+            descriptorPoolSizes[1].descriptorCount = 3;
 
             VkDescriptorPoolCreateInfo descriptorPoolInfo = {};
             descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
             descriptorPoolInfo.poolSizeCount = 2;
             descriptorPoolInfo.pPoolSizes = descriptorPoolSizes;
-            descriptorPoolInfo.maxSets = 1;
+            descriptorPoolInfo.maxSets = 2;
 
             if (vkCreateDescriptorPool(_device, &descriptorPoolInfo, nullptr, &pipeline.descriptorPool) != VK_SUCCESS)
             {
@@ -686,9 +711,13 @@ namespace Renderer
             allocInfo.descriptorSetCount = 1;
             allocInfo.pSetLayouts = &pipeline.descriptorSetLayout;
 
-            if (vkAllocateDescriptorSets(_device, &allocInfo, &pipeline.descriptorSet) != VK_SUCCESS)
+            for (u32 i = 0; i < pipeline.descriptorSets.Num; i++)
             {
-                NC_LOG_FATAL("Failed to allocate descriptor sets!");
+                VkResult result = vkAllocateDescriptorSets(_device, &allocInfo, &pipeline.descriptorSets.Get(i));
+                if (result != VK_SUCCESS)
+                {
+                    NC_LOG_FATAL("Failed to allocate descriptor sets!");
+                }
             }
 
             // No vertex info
@@ -849,7 +878,11 @@ namespace Renderer
             {
                 vkDestroySemaphore(_device, swapChain->imageAvailableSemaphores.Get(i), nullptr);
             }
-
+            for (u32 i = 0; i < swapChain->blitFinishedSemaphores.Num; i++)
+            {
+                vkDestroySemaphore(_device, swapChain->blitFinishedSemaphores.Get(i), nullptr);
+            }
+            
             // Destroy swap chain
             vkDestroySwapchainKHR(_device, swapChain->swapChain, nullptr);
 
@@ -1030,7 +1063,7 @@ namespace Renderer
 
             std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-#if _DEBUG
+#if _DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
             extensions.push_back("VK_KHR_get_physical_device_properties2");

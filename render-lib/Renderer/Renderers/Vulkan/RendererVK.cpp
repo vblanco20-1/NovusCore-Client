@@ -2,8 +2,8 @@
 #include "../../../Window/Window.h"
 #include <Utils/StringUtils.h>
 #include <Utils/DebugHandler.h>
-#include "../../../Window/Window.h"
 #include <tracy/Tracy.hpp>
+#include <tracy/TracyVulkan.hpp>
 
 #include "Backend/RenderDeviceVK.h"
 #include "Backend/ImageHandlerVK.h"
@@ -13,6 +13,7 @@
 #include "Backend/PipelineHandlerVK.h"
 #include "Backend/CommandListHandlerVK.h"
 #include "Backend/SamplerHandlerVK.h"
+#include "Backend/SemaphoreHandlerVK.h"
 #include "Backend/SwapChainVK.h"
 #include "Backend/DebugMarkerUtilVK.h"
 #include "Backend/BufferBackendVK.h"
@@ -32,6 +33,7 @@ namespace Renderer
         _pipelineHandler = new Backend::PipelineHandlerVK();
         _commandListHandler = new Backend::CommandListHandlerVK();
         _samplerHandler = new Backend::SamplerHandlerVK();
+        _semaphoreHandler = new Backend::SemaphoreHandlerVK();
 
         // Init
         _device->Init();
@@ -42,6 +44,7 @@ namespace Renderer
         _pipelineHandler->Init(_device, _shaderHandler, _imageHandler);
         _commandListHandler->Init(_device);
         _samplerHandler->Init(_device);
+        _semaphoreHandler->Init(_device);
 
         _textureHandler->LoadDebugTexture(debugTexture);
     }
@@ -63,6 +66,7 @@ namespace Renderer
         delete(_pipelineHandler);
         delete(_commandListHandler);
         delete(_samplerHandler);
+        delete(_semaphoreHandler);
     }
 
     ImageID RendererVK::CreateImage(ImageDesc& desc)
@@ -78,6 +82,11 @@ namespace Renderer
     SamplerID RendererVK::CreateSampler(SamplerDesc& desc)
     {
         return _samplerHandler->CreateSampler(desc);
+    }
+
+    GPUSemaphoreID RendererVK::CreateGPUSemaphore()
+    {
+        return _semaphoreHandler->CreateGPUSemaphore();
     }
 
     GraphicsPipelineID RendererVK::CreatePipeline(GraphicsPipelineDesc& desc)
@@ -151,6 +160,33 @@ namespace Renderer
         return _shaderHandler->LoadShader(desc);
     }
 
+    void RendererVK::FlipFrame(u32 /*frameIndex*/)
+    {
+        ZoneScopedC(tracy::Color::Red3);
+
+        // Reset old commandbuffers
+        _commandListHandler->FlipFrame();
+
+        // Wait on frame fence
+        {
+            ZoneScopedNC("Wait For Fence", tracy::Color::Red3);
+
+            VkFence frameFence = _commandListHandler->GetCurrentFence();
+
+            u64 timeout = 5000000000; // 5 seconds in nanoseconds
+            VkResult result = vkWaitForFences(_device->_device, 1, &frameFence, true, timeout);
+
+            if (result == VK_TIMEOUT)
+            {
+                NC_LOG_FATAL("Waiting for frame fence took longer than 5 seconds, something is wrong!");
+            }
+
+            vkResetFences(_device->_device, 1, &frameFence);
+        }
+
+        _commandListHandler->ResetCommandBuffers();
+    }
+
     CommandListID RendererVK::BeginCommandList()
     {
         return _commandListHandler->BeginCommandList();
@@ -163,7 +199,7 @@ namespace Renderer
             NC_LOG_FATAL("We found unmatched calls to BeginPipeline in your commandlist, for every BeginPipeline you need to also EndPipeline!");
         }
 
-        _commandListHandler->EndCommandList(commandListID);
+        _commandListHandler->EndCommandList(commandListID, VK_NULL_HANDLE);
     }
 
     void RendererVK::Clear(CommandListID commandListID, ImageID imageID, Color color)
@@ -547,21 +583,69 @@ namespace Renderer
     void RendererVK::MarkFrameStart(CommandListID commandListID, u32 frameIndex)
     {
         VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
+
+        // Collect tracy timings
+        TracyVkCollect(_device->_tracyContext, commandBuffer);
+
+        // Add a marker specifying the frameIndex
         Backend::DebugMarkerUtilVK::PushMarker(commandBuffer, Color(1,1,1,1), std::to_string(frameIndex));
         Backend::DebugMarkerUtilVK::PopMarker(commandBuffer);
 
+        // Free up any old descriptors
         _device->_descriptorMegaPool->SetFrame(frameIndex);
     }
 
-    void RendererVK::Present(Window* window, ImageID imageID)
+    void RendererVK::BeginTrace(CommandListID commandListID, const tracy::SourceLocationData* sourceLocation)
+    {
+        VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
+        tracy::VkCtxManualScope*& tracyScope = _commandListHandler->GetTracyScope(commandListID);
+
+        if (tracyScope != nullptr)
+        {
+            NC_LOG_FATAL("Tried to begin GPU trace on a commandlist that already had a begun GPU trace");
+        }
+
+        tracyScope = new tracy::VkCtxManualScope(_device->_tracyContext, sourceLocation, true);
+        tracyScope->Start(commandBuffer);
+    }
+
+    void RendererVK::EndTrace(CommandListID commandListID)
+    {
+        VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
+        tracy::VkCtxManualScope*& tracyScope = _commandListHandler->GetTracyScope(commandListID);
+
+        if (tracyScope == nullptr)
+        {
+            NC_LOG_FATAL("Tried to end GPU trace on a commandlist that didn't have a running trace");
+        }
+
+        tracyScope->End();
+        delete tracyScope;
+        tracyScope = nullptr;
+    }
+
+    void RendererVK::AddSignalSemaphore(CommandListID commandListID, GPUSemaphoreID semaphoreID)
+    {
+        VkSemaphore semaphore = _semaphoreHandler->GetVkSemaphore(semaphoreID);
+        _commandListHandler->AddSignalSemaphore(commandListID, semaphore);
+    }
+
+    void RendererVK::AddWaitSemaphore(CommandListID commandListID, GPUSemaphoreID semaphoreID)
+    {
+        VkSemaphore semaphore = _semaphoreHandler->GetVkSemaphore(semaphoreID);
+        _commandListHandler->AddWaitSemaphore(commandListID, semaphore);
+    }
+
+    void RendererVK::Present(Window* window, ImageID imageID, GPUSemaphoreID semaphoreID)
     {
         CommandListID commandListID = _commandListHandler->BeginCommandList();
         VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
         PushMarker(commandListID, Color::Red, "Present Blitting");
 
         Backend::SwapChainVK* swapChain = static_cast<Backend::SwapChainVK*>(window->GetSwapChain());
-
         u32 semaphoreIndex = swapChain->frameIndex;
+
+        VkFence frameFence = _commandListHandler->GetCurrentFence();
 
         // Acquire next swapchain image
         u32 frameIndex;
@@ -577,7 +661,14 @@ namespace Renderer
             NC_LOG_FATAL("Failed to acquire swap chain image!");
         }
 
-        _commandListHandler->SetWaitSemaphore(commandListID, swapChain->imageAvailableSemaphores.Get(semaphoreIndex));
+        if (semaphoreID != GPUSemaphoreID::Invalid())
+        {
+            VkSemaphore semaphore = _semaphoreHandler->GetVkSemaphore(semaphoreID);
+            _commandListHandler->AddWaitSemaphore(commandListID, semaphore); // Wait for the provided semaphore to finish
+        }
+        
+        _commandListHandler->AddWaitSemaphore(commandListID, swapChain->imageAvailableSemaphores.Get(semaphoreIndex)); // Wait for swapchain image to be available
+        _commandListHandler->AddSignalSemaphore(commandListID, swapChain->blitFinishedSemaphores.Get(semaphoreIndex)); // Signal that blitting is done
 
         ImageDesc imageDesc = _imageHandler->GetImageDesc(imageID);
         ImageComponentType componentType = ToImageComponentType(imageDesc.format);
@@ -595,7 +686,7 @@ namespace Renderer
 
         VkWriteDescriptorSet descriptorWrites[2] = {};
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = pipeline.descriptorSet;
+        descriptorWrites[0].dstSet = pipeline.descriptorSets.Get(swapChain->frameIndex);
         descriptorWrites[0].dstBinding = 0;
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -605,7 +696,7 @@ namespace Renderer
         descriptorWrites[0].pTexelBufferView = nullptr;
 
         descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet = pipeline.descriptorSet;
+        descriptorWrites[1].dstSet = pipeline.descriptorSets.Get(swapChain->frameIndex);
         descriptorWrites[1].dstBinding = 1;
         descriptorWrites[1].dstArrayElement = 0;
         descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -635,7 +726,7 @@ namespace Renderer
        
         // Bind pipeline and descriptors and render
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &pipeline.descriptorSet, 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &pipeline.descriptorSets.Get(swapChain->frameIndex), 0, nullptr);
 
         vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
@@ -645,13 +736,13 @@ namespace Renderer
         _device->TransitionImageLayout(commandBuffer, image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, imageDesc.depth, 1);
         PopMarker(commandListID);
 
-        _commandListHandler->EndCommandList(commandListID);
+        _commandListHandler->EndCommandList(commandListID, frameFence);
 
         // Present
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.waitSemaphoreCount = 0;
-        presentInfo.pWaitSemaphores = VK_NULL_HANDLE;
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = &swapChain->blitFinishedSemaphores.Get(semaphoreIndex); // Wait for blitting to finish
 
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &swapChain->swapChain;
@@ -670,13 +761,13 @@ namespace Renderer
             NC_LOG_FATAL("Failed to present swap chain image!");
         }
 
-        vkQueueWaitIdle(_device->_presentQueue);
+        //vkQueueWaitIdle(_device->_presentQueue);
 
         // Flip frameIndex between 0 and 1
         swapChain->frameIndex = !swapChain->frameIndex;
     }
 
-    void RendererVK::Present(Window* /*window*/, DepthImageID /*image*/)
+    void RendererVK::Present(Window* /*window*/, DepthImageID /*image*/, GPUSemaphoreID /*semaphoreID*/)
     {
         
     }
