@@ -30,8 +30,11 @@ namespace Renderer
 
             const std::vector<TextureID>& GetTextureIDsInArray(const TextureArrayID id);
 
+            bool IsOnionTexture(const TextureID id);
+
             VkImageView GetImageView(const TextureID id);
             VkImageView GetDebugTextureImageView();
+            VkImageView GetDebugOnionTextureImageView();
 
             u32 GetTextureArraySize(const TextureArrayID id);
 
@@ -73,7 +76,9 @@ namespace Renderer
         private:
             RenderDeviceVK* _device;
 
-            Texture _debugTexture;
+            TextureID _debugTexture;
+            TextureID _debugOnionTexture; // "TextureArrays" using texture layers rather than arrays of descriptors are now called Onion Textures to make it possible to differentiate between them...
+
             std::vector<Texture> _textures;
             std::vector<TextureArray> _textureArrays;
         };

@@ -109,7 +109,8 @@ namespace Renderer
                 CreateBuffer(bufferSize, flags, VMA_MEMORY_USAGE_CPU_TO_GPU, backend->buffers.Get(i), backend->allocations.Get(i));
 
                 char debugName[16];
-                snprintf(debugName, sizeof(debugName), "%s%i", "ConstantBuffer", i);
+
+                snprintf(debugName, sizeof(debugName), "%s%i", "Buffer", i);
                 DebugMarkerUtilVK::SetObjectName(_device, (u64)backend->buffers.Get(i), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, debugName);
             }
 

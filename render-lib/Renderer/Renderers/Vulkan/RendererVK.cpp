@@ -504,18 +504,30 @@ namespace Renderer
             u32 numTextures = static_cast<u32>(textureIDs.size());
 
             // From 0 to numTextures, add our actual textures
+            bool texturesAreOnionTextures = false;
             for (auto textureID : textureIDs)
             {
                 VkDescriptorImageInfo& imageInfo = imageInfos.emplace_back();
                 imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 imageInfo.imageView = _textureHandler->GetImageView(textureID);
                 imageInfo.sampler = VK_NULL_HANDLE;
+
+                texturesAreOnionTextures = _textureHandler->IsOnionTexture(textureID);
             }
 
             // from numTextures to textureArraySize, add debug texture
             VkDescriptorImageInfo imageInfoDebugTexture;
             imageInfoDebugTexture.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfoDebugTexture.imageView = _textureHandler->GetDebugTextureImageView();
+
+            if (texturesAreOnionTextures)
+            {
+                imageInfoDebugTexture.imageView = _textureHandler->GetDebugOnionTextureImageView();
+            }
+            else
+            {
+                imageInfoDebugTexture.imageView = _textureHandler->GetDebugTextureImageView();
+            }
+            
             imageInfoDebugTexture.sampler = VK_NULL_HANDLE;
 
             for (u32 i = numTextures; i < textureArraySize; i++)
@@ -640,7 +652,19 @@ namespace Renderer
     {
         CommandListID commandListID = _commandListHandler->BeginCommandList();
         VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
+        
+        // Tracy profiling
         PushMarker(commandListID, Color::Red, "Present Blitting");
+        tracy::VkCtxManualScope*& tracyScope = _commandListHandler->GetTracyScope(commandListID);
+
+        if (tracyScope != nullptr)
+        {
+            NC_LOG_FATAL("Tried to begin GPU trace on a commandlist that already had a begun GPU trace");
+        }
+
+        TracySourceLocation(presentBlitting, "PresentBlitting", tracy::Color::Yellow2);
+        tracyScope = new tracy::VkCtxManualScope(_device->_tracyContext, &presentBlitting, true);
+        tracyScope->Start(commandBuffer);
 
         Backend::SwapChainVK* swapChain = static_cast<Backend::SwapChainVK*>(window->GetSwapChain());
         u32 semaphoreIndex = swapChain->frameIndex;
@@ -736,6 +760,8 @@ namespace Renderer
         _device->TransitionImageLayout(commandBuffer, image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, imageDesc.depth, 1);
         PopMarker(commandListID);
 
+        tracyScope->End();
+        tracyScope = nullptr;
         _commandListHandler->EndCommandList(commandListID, frameFence);
 
         // Present

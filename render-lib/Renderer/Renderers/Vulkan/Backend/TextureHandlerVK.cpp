@@ -20,20 +20,20 @@ namespace Renderer
         void TextureHandlerVK::Init(RenderDeviceVK* device)
         {
             _device = device;
+
+            DataTextureDesc dataTextureDesc;
+            dataTextureDesc.width = 1;
+            dataTextureDesc.height = 1;
+            dataTextureDesc.layers = 256;
+            dataTextureDesc.format = ImageFormat::IMAGE_FORMAT_R8G8B8A8_UNORM;
+            dataTextureDesc.data = new u8[1 * 1 * 256 * 4]{ 1 };
+
+            _debugOnionTexture = CreateDataTexture(dataTextureDesc);
         }
 
         void TextureHandlerVK::LoadDebugTexture(const TextureDesc& desc)
         {
-            _debugTexture.debugName = desc.path;
-            
-            u8* pixels;
-            pixels = ReadFile(desc.path, _debugTexture.width, _debugTexture.height, _debugTexture.mipLevels, _debugTexture.format, _debugTexture.fileSize);
-            if (!pixels)
-            {
-                NC_LOG_FATAL("Failed to load debug texture!");
-            }
-
-            CreateTexture(_debugTexture, pixels);
+            _debugTexture = LoadTexture(desc);
         }
 
         TextureID TextureHandlerVK::LoadTexture(const TextureDesc& desc)
@@ -177,6 +177,15 @@ namespace Renderer
             return _textureArrays[static_cast<type>(id)].textures;
         }
 
+        bool TextureHandlerVK::IsOnionTexture(const TextureID id)
+        {
+            using type = type_safe::underlying_type<TextureID>;
+
+            // Lets make sure this id exists
+            assert(_textures.size() > static_cast<type>(id));
+            return _textures[static_cast<type>(id)].layers != 1;
+        }
+
         VkImageView TextureHandlerVK::GetImageView(const TextureID id)
         {
             using type = type_safe::underlying_type<TextureID>;
@@ -188,7 +197,12 @@ namespace Renderer
 
         VkImageView TextureHandlerVK::GetDebugTextureImageView()
         {
-            return _debugTexture.imageView;
+            return GetImageView(_debugTexture);
+        }
+
+        VkImageView TextureHandlerVK::GetDebugOnionTextureImageView()
+        {
+            return GetImageView(_debugOnionTexture);
         }
 
         u32 TextureHandlerVK::GetTextureArraySize(const TextureArrayID id)
