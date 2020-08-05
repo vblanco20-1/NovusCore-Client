@@ -1,15 +1,14 @@
 #include "asPanel.h"
 #include "../../ScriptEngine.h"
 #include "../../../Utils/ServiceLocator.h"
+#include "../../../UI/ImageUtilsTransactions.h"
+#include "../../../UI/TransformEventUtilsTransactions.h"
 
-#include "../../../ECS/Components/UI/Singletons/UIEntityPoolSingleton.h"
 #include "../../../ECS/Components/Singletons/ScriptSingleton.h"
-
-#include "../../../ECS/Components/UI/UIDirty.h"
 
 namespace UI
 {
-    asPanel::asPanel(entt::entity entityId) : asUITransform(entityId, UIElementType::UITYPE_PANEL) { }
+    asPanel::asPanel() : asUITransform(UIElementType::UITYPE_PANEL) { }
 
     void asPanel::RegisterType()
     {
@@ -40,16 +39,7 @@ namespace UI
         _events.onClickCallback = callback;
         _events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_CLICKABLE);
 
-        entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
-        entt::entity entId = _entityId;
-        gameRegistry->ctx<ScriptSingleton>().AddTransaction([callback, entId]()
-            {
-                entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
-                UITransformEvents& events = uiRegistry->get<UITransformEvents>(entId);
-
-                events.onClickCallback = callback;
-                events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_CLICKABLE);
-            });
+        UI::TransformEventUtils::Transactions::SetOnClickCallbackTransaction(_entityId, callback);
     }
 
     void asPanel::SetOnDragCallback(asIScriptFunction* callback)
@@ -57,16 +47,7 @@ namespace UI
         _events.onDraggedCallback = callback;
         _events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_DRAGGABLE);
 
-        entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
-        entt::entity entId = _entityId;
-        gameRegistry->ctx<ScriptSingleton>().AddTransaction([callback, entId]()
-            {
-                entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
-                UITransformEvents& events = uiRegistry->get<UITransformEvents>(entId);
-
-                events.onDraggedCallback = callback;
-                events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_DRAGGABLE);
-            });
+        UI::TransformEventUtils::Transactions::SetOnDragCallbackTransaction(_entityId, callback);
     }
 
     void asPanel::SetOnFocusCallback(asIScriptFunction* callback)
@@ -74,55 +55,25 @@ namespace UI
         _events.onFocusedCallback = callback;
         _events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
 
-        entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
-        entt::entity entId = _entityId;
-        gameRegistry->ctx<ScriptSingleton>().AddTransaction([callback, entId]()
-            {
-                entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
-                UITransformEvents& events = uiRegistry->get<UITransformEvents>(entId);
-
-                events.onFocusedCallback = callback;
-                events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
-            });
+        UI::TransformEventUtils::Transactions::SetOnFocusCallbackTransaction(_entityId, callback);
     }
 
     void asPanel::SetTexture(const std::string& texture)
     {
         _image.texture = texture;
 
-        entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
-        entt::entity entId = _entityId;
-        gameRegistry->ctx<ScriptSingleton>().AddTransaction([texture, entId]()
-            {
-                entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
-                UIImage& image = uiRegistry->get<UIImage>(entId);
-
-                image.texture = texture;
-                MarkDirty(uiRegistry, entId);
-            });
+        UI::ImageUtils::Transactions::SetTextureTransaction(texture, _entityId);
     }
     void asPanel::SetColor(const Color& color)
     {
         _image.color = color;
 
-        entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
-        entt::entity entId = _entityId;
-        gameRegistry->ctx<ScriptSingleton>().AddTransaction([color, entId]()
-            {
-                entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
-                UIImage& image = uiRegistry->get<UIImage>(entId);
-
-                image.color = color;
-                MarkDirty(uiRegistry, entId);
-            });
+        UI::ImageUtils::Transactions::SetColorTransaction(color, _entityId);
     }
 
     asPanel* asPanel::CreatePanel()
     {
-        entt::registry* registry = ServiceLocator::GetUIRegistry();
-        UIEntityPoolSingleton& entityPool = registry->ctx<UIEntityPoolSingleton>();
-
-        asPanel* panel = new asPanel(entityPool.GetId());
+        asPanel* panel = new asPanel();
         
         return panel;
     }

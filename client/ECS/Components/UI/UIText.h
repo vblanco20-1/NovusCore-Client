@@ -3,34 +3,59 @@
 #include <Renderer/Renderer.h>
 #include <vector>
 
-struct UIText
+namespace UI
 {
-public:
-    struct TextConstantBuffer
+    enum class TextHorizontalAlignment
     {
-        Color textColor; // 16 bytes
-        Color outlineColor; // 16 bytes
-        f32 outlineWidth; // 4 bytes
-
-        u8 padding[220] = {};
+        LEFT,
+        CENTER,
+        RIGHT
+    };
+    
+    enum class TextVerticalAlignment
+    {
+        TOP,
+        CENTER,
+        BOTTOM
     };
 
-public:
-    UIText() : text(), glyphCount(), color(1, 1, 1, 1), outlineColor(0, 0, 0, 1), outlineWidth(0.0f), fontPath(), fontSize(), font(), models(), textures(), constantBuffer(nullptr) { }
+    struct UIText
+    {
+    public:
+        struct TextConstantBuffer
+        {
+            Color textColor = Color(); // 16 bytes
+            Color outlineColor = Color(); // 16 bytes
+            f32 outlineWidth = 0.f; // 4 bytes
 
-    std::string text;
-    u32 glyphCount;
+            u8 padding[220] = {};
+        };
 
-    Color color;
-    Color outlineColor;
-    f32 outlineWidth;
+    public:
+        UIText() { }
 
-    std::string fontPath;
-    f32 fontSize;
-    Renderer::Font* font;
+        std::string text = "";
+        size_t glyphCount = 0;
+        size_t pushback = 0;
 
-    std::vector<Renderer::ModelID> models;
-    std::vector<Renderer::TextureID> textures;
+        Color color = Color(1, 1, 1, 1);
+        Color outlineColor = Color(0, 0, 0, 0);
+        f32 outlineWidth = 0.f;
 
-    Renderer::ConstantBuffer<TextConstantBuffer>* constantBuffer;
-};
+
+        TextHorizontalAlignment horizontalAlignment = TextHorizontalAlignment::LEFT;
+        TextVerticalAlignment verticalAlignment = TextVerticalAlignment::TOP;
+        bool isMultiline = false;
+
+        f32 lineHeight = 1.15f;
+
+        std::string fontPath = "";
+        f32 fontSize = 0;
+        Renderer::Font* font = nullptr;
+
+        std::vector<Renderer::ModelID> models;
+        std::vector<Renderer::TextureID> textures;
+
+        Renderer::ConstantBuffer<TextConstantBuffer>* constantBuffer = nullptr;
+    };
+}

@@ -15,7 +15,7 @@ namespace UI
     class asInputField : public asUITransform
     {
     public:
-        asInputField(entt::entity entityId);
+        asInputField();
 
         static void RegisterType();
 
@@ -30,7 +30,7 @@ namespace UI
         void MovePointerLeft();
         void MovePointerRight();
 
-        void SetWriteHeadPosition(u32 position);
+        void SetWriteHeadPosition(size_t position);
 
         void SetOnSubmitCallback(asIScriptFunction* callback);
 

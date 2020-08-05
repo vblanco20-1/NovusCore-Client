@@ -1,15 +1,16 @@
 #pragma once
-#include <NovusTypes.h>
 #include <angelscript.h>
 #include "../../../Scripting/ScriptEngine.h"
 
-struct UIInputField
+struct UICheckbox
 {
 public:
-    UIInputField() { }
+    UICheckbox() { }
 
-    size_t writeHeadIndex = 0;
-    asIScriptFunction* onSubmitCallback = nullptr;
+    bool checked = false;
+
+    asIScriptFunction* onChecked = nullptr;
+    asIScriptFunction* onUnchecked = nullptr;
     void* asObject = nullptr;
 
     // Usually Components do not store logic, however this is an exception
@@ -26,11 +27,18 @@ private:
         }
     }
 public:
-    void OnSubmit()
+    void OnChecked()
     {
-        if (!onSubmitCallback)
+        if (!onChecked)
             return;
 
-        _OnEvent(onSubmitCallback);
+        _OnEvent(onChecked);
+    }
+    void OnUnchecked()
+    {
+        if (!onUnchecked)
+            return;
+
+        _OnEvent(onUnchecked);
     }
 };

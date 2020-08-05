@@ -1,7 +1,6 @@
 #pragma once
 #include <NovusTypes.h>
 
-#include "../../../ECS/Components/UI/UITransform.h"
 #include "../../../ECS/Components/UI/UITransformEvents.h"
 #include "../../../ECS/Components/UI/UIImage.h"
 #include "asUITransform.h"
@@ -11,7 +10,7 @@ namespace UI
     class asPanel : public asUITransform
     {
     public:
-        asPanel(entt::entity entityId);
+        asPanel();
 
         static void RegisterType();
 
@@ -27,16 +26,10 @@ namespace UI
 
         // Renderable Functions
         void SetTexture(const std::string& texture);
-        const std::string& GetTexture() const
-        {
-            return _image.texture;
-        }
+        const std::string& GetTexture() const { return _image.texture; }
 
         void SetColor(const Color& color);
-        const Color GetColor() const
-        {
-            return _image.color;
-        }
+        const Color GetColor() const { return _image.color; }
 
         static asPanel* CreatePanel();
 

@@ -11,8 +11,10 @@ namespace UI
 {
     class asUITransform
     {
+        friend struct UIDataSingleton;
+
     public:
-        asUITransform(entt::entity entityId, UIElementType elementType);
+        asUITransform(UIElementType elementType);
 
         static void RegisterType()
         {
@@ -27,6 +29,8 @@ namespace UI
         static void RegisterBase()
         {
             i32 r = ScriptEngine::RegisterScriptClassFunction("Entity GetEntityId()", asMETHOD(T, GetEntityId)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void SetTransform(vec2 position, vec2 size)", asMETHOD(T, SetTransform)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("vec2 GetScreenPosition()", asMETHOD(T, GetScreenPosition)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("vec2 GetLocalPosition()", asMETHOD(T, GetLocalPosition)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("vec2 GetParentPosition()", asMETHOD(T, GetParentPosition)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("vec2 GetPosition()", asMETHOD(T, GetPosition)); assert(r >= 0);
@@ -36,14 +40,16 @@ namespace UI
             r = ScriptEngine::RegisterScriptClassFunction("void SetLocalAnchor(vec2 anchor)", asMETHOD(T, SetLocalAnchor)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("vec2 GetSize()", asMETHOD(T, GetSize)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void SetSize(vec2 size)", asMETHOD(T, SetSize)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("bool GetFillParentSize()", asMETHOD(T, GetFillParentSize)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void SetFillParentSize(bool fillParent)", asMETHOD(T, SetFillParentSize)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("float GetDepth()", asMETHOD(T, GetDepth)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void SetDepth(uint16 depth)", asMETHOD(T, SetDepth)); assert(r >= 0);
 
             r = ScriptEngine::RegisterScriptClassFunction("void SetParent(UITransform@ parent)", asMETHOD(T, SetParent)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void UnsetParent()", asMETHOD(T, UnsetParent)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void Destroy()", asMETHOD(T, Destroy)); assert(r >= 0);
 
-            r = ScriptEngine::RegisterScriptClassFunction("vec2 GetMinBound()", asMETHOD(T, GetMinBound)); assert(r >= 0);
-            r = ScriptEngine::RegisterScriptClassFunction("vec2 GetMaxBound()", asMETHOD(T, GetMaxBound)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void SetExpandBoundsToChildren(bool enabled)", asMETHOD(T, SetExpandBoundsToChildren)); assert(r >= 0);
 
             r = ScriptEngine::RegisterScriptClassFunction("bool IsVisible()", asMETHOD(T, IsVisible)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("bool IsLocallyVisible()", asMETHOD(T, IsLocallyVisible)); assert(r >= 0);
@@ -56,12 +62,18 @@ namespace UI
             return _entityId;
         }
 
-        virtual const UIElementType GetEntityType() const
+        virtual const UIElementType GetType() const
         {
             return _elementType;
         }
 
         // Transform Functions
+        virtual void SetTransform(const vec2& position, const vec2& size);
+
+        virtual const vec2 GetScreenPosition() const
+        {
+            return _transform.position + _transform.localPosition;
+        }
         virtual const vec2 GetLocalPosition() const
         {
             return _transform.parent ? _transform.localPosition : vec2(0, 0);
@@ -94,6 +106,12 @@ namespace UI
         }
         virtual void SetSize(const vec2& size);
         
+        virtual const bool GetFillParentSize()
+        {
+            return _transform.fillParentSize;
+        }
+        virtual void SetFillParentSize(bool fillParent);
+
         virtual const u16 GetDepth() const
         {
             return _transform.sortData.depth;
@@ -101,11 +119,9 @@ namespace UI
         virtual void SetDepth(const u16 depth);
 
         virtual void SetParent(asUITransform* parent);
-        
-        virtual void Destroy();
+        virtual void UnsetParent();
 
-        const vec2 GetMinBound() const;
-        const vec2 GetMaxBound() const;
+        virtual void SetExpandBoundsToChildren(bool expand);
 
         const bool IsVisible() const { return _visibility.visible && _visibility.parentVisible; }
         const bool IsLocallyVisible() const { return _visibility.visible; }
@@ -113,6 +129,8 @@ namespace UI
         virtual void SetVisible(bool visible);
     
         void SetCollisionEnabled(bool enabled);
+
+        virtual void Destroy();
 
 protected:
         static void MarkDirty(entt::registry* registry, entt::entity entId);
@@ -123,8 +141,8 @@ protected:
         static void UpdateChildVisibility(entt::registry* uiRegistry, const UITransform& parent, bool parentVisibility);
         static void UpdateChildVisibilityAngelScript(UI::UIDataSingleton& uiDataSingleton, const UITransform& parent, bool parentVisibility);
 
-        static void UpdateBounds(entt::registry* uiRegistry, UITransform& transform);
-        static void UpdateParentBounds(entt::registry* uiRegistry, UITransform& parent, vec2 childMin, vec2 childMax);
+        static void UpdateChildBounds(entt::registry* uiRegistry, UITransform& transform);
+        static void UpdateBounds(entt::registry* uiRegistry, UITransform& parent);
 
     protected:
         entt::entity _entityId;

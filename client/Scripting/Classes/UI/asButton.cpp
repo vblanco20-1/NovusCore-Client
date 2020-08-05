@@ -3,20 +3,28 @@
 #include "asPanel.h"
 #include "../../ScriptEngine.h"
 #include "../../../Utils/ServiceLocator.h"
+#include "../../../UI/TransformEventUtilsTransactions.h"
 
-#include "../../../ECS/Components/UI/Singletons/UIEntityPoolSingleton.h"
 #include "../../../ECS/Components/Singletons/ScriptSingleton.h"
 
 namespace UI
 {
-    asButton::asButton(entt::entity entityId) : asUITransform(entityId, UIElementType::UITYPE_BUTTON) 
+    asButton::asButton() : asUITransform(UIElementType::UITYPE_BUTTON) 
     {
         _panel = asPanel::CreatePanel();
+        _panel->SetFillParentSize(true);
+        _panel->SetAnchor(vec2(0.5, 0.5));
+        _panel->SetLocalAnchor(vec2(0.5, 0.5));
         _panel->SetParent(this);
+        _panel->SetCollisionEnabled(false);
 
         _label = asLabel::CreateLabel();
-        _label->SetParent(this);
+        _label->SetFillParentSize(true);
         _label->SetAnchor(vec2(0.5, 0.5));
+        _label->SetLocalAnchor(vec2(0.5, 0.5));
+        _label->SetParent(this);
+        _label->SetCollisionEnabled(false);
+        _label->SetHorizontalAlignment(TextHorizontalAlignment::CENTER);
     }
     
     void asButton::RegisterType()
@@ -48,30 +56,12 @@ namespace UI
         r = ScriptEngine::RegisterScriptClassFunction("void SetColor(Color color)", asMETHOD(asButton, SetColor)); assert(r >= 0);
     }
 
-    void asButton::SetSize(const vec2& size)
-    {
-        asUITransform::SetSize(size);
-
-        //This should be replaced by a system for filling parent size.
-        _panel->SetSize(size);
-        _label->SetSize(size);
-    }
-
     void asButton::SetOnClickCallback(asIScriptFunction* callback)
     {
         _events.onClickCallback = callback;
         _events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_CLICKABLE);
 
-        entt::registry* gameRegistry = ServiceLocator::GetGameRegistry();
-        entt::entity entId = _entityId;
-        gameRegistry->ctx<ScriptSingleton>().AddTransaction([callback, entId]()
-            {
-                entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
-                UITransformEvents& events = uiRegistry->get<UITransformEvents>(entId);
-
-                events.onClickCallback = callback;
-                events.SetFlag(UITransformEventsFlags::UIEVENTS_FLAG_CLICKABLE);
-            });
+        UI::TransformEventUtils::Transactions::SetOnClickCallbackTransaction(_entityId, callback);
     }
 
     void asButton::SetText(const std::string& text)
@@ -137,10 +127,7 @@ namespace UI
 
     asButton* asButton::CreateButton()
     {
-        entt::registry* registry = ServiceLocator::GetUIRegistry();
-        UIEntityPoolSingleton& entityPool = registry->ctx<UIEntityPoolSingleton>();
-
-        asButton* button = new asButton(entityPool.GetId());
+        asButton* button = new asButton();
 
         return button;
     }

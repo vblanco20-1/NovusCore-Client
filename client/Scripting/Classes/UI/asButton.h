@@ -14,12 +14,9 @@ namespace UI
     class asButton : public asUITransform
     {
     public:
-        asButton(entt::entity entityId);
+        asButton();
 
         static void RegisterType();
-
-        //Transform Functions.
-        virtual void SetSize(const vec2& size);
 
         //Button Functions.
         const bool IsClickable() const { return _events.IsClickable(); }
@@ -39,7 +36,7 @@ namespace UI
         const f32 GetTextOutlineWidth() const;
 
         void SetTextFont(std::string fontPath, f32 fontSize);
-    
+
         //Panel Functions        
         void SetTexture(const std::string& texture);
         const std::string& GetTexture() const;
