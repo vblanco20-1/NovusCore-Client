@@ -10,50 +10,50 @@
 
 #include "../Utils/ServiceLocator.h"
 
-#include "../ECS/Components/UI/Singletons/UIEntityPoolSingleton.h"
-#include "../ECS/Components/UI/Singletons/UIAddElementQueueSingleton.h"
-#include "../ECS/Components/UI/Singletons/UIDataSingleton.h"
-#include "../ECS/Components/UI/UITransform.h"
-#include "../ECS/Components/UI/UITransformEvents.h"
-#include "../ECS/Components/UI/UIRenderable.h"
-#include "../ECS/Components/UI/UIImage.h"
-#include "../ECS/Components/UI/UIText.h"
-#include "../ECS/Components/UI/UIVisible.h"
-#include "../ECS/Components/UI/UIVisibility.h"
-#include "../ECS/Components/UI/UIDirty.h"
-#include "../ECS/Components/UI/UICollidable.h"
-#include "../ECS/Components/UI/UIInputField.h"
-#include "../ECS/Components/UI/UICheckbox.h"
+#include "../UI/ECS/Components/Singletons/UIEntityPoolSingleton.h"
+#include "../UI/ECS/Components/Singletons/UIAddElementQueueSingleton.h"
+#include "../UI/ECS/Components/Singletons/UIDataSingleton.h"
+#include "../UI/ECS/Components/Transform.h"
+#include "../UI/ECS/Components/TransformEvents.h"
+#include "../UI/ECS/Components/Renderable.h"
+#include "../UI/ECS/Components/Image.h"
+#include "../UI/ECS/Components/Text.h"
+#include "../UI/ECS/Components/Visible.h"
+#include "../UI/ECS/Components/Visibility.h"
+#include "../UI/ECS/Components/Dirty.h"
+#include "../UI/ECS/Components/Collidable.h"
+#include "../UI/ECS/Components/InputField.h"
+#include "../UI/ECS/Components/Checkbox.h"
 
-#include "../ECS/Systems/UI/UIInputSystem.h"
+#include "../UI/UIInputHandler.h"
 
 UIRenderer::UIRenderer(Renderer::Renderer* renderer) : _renderer(renderer)
 {
     CreatePermanentResources();
 
-    UI::InputSystem::RegisterCallbacks();
+    UIInput::RegisterCallbacks();
 
     entt::registry* registry = ServiceLocator::GetUIRegistry();
-    registry->prepare<UITransform>();
-    registry->prepare<UITransformEvents>();
-    registry->prepare<UIRenderable>();
-    registry->prepare<UIImage>();
-    registry->prepare<UI::UIText>();
+    registry->prepare<UIComponent::Transform>();
+    registry->prepare<UIComponent::TransformEvents>();
+    registry->prepare<UIComponent::Renderable>();
+    registry->prepare<UIComponent::Image>();
+    registry->prepare<UIComponent::Text>();
 
-    registry->prepare<UIVisible>();
-    registry->prepare<UIVisibility>();
-    registry->prepare<UIDirty>();
-    registry->prepare<UICollidable>();
+    registry->prepare<UIComponent::Visible>();
+    registry->prepare<UIComponent::Visibility>();
+    registry->prepare<UIComponent::Dirty>();
+    registry->prepare<UIComponent::Collidable>();
 
-    registry->prepare<UIInputField>();
-    registry->prepare<UICheckbox>();
+    registry->prepare<UIComponent::InputField>();
+    registry->prepare<UIComponent::Checkbox>();
 
     // Register UI singletons.
-    registry->set<UI::UIDataSingleton>();
-    registry->set<UI::UIAddElementQueueSingleton>();
+    registry->set<UISingleton::UIDataSingleton>();
+    registry->set<UISingleton::UIAddElementQueueSingleton>();
 
     // Register entity pool.
-    registry->set<UI::UIEntityPoolSingleton>().AllocatePool();
+    registry->set<UISingleton::UIEntityPoolSingleton>().AllocatePool();
 }
 
 void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID renderTarget, u8 frameIndex)
@@ -133,16 +133,16 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
             commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, frameIndex);
 
             entt::registry* registry = ServiceLocator::GetUIRegistry();
-            auto renderGroup = registry->group<UITransform>(entt::get<UIRenderable, UIVisible>);
-            renderGroup.sort<UITransform>([](UITransform& first, UITransform& second) { return first.sortKey < second.sortKey; });
-            renderGroup.each([this, &commandList, frameIndex, &registry, &activePipeline, &textPipeline, &imagePipeline](const auto entity, UITransform& transform)
+            auto renderGroup = registry->group<UIComponent::Transform>(entt::get<UIComponent::Renderable, UIComponent::Visible>);
+            renderGroup.sort<UIComponent::Transform>([](UIComponent::Transform& first, UIComponent::Transform& second) { return first.sortKey < second.sortKey; });
+            renderGroup.each([this, &commandList, frameIndex, &registry, &activePipeline, &textPipeline, &imagePipeline](const auto entity, UIComponent::Transform& transform)
                 {
                     switch (transform.sortData.type)
                     {
                     case UI::UIElementType::UITYPE_TEXT:
                     case UI::UIElementType::UITYPE_INPUTFIELD:
                     {
-                        UI::UIText& text = registry->get<UI::UIText>(entity);
+                        UIComponent::Text& text = registry->get<UIComponent::Text>(entity);
                         if (!text.constantBuffer)
                             return;
 
@@ -175,7 +175,7 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                     }
                     default:
                     {
-                        UIImage& image = registry->get<UIImage>(entity);
+                        UIComponent::Image& image = registry->get<UIComponent::Image>(entity);
                         if (!image.constantBuffer)
                             return;
 

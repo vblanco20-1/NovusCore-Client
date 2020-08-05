@@ -20,15 +20,15 @@
 #include "ECS/Components/Network/AuthenticationSingleton.h"
 #include "ECS/Components/LocalplayerSingleton.h"
 
-#include "ECS/Components/UI/Singletons/UIDataSingleton.h"
+#include "UI/ECS/Components/Singletons/UIDataSingleton.h"
 
 // Components
 #include "ECS/Components/Transform.h"
 
 // Systems
 #include "ECS/Systems/Network/ConnectionSystems.h"
-#include "ECS/Systems/UI/AddElementSystem.h"
-#include "ECS/Systems/UI/UpdateElementSystem.h"
+#include "UI/ECS/Systems/AddElementSystem.h"
+#include "UI/ECS/Systems/UpdateElementSystem.h"
 #include "ECS/Systems/Rendering/RenderModelSystem.h"
 #include "ECS/Systems/MovementSystem.h"
 
@@ -243,7 +243,7 @@ bool EngineLoop::Update(f32 deltaTime)
         else if (message.code == MSG_IN_RELOAD)
         {
             entt::registry* uiRegistry = ServiceLocator::GetUIRegistry();
-            uiRegistry->ctx<UI::UIDataSingleton>().ClearWidgets();
+            uiRegistry->ctx<UISingleton::UIDataSingleton>().ClearWidgets();
 
             ScriptHandler::ReloadScripts();
         }
@@ -283,7 +283,7 @@ void EngineLoop::SetupUpdateFramework()
     tf::Task addElementSystemTask = framework.emplace([&uiRegistry, &gameRegistry]()
         {
             ZoneScopedNC("AddElementSystem::Update", tracy::Color::Gainsboro)
-                AddElementSystem::Update(uiRegistry);
+                UISystem::AddElementSystem::Update(uiRegistry);
             gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
         });
     addElementSystemTask.gather(connectionUpdateSystemTask);
@@ -292,7 +292,7 @@ void EngineLoop::SetupUpdateFramework()
     tf::Task updateElementSystemTask = framework.emplace([&uiRegistry, &gameRegistry]()
         {
             ZoneScopedNC("UpdateElementSystem::Update", tracy::Color::Gainsboro)
-                UpdateElementSystem::Update(uiRegistry);
+                UISystem::UpdateElementSystem::Update(uiRegistry);
             gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
         });
     updateElementSystemTask.gather(addElementSystemTask);
