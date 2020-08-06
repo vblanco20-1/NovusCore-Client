@@ -89,7 +89,7 @@ namespace UISystem
                 constantBuffer->ApplyAll();
 
                 // Transform Updates.
-                const vec2& pos = UIUtils::Transform::GetMinBounds(transform);
+                const vec2& pos = UIUtils::Transform::GetMinBounds(&transform);
                 const vec2& size = transform.size;
 
                 // Update vertex buffer
@@ -126,7 +126,7 @@ namespace UISystem
 
                 std::vector<f32> lineWidths;
                 std::vector<size_t> lineBreakPoints;
-                size_t finalCharacter = UIUtils::Text::CalculateLineWidthsAndBreaks(text, transform.size.x, transform.size.y, lineWidths, lineBreakPoints);
+                size_t finalCharacter = UIUtils::Text::CalculateLineWidthsAndBreaks(&text, transform.size.x, transform.size.y, lineWidths, lineBreakPoints);
 
                 size_t textLengthWithoutSpaces = std::count_if(text.text.begin() + text.pushback, text.text.end() - (text.text.length() - finalCharacter), [](char c) { return !std::isspace(c); });
                 if (text.models.size() < textLengthWithoutSpaces)
@@ -139,7 +139,7 @@ namespace UISystem
 
                 f32 horizontalAlignment = UIUtils::Text::GetHorizontalAlignment(text.horizontalAlignment);
                 f32 verticalAlignment = UIUtils::Text::GetVerticalAlignment(text.verticalAlignment);
-                vec2 currentPosition = UIUtils::Transform::GetAnchorPosition(transform, vec2(horizontalAlignment, verticalAlignment));
+                vec2 currentPosition = UIUtils::Transform::GetAnchorPosition(&transform, vec2(horizontalAlignment, verticalAlignment));
                 f32 startX = currentPosition.x;
                 currentPosition.x -= lineWidths[0] * horizontalAlignment;
                 currentPosition.y += text.fontSize * (1 - verticalAlignment);
