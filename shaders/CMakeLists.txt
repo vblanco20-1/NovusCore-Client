@@ -43,11 +43,11 @@ file(GLOB_RECURSE HLSL_SOURCE_FILES
   "*.ms.hlsl"
   "*.as.hlsl"
     )
- 
+
 file(GLOB_RECURSE HLSL_INCLUDE_FILES
   "*.inc.hlsl"
     )
- 
+
 foreach(HLSL ${HLSL_SOURCE_FILES})
   get_filename_component(FILE_NAME ${HLSL} NAME)
   set(SPIRV "${SHADER_OUTPUT}/${FILE_NAME}.spv")
@@ -66,7 +66,7 @@ foreach(HLSL ${HLSL_INCLUDE_FILES})
 endforeach(HLSL)
  
 find_assign_files(${HLSL_SOURCE_FILES} ${HLSL_INCLUDE_FILES})
- 
+
 add_custom_target(${PROJECT_NAME}
     DEPENDS ${SPIRV_BINARY_FILES}
     SOURCES ${HLSL_SOURCE_FILES} ${HLSL_INCLUDE_FILES}

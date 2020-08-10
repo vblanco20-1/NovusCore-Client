@@ -4,7 +4,7 @@
 #include <Renderer/Descriptors/FontDesc.h>
 #include <Renderer/Descriptors/TextureDesc.h>
 #include <Renderer/Descriptors/SamplerDesc.h>
-#include <Renderer/ConstantBuffer.h>
+#include <Renderer/Buffer.h>
 #include <tracy/Tracy.hpp>
 #include <tracy/TracyVulkan.hpp>
 
@@ -158,7 +158,7 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                         commandList.PushMarker("Text", Color(0.0f, 0.1f, 0.0f));
 
                         // Bind textdata descriptor
-                        _drawDescriptorSet.Bind("_textData"_h, text.constantBuffer);
+                        _drawDescriptorSet.Bind("_textData"_h, text.constantBuffer->GetBuffer(frameIndex));
 
                         // Each glyph in the label has it's own plane and texture, this could be optimized in the future.
                         for (u32 i = 0; i < text.glyphCount; i++)
@@ -169,7 +169,7 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                             commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_DRAW, &_drawDescriptorSet, frameIndex);
 
                             // Draw
-                            commandList.Draw(text.models[i]);
+                            //commandList.Draw(text.models[i]); // TODO
                         }
 
                         commandList.PopMarker();
@@ -191,13 +191,13 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                         commandList.PushMarker("Image", Color(0.0f, 0.1f, 0.0f));
 
                         // Bind descriptors
-                        _drawDescriptorSet.Bind("_panelData"_h, image.constantBuffer);
+                        _drawDescriptorSet.Bind("_panelData"_h, image.constantBuffer->GetBuffer(frameIndex));
                         _drawDescriptorSet.Bind("_texture"_h, image.textureID);
 
                         commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_DRAW, &_drawDescriptorSet, frameIndex);
 
                         // Draw
-                        commandList.Draw(image.modelID);
+                        //commandList.Draw(image.modelID); // TODO
 
                         commandList.PopMarker();
                         break;
