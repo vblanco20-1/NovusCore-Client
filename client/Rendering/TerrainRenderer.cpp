@@ -1,4 +1,5 @@
 #include "TerrainRenderer.h"
+#include "MapObjectRenderer.h"
 #include <entt.hpp>
 #include "../Utils/ServiceLocator.h"
 
@@ -14,7 +15,13 @@ const int HEIGHT = 1080;
 TerrainRenderer::TerrainRenderer(Renderer::Renderer* renderer)
     : _renderer(renderer)
 {
+    _mapObjectRenderer = new MapObjectRenderer(renderer); // Needs to be created before CreatePermanentResources
     CreatePermanentResources();
+}
+
+TerrainRenderer::~TerrainRenderer()
+{
+    delete _mapObjectRenderer;
 }
 
 void TerrainRenderer::Update(f32 deltaTime)
@@ -27,6 +34,9 @@ void TerrainRenderer::Update(f32 deltaTime)
     {
         terrainLayer.RegisterModel(Renderer::ModelID::Invalid(), &_chunkModelInstances[i]);
     }
+
+    // Subrenderers
+    _mapObjectRenderer->Update(deltaTime);
 }
 
 void TerrainRenderer::AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::DepthImageID depthTarget, u8 frameIndex)
@@ -112,6 +122,9 @@ void TerrainRenderer::AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph,
             commandList.EndTrace();
         });
     }
+
+    // Subrenderers
+    _mapObjectRenderer->AddMapObjectDepthPrepass(renderGraph, viewConstantBuffer, depthTarget, frameIndex);
 }
 
 void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::ConstantBuffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, u8 debugMode)
@@ -210,6 +223,9 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
             commandList.EndTrace();
         });
     }
+
+    // Subrenderers
+    _mapObjectRenderer->AddMapObjectPass(renderGraph, viewConstantBuffer, renderTarget, depthTarget, frameIndex);
 }
 
 void TerrainRenderer::CreatePermanentResources()
@@ -383,41 +399,17 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
         }
     }
 
-    // ADTs store their alphamaps on a per-cell basis, one alphamap per used texture layer up to 4 different alphamaps
-    // The different layers alphamaps can easily be combined into different channels of a single texture
-    // But, that would still be 256 textures per chunk, which is a bit extreme
-    // Instead we'll load our per-cell alphamaps and combine them into a single alphamap per chunk
-    // This is gonna heavily decrease the amount of textures we need to use, and how big our texture arrays have to be
+    u32 alphaMapStringID = chunk.alphaMapStringID;
+    u32 alphaID = 0;
 
-    // First we create our per-chunk alpha map descriptor
-    Renderer::DataTextureDesc chunkAlphaMapDesc;
-    chunkAlphaMapDesc.debugName = "ChunkAlphaMapArray";
-    chunkAlphaMapDesc.width = 64;
-    chunkAlphaMapDesc.height = 64;
-    chunkAlphaMapDesc.layers = 256;
-    chunkAlphaMapDesc.format = Renderer::ImageFormat::IMAGE_FORMAT_R8G8B8A8_UNORM;
-
-    constexpr u32 numChannels = 4;
-    const u32 chunkAlphaMapSize = chunkAlphaMapDesc.width * chunkAlphaMapDesc.height * chunkAlphaMapDesc.layers * numChannels; // 4 channels per pixel, 1 byte per channel
-    chunkAlphaMapDesc.data = new u8[chunkAlphaMapSize]{ 0 }; // Allocate the data needed for it // TODO: Delete this...
-
-    const u32 cellAlphaMapSize = 64 * 64; // This is the size of the per-cell alphamap
-    for (u32 i = 0; i < Terrain::MAP_CELLS_PER_CHUNK; i++)
+    if (alphaMapStringID < stringTable.GetNumStrings())
     {
-        std::vector<Terrain::AlphaMap>& alphaMaps = chunk.alphaMaps[i];
-        u32 numAlphaMaps = static_cast<u32>(alphaMaps.size());
+        Renderer::TextureDesc chunkAlphaMapDesc;
+        chunkAlphaMapDesc.path = stringTable.GetString(alphaMapStringID);
 
-        if (numAlphaMaps > 0)
-        {
-            for (u32 pixel = 0; pixel < cellAlphaMapSize; pixel++)
-            {
-                for (u32 channel = 0; channel < numAlphaMaps; channel++)
-                {
-                    u32 dst = (i * cellAlphaMapSize * numChannels) + (pixel * numChannels) + channel;
-                    chunkAlphaMapDesc.data[dst] = alphaMaps[channel].alphaMap[pixel];
-                }
-            }
-        }
+        
+        _renderer->LoadTextureIntoArray(chunkAlphaMapDesc, _terrainAlphaTextureArray, alphaID);
+        assert(alphaID < 65536);// Because of the way we pack diffuseIDs[3] and alphaID, this should never be bigger than a u16, see the comment below
     }
 
     // We have 4 uints per chunk for our diffuseIDs, this gives us a size and alignment of 16 bytes which is exactly what GPUs want
@@ -427,9 +419,6 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
     // [2222] diffuseIDs[1]
     // [3333] diffuseIDs[2]
     // [AA44] diffuseIDs[3] Alpha is read from the most significant bits, the fourth diffuseID read from the least 
-    u32 alphaID;
-    _renderer->CreateDataTextureIntoArray(chunkAlphaMapDesc, _terrainAlphaTextureArray, alphaID);
-    assert(alphaID < 65536); // Because of the way we pack diffuseIDs[3] and alphaID, this should never be bigger than a u16
 
     // TODO: alphaID is only needed on a per-chunk basis, not per-cell, so it should not be inside of chunkData I believe
     for (u32 i = 0; i < Terrain::MAP_CELLS_PER_CHUNK; i++)
@@ -462,6 +451,9 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
     chunkInstance.ApplyAll();
     terrainInstanceData->vertexBuffer->ApplyAll();
     terrainInstanceData->chunkData->ApplyAll();
+
+    // Load MapObjects referenced in this chunk
+    //_mapObjectRenderer->LoadMapObjects(chunk, stringTable);
     
     _chunkModelInstances.push_back(chunkInstance);
 }

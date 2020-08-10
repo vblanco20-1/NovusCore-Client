@@ -32,10 +32,13 @@ namespace Renderer
     class DescriptorSet;
 }
 
+class MapObjectRenderer;
+
 class TerrainRenderer
 {
 public:
     TerrainRenderer(Renderer::Renderer* renderer);
+    ~TerrainRenderer();
 
     void Update(f32 deltaTime);
 
@@ -86,4 +89,7 @@ private:
 
     Renderer::DescriptorSet _passDescriptorSet;
     Renderer::DescriptorSet _drawDescriptorSet;
+
+    // Subrenderers
+    MapObjectRenderer* _mapObjectRenderer = nullptr;
 };
