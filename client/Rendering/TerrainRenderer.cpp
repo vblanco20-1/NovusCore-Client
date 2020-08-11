@@ -13,6 +13,7 @@
 
 #include <InputManager.h>
 #include <GLFW/glfw3.h>
+#include <tracy/Tracy.hpp>
 
 #include "Camera.h"
 
@@ -193,8 +194,7 @@ void TerrainRenderer::AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph,
         },
             [=](TerrainDepthPrepassData& data, Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList) // Execute
         {
-            TracySourceLocation(terrainDepth, "TerrainDepth", tracy::Color::Yellow2);
-            commandList.BeginTrace(&terrainDepth);
+            GPU_SCOPED_PROFILER_ZONE(commandList, TerrainDepth);
 
             Renderer::GraphicsPipelineDesc pipelineDesc;
             resources.InitializePipelineDesc(pipelineDesc);
@@ -243,7 +243,6 @@ void TerrainRenderer::AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph,
             //commandList.DrawIndexedIndirect(_argumentBuffer, 0, 1 );
 
             commandList.EndPipeline(pipeline);
-            commandList.EndTrace();
         });
     }
 
@@ -271,8 +270,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
         },
             [=](TerrainPassData& data, Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList) // Execute
         {
-            TracySourceLocation(terrainPass, "TerrainPass", tracy::Color::Yellow2);
-            commandList.BeginTrace(&terrainPass);
+            GPU_SCOPED_PROFILER_ZONE(commandList, TerrainPass);
 
             // Upload culled instances
             if (s_cullingEnabled && !s_gpuCullingEnabled && !_culledInstances.empty())
@@ -400,7 +398,6 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
             }
 
             commandList.EndPipeline(pipeline);
-            commandList.EndTrace();
         });
     }
 
