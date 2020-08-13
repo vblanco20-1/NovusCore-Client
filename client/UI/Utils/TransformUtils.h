@@ -1,5 +1,6 @@
 #pragma once
 #include <NovusTypes.h>
+#include <entity/fwd.hpp>
 #include "../ECS/Components/Transform.h"
 
 namespace UIUtils::Transform
@@ -28,23 +29,44 @@ namespace UIUtils::Transform
         return GetMinBounds(transform) + (transform->size * anchor);
     }
 
-    inline static void AddChild(UIComponent::Transform* transform, entt::entity childEntityId, UI::UIElementType childElementType)
+    inline static void RemoveChild(UIComponent::Transform* transform, UIComponent::Transform* child)
     {
-        transform->children.push_back({ entt::to_integral(childEntityId) , childElementType });
-    }
+        if (child->parent != transform->sortData.entId)
+            return;
 
-    inline static void RemoveChild(UIComponent::Transform* transform, entt::entity childEntityId)
-    {
-        auto itr = std::find_if(transform->children.begin(), transform->children.end(), [childEntityId](UI::UIChild& uiChild) { return uiChild.entity == entt::to_integral(childEntityId); });
-
+        auto itr = std::find_if(transform->children.begin(), transform->children.end(), [child](UI::UIChild& uiChild) { return uiChild.entId == child->sortData.entId; });
         if (itr != transform->children.end())
             transform->children.erase(itr);
+
+        child->position = child->position + child->localPosition;
+        child->localPosition = vec2(0, 0);
+        child->parent = entt::null;
     }
 
-    inline static void RemoveParent(UIComponent::Transform* transform)
-    {
-        transform->position = transform->position + transform->localPosition;
-        transform->localPosition = vec2(0, 0);
-        transform->parent = 0;
-    }
+    /*
+    *   Recursively updates depths of children changing it by modifier.
+    *   registry: Pointer to UI Registry.
+    *   transform: Transform from which to start update.
+    *   modifer: amount to modify depth by.
+    */
+    void UpdateChildDepths(entt::registry* registry, UIComponent::Transform* parent, u32 modifier);
+    
+    void UpdateChildTransforms(entt::registry* registry, UIComponent::Transform* parent);
+
+    /*
+    *   Recursively updates bounds of children and self.
+    *   registry: Pointer to UI Registry.
+    *   transform: Transform from which to start bounds update.
+    *   updateParent: Whether or not to shallow update parents after updating our own bounds.
+    */
+    void UpdateBounds(entt::registry* registry, UIComponent::Transform* transform, bool updateParent = true);
+    /*
+    *   Shallow update bounds by non-recursively iterating over children. I.e we only go one level deep.
+    *   registry: Pointer to UI Registry.
+    *   transform: Transform to update bounds of.
+    */
+    void ShallowUpdateBounds(entt::registry* registry, UIComponent::Transform* transform);
+
+    void MarkChildrenDirty(entt::registry* registry, const UIComponent::Transform* transform);
+
 };

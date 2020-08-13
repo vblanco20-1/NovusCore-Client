@@ -1,13 +1,29 @@
 #pragma once
 #include <NovusTypes.h>
+#include <vector>
+#include <entity/entity.hpp>
 #include "../../../UI/UITypes.h"
 
 namespace UI
 {
     struct UIChild
     {
-        u32 entity;
+        entt::entity entId;
         UI::UIElementType type;
+    };
+
+    enum class DepthLayer : u8
+    {
+        WORLD,
+        BACKGROUND,
+        LOW,
+        MEDIUM,
+        HIGH,
+        DIALOG,
+        FULLSCREEN,
+        FULLSCREEN_DIALOG,
+        TOOLTIP,
+        MAX
     };
 }
 
@@ -28,16 +44,16 @@ namespace UIComponent
         bool fillParentSize = false;
         union
         {
-            u64 sortKey = 0;
             struct
             {
-                u8 depthLayer;
-                u16 depth;
-                UI::UIElementType type;
                 entt::entity entId;
-            } sortData;
+                UI::UIElementType type;
+                u16 depth;
+                UI::DepthLayer depthLayer;
+            } sortData{ entt::null, UI::UIElementType::UITYPE_NONE, 0, UI::DepthLayer::MEDIUM };
+            u64 sortKey;
         };
-        u32 parent = 0;
+        entt::entity parent = entt::null;
         std::vector<UI::UIChild> children;
         void* asObject = nullptr;
 

@@ -27,7 +27,6 @@
 
 // Systems
 #include "ECS/Systems/Network/ConnectionSystems.h"
-#include "UI/ECS/Systems/AddElementSystem.h"
 #include "UI/ECS/Systems/UpdateElementSystem.h"
 #include "ECS/Systems/Rendering/RenderModelSystem.h"
 #include "ECS/Systems/MovementSystem.h"
@@ -278,15 +277,6 @@ void EngineLoop::SetupUpdateFramework()
             gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
         });
 
-    // AddElementSystem
-    tf::Task addElementSystemTask = framework.emplace([&uiRegistry, &gameRegistry]()
-        {
-            ZoneScopedNC("AddElementSystem::Update", tracy::Color::Gainsboro)
-                UISystem::AddElementSystem::Update(uiRegistry);
-            gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
-        });
-    addElementSystemTask.gather(connectionUpdateSystemTask);
-
     // UpdateElementSystem
     tf::Task updateElementSystemTask = framework.emplace([&uiRegistry, &gameRegistry]()
         {
@@ -294,7 +284,6 @@ void EngineLoop::SetupUpdateFramework()
                 UISystem::UpdateElementSystem::Update(uiRegistry);
             gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
         });
-    updateElementSystemTask.gather(addElementSystemTask);
 
     // MovementSystem
     tf::Task movementSystemTask = framework.emplace([&gameRegistry]()

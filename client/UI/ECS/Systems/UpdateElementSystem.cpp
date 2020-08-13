@@ -1,18 +1,22 @@
 #include "UpdateElementSystem.h"
 #include <entity/registry.hpp>
 #include <tracy/Tracy.hpp>
-#include "../../../Utils/ServiceLocator.h"
+#include "../../render-lib/Renderer/Descriptors/ModelDesc.h"
+#include "../../render-lib/Renderer/Buffer.h"
 
+#include "../../../Utils/ServiceLocator.h"
 #include "../Components/Transform.h"
 #include "../Components/Image.h"
 #include "../Components/Text.h"
 #include "../Components/Dirty.h"
+#include "../Components/BoundsDirty.h"
+#include "../Components/Visible.h"
+#include "../Components/Collidable.h"
 #include "../Components/Singletons/UIDataSingleton.h"
 #include "../../Utils/TransformUtils.h"
 #include "../../Utils/TextUtils.h"
+#include "../../angelscript/BaseElement.h"
 
-#include "../../render-lib/Renderer/Descriptors/ModelDesc.h"
-#include "../../render-lib/Renderer/Buffer.h"
 
 namespace UISystem
 {
@@ -63,6 +67,50 @@ namespace UISystem
     void UpdateElementSystem::Update(entt::registry& registry)
     {
         Renderer::Renderer* renderer = ServiceLocator::GetRenderer();
+
+        auto& dataSingleton = registry.ctx<UISingleton::UIDataSingleton>();
+        // Destroy elements queued for destruction.
+        {
+            size_t deleteEntityNum = dataSingleton.destructionQueue.size_approx();
+            std::vector<entt::entity> deleteEntities;
+            deleteEntities.reserve(deleteEntityNum);
+
+            dataSingleton.destructionQueue.try_dequeue_bulk(deleteEntities.begin(), deleteEntityNum);
+            for (entt::entity entId : deleteEntities)
+            {
+                delete dataSingleton.entityToAsObject[entId];
+            }
+
+            registry.destroy(deleteEntities.begin(), deleteEntities.end());
+        }
+        // Toggle visibility of elements
+        {
+            entt::entity entId;
+            while (dataSingleton.visibilityToggleQueue.try_dequeue(entId))
+            {
+                if (registry.has<UIComponent::Visible>(entId))
+                    registry.remove<UIComponent::Visible>(entId);
+                else
+                    registry.emplace<UIComponent::Visible>(entId);
+            }
+        }
+        // Toggle collision of elements
+        {
+            entt::entity entId;
+            while (dataSingleton.collisionToggleQueue.try_dequeue(entId))
+            {
+                if (registry.has<UIComponent::Collidable>(entId))
+                    registry.remove<UIComponent::Collidable>(entId);
+                else
+                    registry.emplace<UIComponent::Collidable>(entId);
+            }
+        }
+
+        auto boundsUpdateView = registry.view<UIComponent::Transform, UIComponent::BoundsDirty>();
+        boundsUpdateView.each([&](UIComponent::Transform& transform)
+            {
+                UIUtils::Transform::UpdateBounds(ServiceLocator::GetUIRegistry(), &transform, true);
+            });
 
         auto imageView = registry.view<UIComponent::Transform, UIComponent::Image, UIComponent::Dirty>();
         imageView.each([&](UIComponent::Transform& transform, UIComponent::Image& image)
@@ -214,5 +262,6 @@ namespace UISystem
             });
 
         registry.clear<UIComponent::Dirty>();
+        registry.clear<UIComponent::BoundsDirty>();
     }
 }

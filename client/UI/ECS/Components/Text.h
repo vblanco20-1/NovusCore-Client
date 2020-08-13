@@ -6,14 +6,14 @@
 
 namespace UI
 {
-    enum class TextHorizontalAlignment
+    enum class TextHorizontalAlignment : u8
     {
         LEFT,
         CENTER,
         RIGHT
     };
 
-    enum class TextVerticalAlignment
+    enum class TextVerticalAlignment : u8
     {
         TOP,
         CENTER,

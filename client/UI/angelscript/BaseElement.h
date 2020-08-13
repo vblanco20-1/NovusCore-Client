@@ -14,14 +14,15 @@ namespace UIScripting
     class BaseElement
     {
         friend struct ::UISingleton::UIDataSingleton;
-        friend class LockToken;
 
     public:
         BaseElement(UI::UIElementType elementType);
 
+        virtual ~BaseElement() { }
+
         static void RegisterType()
         {
-            i32 r = ScriptEngine::RegisterScriptClass("Transform", 0, asOBJ_REF | asOBJ_NOCOUNT);
+            i32 r = ScriptEngine::RegisterScriptClass("BaseElement", 0, asOBJ_REF | asOBJ_NOCOUNT);
             assert(r >= 0);
             {
                 RegisterBase<BaseElement>();
@@ -36,7 +37,6 @@ namespace UIScripting
             r = ScriptEngine::RegisterScriptClassFunction("vec2 GetScreenPosition()", asMETHOD(T, GetScreenPosition)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("vec2 GetLocalPosition()", asMETHOD(T, GetLocalPosition)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("vec2 GetParentPosition()", asMETHOD(T, GetParentPosition)); assert(r >= 0);
-            r = ScriptEngine::RegisterScriptClassFunction("vec2 GetPosition()", asMETHOD(T, GetPosition)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void SetPosition(vec2 position)", asMETHOD(T, SetPosition)); assert(r >= 0);
 
             r = ScriptEngine::RegisterScriptClassFunction("vec2 GetLocalAnchor()", asMETHOD(T, GetLocalAnchor)); assert(r >= 0);
@@ -45,10 +45,13 @@ namespace UIScripting
             r = ScriptEngine::RegisterScriptClassFunction("void SetSize(vec2 size)", asMETHOD(T, SetSize)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("bool GetFillParentSize()", asMETHOD(T, GetFillParentSize)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void SetFillParentSize(bool fillParent)", asMETHOD(T, SetFillParentSize)); assert(r >= 0);
-            r = ScriptEngine::RegisterScriptClassFunction("float GetDepth()", asMETHOD(T, GetDepth)); assert(r >= 0);
+            
+            r = ScriptEngine::RegisterScriptClassFunction("uint8 GetDepthLayer()", asMETHOD(T, GetDepthLayer)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void SetDepthLayer(uint8 layer)", asMETHOD(T, SetDepthLayer)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("uint16 GetDepth()", asMETHOD(T, GetDepth)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void SetDepth(uint16 depth)", asMETHOD(T, SetDepth)); assert(r >= 0);
 
-            r = ScriptEngine::RegisterScriptClassFunction("void SetParent(Transform@ parent)", asMETHOD(T, SetParent)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void SetParent(BaseElement@ parent)", asMETHOD(T, SetParent)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void UnsetParent()", asMETHOD(T, UnsetParent)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void Destroy()", asMETHOD(T, Destroy)); assert(r >= 0);
 
@@ -58,105 +61,68 @@ namespace UIScripting
             r = ScriptEngine::RegisterScriptClassFunction("bool IsLocallyVisible()", asMETHOD(T, IsLocallyVisible)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("bool IsParentVisible()", asMETHOD(T, IsParentVisible)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void SetVisible(bool visible)", asMETHOD(T, SetVisible)); assert(r >= 0);
-            r = ScriptEngine::RegisterScriptClassFunction("LockToken@ GetLock(int lockState)", asMETHOD(T, GetLock)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("LockToken@ GetLock(uint8 lockState)", asMETHOD(T, GetLock)); assert(r >= 0);
+
+            r = ScriptEngine::RegisterScriptClassFunction("void MarkDirty()", asMETHOD(T, MarkDirty)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void MarkSelfDirty()", asMETHOD(T, MarkSelfDirty)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void MarkBoundsDirty()", asMETHOD(T, MarkBoundsDirty)); assert(r >= 0);
         }
 
-        virtual const entt::entity GetEntityId() const
-        {
-            return _entityId;
-        }
-
-        virtual const UI::UIElementType GetType() const
-        {
-            return _elementType;
-        }
+        const entt::entity GetEntityId() const { return _entityId; }
+        const UI::UIElementType GetType() const { return _elementType; }
 
         // Transform Functions
-        virtual void SetTransform(const vec2& position, const vec2& size);
+        vec2 GetScreenPosition() const;
+        vec2 GetLocalPosition() const;
+        vec2 GetParentPosition() const;
+        void SetPosition(const vec2& position);
 
-        virtual const vec2 GetScreenPosition() const
-        {
-            return _transform->position + _transform->localPosition;
-        }
-        virtual const vec2 GetLocalPosition() const
-        {
-            return _transform->parent ? _transform->localPosition : vec2(0, 0);
-        }
-        virtual const vec2 GetParentPosition() const
-        {
-            return _transform->parent ? _transform->position : vec2(0, 0);
-        }
-        virtual const vec2 GetPosition() const
-        {
-            return _transform->position + _transform->localPosition;
-        }
-        virtual void SetPosition(const vec2& position);
+        vec2 GetSize() const;
+        void SetSize(const vec2& size);
+
+        void SetTransform(const vec2& position, const vec2& size);
+
+        vec2 GetAnchor() const;
+        void SetAnchor(const vec2& anchor);
+
+        vec2 GetLocalAnchor() const;
+        void SetLocalAnchor(const vec2& localAnchor);
         
-        virtual const vec2 GetAnchor() const
-        {
-            return _transform->anchor;
-        }
-        virtual void SetAnchor(const vec2& anchor);
+        bool GetFillParentSize() const;
+        void SetFillParentSize(bool fillParent);
 
-        virtual const vec2 GetLocalAnchor() const
-        {
-            return _transform->localAnchor;
-        }
-        virtual void SetLocalAnchor(const vec2& localAnchor);
-        
-        virtual const vec2 GetSize() const
-        {
-            return _transform->size;
-        }
-        virtual void SetSize(const vec2& size);
-        
-        virtual const bool GetFillParentSize()
-        {
-            return _transform->fillParentSize;
-        }
-        virtual void SetFillParentSize(bool fillParent);
+        UI::DepthLayer GetDepthLayer() const;
+        void SetDepthLayer(const UI::DepthLayer layer);
 
-        virtual const u16 GetDepth() const
-        {
-            return _transform->sortData.depth;
-        }
-        virtual void SetDepth(const u16 depth);
+        u16 GetDepth() const;
+        void SetDepth(const u16 depth);
 
-        virtual void SetParent(BaseElement* parent);
-        virtual void UnsetParent();
+        void SetParent(BaseElement* parent);
+        void UnsetParent();
 
-        virtual void SetExpandBoundsToChildren(bool expand);
+        bool GetExpandBoundsToChildren() const;
+        void SetExpandBoundsToChildren(bool expand);
 
-        const bool IsVisible() const { return _visibility->visible && _visibility->parentVisible; }
-        const bool IsLocallyVisible() const { return _visibility->visible; }
-        const bool IsParentVisible() const { return _visibility->parentVisible; }
-        virtual void SetVisible(bool visible);
+        bool IsVisible() const;
+        bool IsLocallyVisible() const;
+        bool IsParentVisible() const;
+        void SetVisible(bool visible);
     
         void SetCollisionEnabled(bool enabled);
 
-        virtual void Destroy();
+        void Destroy();
 
-protected:
-        static void MarkDirty(entt::registry* registry, entt::entity entId);
-    
-        static void UpdateChildTransforms(entt::registry* uiRegistry, UIComponent::Transform* parent);
-
-        static void UpdateChildVisibility(entt::registry* uiRegistry, const UIComponent::Transform* parent, bool parentVisibility);
-
-        static void UpdateChildBounds(entt::registry* uiRegistry, UIComponent::Transform* transform);
-        static void UpdateBounds(entt::registry* uiRegistry, UIComponent::Transform* parent);
+        void MarkDirty();
+        void MarkSelfDirty();
+        void MarkBoundsDirty();
 
         inline LockToken* GetLock(LockState state)
         {
             return new LockToken(_mutex, state);
         }
-
     protected:
         entt::entity _entityId;
         UI::UIElementType _elementType;
-
-        UIComponent::Transform* _transform = nullptr;
-        UIComponent::Visibility* _visibility = nullptr;
 
         std::shared_mutex _mutex;
     };
