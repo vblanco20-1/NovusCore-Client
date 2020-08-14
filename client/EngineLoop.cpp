@@ -1,17 +1,16 @@
 #include "EngineLoop.h"
-#include <Networking/InputQueue.h>
 #include <Utils/Timer.h>
-#include <tracy/Tracy.hpp>
 #include "Utils/ServiceLocator.h"
+#include <SceneManager.h>
+#include <Networking/InputQueue.h>
 #include <Networking/MessageHandler.h>
-#include "Utils/MapLoader.h"
+#include <Renderer/Renderer.h>
 #include "Rendering/ClientRenderer.h"
 #include "Rendering/Camera.h"
-#include <Renderer/Renderer.h>
-#include <SceneManager.h>
+#include "Gameplay/Map/MapLoader.h"
+#include "Gameplay/DBC/DBCLoader.h"
 
 // Component Singletons
-#include "ECS/Components/Singletons/MapSingleton.h"
 #include "ECS/Components/Singletons/TimeSingleton.h"
 #include "ECS/Components/Singletons/ScriptSingleton.h"
 #include "ECS/Components/Singletons/DataStorageSingleton.h"
@@ -38,6 +37,7 @@
 
 #include <InputManager.h>
 #include <GLFW/glfw3.h>
+#include <tracy/Tracy.hpp>
 
 EngineLoop::EngineLoop() : _isRunning(false), _inputQueue(256), _outputQueue(256)
 {
@@ -92,6 +92,7 @@ void EngineLoop::Run()
     _updateFramework.uiRegistry.create();
     SetupUpdateFramework();
 
+    DBCLoader::Load(_updateFramework.gameRegistry);
     MapLoader::Load(_updateFramework.gameRegistry);
 
     TimeSingleton& timeSingleton = _updateFramework.gameRegistry.set<TimeSingleton>();

@@ -24,15 +24,11 @@
 #pragma once
 #include <NovusTypes.h>
 #include <robin_hood.h>
-#include "../../../Gameplay/Map/Map.h"
 #include "../../../Gameplay/DBC/DBC.h"
 
-struct MapSingleton
+struct DBCSingleton
 {
-    MapSingleton() {}
+	DBCSingleton() {}
 
-    robin_hood::unordered_map<u16, Terrain::Map> maps;
-	robin_hood::unordered_map<u16, DBC::Map> mapIdToDBC;
-	robin_hood::unordered_map<u32, DBC::Map> mapInternalNameToDBC;
-	StringTable mapsDBCStringTable;
+    robin_hood::unordered_map<u32, DBC::File> dbcs;
 };

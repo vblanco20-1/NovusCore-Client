@@ -35,12 +35,19 @@ namespace Terrain
     struct Chunk;
 }
 
+namespace DBC
+{
+    struct File;
+    struct Map;
+}
+
 class MapLoader
 {
 public:
-    MapLoader() {}
+    MapLoader() { }
     static bool Load(entt::registry& registry);
 
 private:
+    static bool ExtractMapDBC(DBC::File& file, std::vector<DBC::Map>& maps, StringTable& stringTable);
     static bool ExtractChunkData(FileReader& reader, Terrain::Chunk& chunk, StringTable& stringTable);
 };

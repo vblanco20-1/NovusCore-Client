@@ -74,7 +74,7 @@ u32 MapObjectRenderer::LoadMapObject(u32 nameID, StringTable& stringTable)
     }
     
     Bytebuffer nmorBuffer(nullptr, nmorFile.Length());
-    nmorFile.Read(nmorBuffer, nmorBuffer.size);
+    nmorFile.Read(&nmorBuffer, nmorBuffer.size);
     nmorFile.Close();
 
     Terrain::MapObjectRoot mapObjectRoot;
@@ -122,7 +122,7 @@ u32 MapObjectRenderer::LoadMapObject(u32 nameID, StringTable& stringTable)
         }
 
         Bytebuffer nmoBuffer(nullptr, nmoFile.Length());
-        nmoFile.Read(nmoBuffer, nmoBuffer.size);
+        nmoFile.Read(&nmoBuffer, nmoBuffer.size);
         nmoFile.Close();
 
         Terrain::MapObject mapObject;

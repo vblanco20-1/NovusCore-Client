@@ -38,7 +38,7 @@ namespace Terrain
     struct Map
     {
         Map() {}
-        u16 id;
+        u16 id = std::numeric_limits<u16>().max(); // Default Map to Invalid ID
         std::string name;
         robin_hood::unordered_map<u16, Chunk> chunks;
         robin_hood::unordered_map<u16, StringTable> stringTables;

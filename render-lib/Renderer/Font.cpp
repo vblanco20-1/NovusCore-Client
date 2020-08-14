@@ -48,7 +48,7 @@ namespace Renderer
             }
 
             std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<1048576>();
-            file.Read(*buffer, file.Length());
+            file.Read(buffer.get(), file.Length());
 
             font->fontInfo = new stbtt_fontinfo();
             stbtt_InitFont(font->fontInfo, buffer->GetDataPointer(), 0);
