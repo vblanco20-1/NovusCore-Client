@@ -30,9 +30,9 @@ public:
     {
         _position = position;
     }
-    vec3 GetPosition() { return _position; }
-    vec3 GetRotation() { return vec3(0, _yaw, _pitch); }
-    bool IsMouseCaptured() { return _captureMouse; }
+    vec3 GetPosition() const { return _position; }
+    vec3 GetRotation() const { return vec3(0, _yaw, _pitch); }
+    bool IsMouseCaptured() const { return _captureMouse; }
 
 private:
     void UpdateCameraVectors();

@@ -3,6 +3,7 @@
 #include "MapObjectRenderer.h"
 #include <entt.hpp>
 #include "../Utils/ServiceLocator.h"
+#include "../Utils/MapUtils.h"
 
 #include "../ECS/Components/Singletons/MapSingleton.h"
 
@@ -23,6 +24,10 @@
 static bool s_cullingEnabled = true;
 static bool s_gpuCullingEnabled = true;
 static bool s_lockCullingFrustum = false;
+
+static vec3 s_debugPosition = vec3(0, 0, 0);
+static f32 s_debugPositionScale = 0.1f;
+static bool s_lockDebugPosition = false;
 
 struct TerrainChunkData
 {
@@ -70,6 +75,22 @@ TerrainRenderer::TerrainRenderer(Renderer::Renderer* renderer, DebugRenderer* de
         s_lockCullingFrustum = !s_lockCullingFrustum;
         return true;
     });
+
+    ServiceLocator::GetInputManager()->RegisterKeybind("ToggleLockDebugPosition", GLFW_KEY_F6, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [this](Window* window, std::shared_ptr<Keybind> keybind)
+    {
+        s_lockDebugPosition = !s_lockDebugPosition;
+        return true;
+    });
+    ServiceLocator::GetInputManager()->RegisterKeybind("DecreaseDebugPositionScale", GLFW_KEY_F7, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [this](Window* window, std::shared_ptr<Keybind> keybind)
+    {
+        s_debugPositionScale -= 0.1f;
+        return true;
+    });
+    ServiceLocator::GetInputManager()->RegisterKeybind("IncreaseDebugPositionScale", GLFW_KEY_F8, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [this](Window* window, std::shared_ptr<Keybind> keybind)
+    {
+        s_debugPositionScale += 0.1f;
+        return true;
+    });
 }
 
 TerrainRenderer::~TerrainRenderer()
@@ -83,6 +104,25 @@ void TerrainRenderer::Update(f32 deltaTime, const Camera& camera)
     //{
     //    _debugRenderer->DrawAABB3D(boundingBox.min, boundingBox.max, 0xff00ff00);
     //}
+
+    if (!s_lockDebugPosition)
+    {
+        s_debugPosition = camera.GetPosition();
+        s_debugPosition.y = Terrain::MapUtils::GetHeightFromWorldPosition(s_debugPosition);
+    }
+    
+    f32 halfSize = s_debugPositionScale;
+    vec3 min = s_debugPosition;
+    min.x -= halfSize;
+    min.z -= halfSize;
+
+    vec3 max = s_debugPosition;
+    max.x += halfSize;
+    max.z += halfSize;
+
+    max.y += s_debugPositionScale;
+
+    _debugRenderer->DrawAABB3D(min, max, 0xff00ff00);
 
     if (s_cullingEnabled && !s_gpuCullingEnabled)
     {
