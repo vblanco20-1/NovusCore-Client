@@ -6,6 +6,7 @@
 #include <Networking/MessageHandler.h>
 #include <Renderer/Renderer.h>
 #include "Rendering/ClientRenderer.h"
+#include "Rendering/TerrainRenderer.h"
 #include "Rendering/Camera.h"
 #include "Gameplay/Map/MapLoader.h"
 #include "Gameplay/DBC/DBCLoader.h"
@@ -92,8 +93,8 @@ void EngineLoop::Run()
     _updateFramework.uiRegistry.create();
     SetupUpdateFramework();
 
-    DBCLoader::Load(_updateFramework.gameRegistry);
-    MapLoader::Load(_updateFramework.gameRegistry);
+    DBCLoader::Load(&_updateFramework.gameRegistry);
+    MapLoader::Init(&_updateFramework.gameRegistry);
 
     TimeSingleton& timeSingleton = _updateFramework.gameRegistry.set<TimeSingleton>();
     ScriptSingleton& scriptSingleton = _updateFramework.gameRegistry.set<ScriptSingleton>();
@@ -245,6 +246,15 @@ bool EngineLoop::Update(f32 deltaTime)
             uiRegistry->ctx<UISingleton::UIDataSingleton>().ClearWidgets();
 
             ScriptHandler::ReloadScripts();
+        }
+        else if (message.code == MSG_IN_LOAD_MAP)
+        {
+            LoadMapInfo* loadMapInfo = reinterpret_cast<LoadMapInfo*>(message.object);
+
+            ServiceLocator::GetClientRenderer()->GetTerrainRenderer()->LoadMap(loadMapInfo->mapInternalNameHash);
+            ServiceLocator::GetCamera()->SetPosition(vec3(loadMapInfo->x, 100, loadMapInfo->y));
+
+            delete loadMapInfo;
         }
     }
 

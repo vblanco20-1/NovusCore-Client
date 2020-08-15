@@ -80,13 +80,13 @@ void Camera::Init()
 
     inputManager->RegisterKeybind("IncreaseCameraSpeed", GLFW_KEY_PAGE_UP, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [this](Window* window, std::shared_ptr<Keybind> keybind)
     {
-        _movementSpeed += 5.0f;
+        _movementSpeed += 15.0f;
         return true;
     });
 
     inputManager->RegisterKeybind("DecreaseCameraSpeed", GLFW_KEY_PAGE_DOWN, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [this](Window* window, std::shared_ptr<Keybind> keybind)
     {
-        _movementSpeed -= 5.0f;
+        _movementSpeed -= 15.0f;
         if (_movementSpeed < 7.3333f)
         {
             _movementSpeed = 7.3333f;

@@ -16,6 +16,7 @@
 #include <tracy/Tracy.hpp>
 
 #include "Camera.h"
+#include "../Gameplay/Map/MapLoader.h"
 
 #define USE_PACKED_HEIGHT_RANGE 1
 
@@ -30,7 +31,7 @@ struct TerrainChunkData
 
 struct TerrainCellData
 {
-    u8 diffuseIDs[4];
+    u16 diffuseIDs[4];
     u16 hole;
     u16 _padding;
 };
@@ -642,9 +643,22 @@ void TerrainRenderer::CreatePermanentResources()
         _renderer->CopyBuffer(_cellIndexBuffer, 0, indexUploadBuffer, 0, indexUploadBufferDesc.size);
     }
 
-    // Load map
-    Terrain::Map& map = mapSingleton.maps[0];
-    LoadChunksAround(map, ivec2(32, 32), 32); // Goldshire
+    // Load default map
+    LoadMap("Azeroth"_h);
+}
+
+bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
+{
+    entt::registry* registry = ServiceLocator::GetGameRegistry();
+    MapSingleton& mapSingleton = registry->ctx<MapSingleton>();
+
+    if (!MapLoader::LoadMap(registry, mapInternalNameHash))
+        return false;
+
+    _loadedChunks.clear();
+    _cellBoundingBoxes.clear();
+
+    LoadChunksAround(mapSingleton.currentMap, ivec2(32, 32), 32); // Goldshire
     //LoadChunksAround(map, ivec2(40, 32), 8); // Razor Hill
     //LoadChunksAround(map, ivec2(22, 25), 8); // Borean Tundra
 
@@ -678,6 +692,8 @@ void TerrainRenderer::CreatePermanentResources()
         _renderer->UnmapBuffer(instanceUploadBuffer);
         _renderer->CopyBuffer(_instanceBuffer, 0, instanceUploadBuffer, 0, uploadBufferDesc.size);
     }
+
+    return true;
 }
 
 void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
@@ -729,7 +745,7 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
 
                 u32 diffuseID = 0;
                 _renderer->LoadTextureIntoArray(textureDesc, _terrainColorTextureArray, diffuseID);
-                assert(diffuseID < 256);
+                assert(diffuseID < 65536);
 
                 cellData.diffuseIDs[layerCount++] = diffuseID;
             }

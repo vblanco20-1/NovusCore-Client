@@ -97,6 +97,8 @@ ClientRenderer::ClientRenderer()
         }
         return true;
     });
+
+    ServiceLocator::SetClientRenderer(this);
 }
 
 bool ClientRenderer::UpdateWindow(f32 deltaTime)

@@ -26,6 +26,10 @@ public:
     __forceinline const mat4x4& GetViewProjectionMatrix() const { return _viewProjectionMatrix; }
     __forceinline const vec4* GetFrustumPlanes() const { return _frustumPlanes; }
 
+    void SetPosition(vec3 position)
+    {
+        _position = position;
+    }
     vec3 GetPosition() { return _position; }
     vec3 GetRotation() { return vec3(0, _yaw, _pitch); }
     bool IsMouseCaptured() { return _captureMouse; }

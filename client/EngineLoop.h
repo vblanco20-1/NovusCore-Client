@@ -51,6 +51,13 @@ struct NetworkPair
     std::shared_ptr<asio::io_service> asioService;
 };
 
+struct LoadMapInfo
+{
+    u32 mapInternalNameHash = 0;
+    f32 x = 0;
+    f32 y = 0;
+};
+
 class ClientRenderer;
 class EngineLoop
 {
