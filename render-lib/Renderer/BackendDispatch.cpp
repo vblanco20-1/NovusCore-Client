@@ -27,6 +27,7 @@
 #include "Commands/AddWaitSemaphore.h"
 #include "Commands/CopyBuffer.h"
 #include "Commands/PipelineBarrier.h"
+#include "Commands/PushConstant.h"
 
 namespace Renderer
 {
@@ -221,5 +222,12 @@ namespace Renderer
         ZoneScopedC(tracy::Color::Red3);
         const Commands::PipelineBarrier* actualData = static_cast<const Commands::PipelineBarrier*>(data);
         renderer->PipelineBarrier(commandList, actualData->barrierType, actualData->buffer);
+    }
+
+    void BackendDispatch::PushConstant(Renderer* renderer, CommandListID commandList, const void* data)
+    {
+        ZoneScopedC(tracy::Color::Red3);
+        const Commands::PushConstant* actualData = static_cast<const Commands::PushConstant*>(data);
+        renderer->PushConstant(commandList, actualData->data, actualData->offset, actualData->size);
     }
 }

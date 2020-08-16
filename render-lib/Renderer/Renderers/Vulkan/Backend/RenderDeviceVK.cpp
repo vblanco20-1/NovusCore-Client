@@ -39,7 +39,8 @@ namespace Renderer
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
             //"VK_KHR_get_physical_device_properties2",
             "VK_KHR_maintenance3",
-            "VK_EXT_descriptor_indexing"
+            "VK_EXT_descriptor_indexing",
+            "VK_KHR_draw_indirect_count"
         };
 
         RenderDeviceVK::~RenderDeviceVK()
@@ -1142,8 +1143,8 @@ namespace Renderer
                     NC_LOG_FATAL("Tried to use a format that wasn't uncompressed or used BC compression, what is this? id: %u", format)
                 }
 
-                curWidth /= 2;
-                curHeight /= 2;
+                curWidth = Math::Max(1, curWidth / 2);
+                curHeight = Math::Max(1, curHeight / 2);
             }
             
             vkCmdCopyBufferToImage(

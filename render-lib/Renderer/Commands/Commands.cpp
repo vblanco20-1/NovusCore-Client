@@ -24,6 +24,7 @@
 #include "AddWaitSemaphore.h"
 #include "CopyBuffer.h"
 #include "PipelineBarrier.h"
+#include "PushConstant.h"
 
 namespace Renderer
 {
@@ -57,5 +58,6 @@ namespace Renderer
         const BackendDispatchFunction AddWaitSemaphore::DISPATCH_FUNCTION = &BackendDispatch::AddWaitSemaphore;
         const BackendDispatchFunction CopyBuffer::DISPATCH_FUNCTION = &BackendDispatch::CopyBuffer;
         const BackendDispatchFunction PipelineBarrier::DISPATCH_FUNCTION = &BackendDispatch::PipelineBarrier;
+        const BackendDispatchFunction PushConstant::DISPATCH_FUNCTION = &BackendDispatch::PushConstant;
     }
 }

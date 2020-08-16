@@ -59,6 +59,11 @@ bool MapLoader::LoadMap(entt::registry* registry, u32 mapInternalNameHash)
     MapSingleton& mapSingleton = registry->ctx<MapSingleton>();
     DBCSingleton& dbcSingleton = registry->ctx<DBCSingleton>();
 
+    if (mapSingleton.loadedMapHash == mapInternalNameHash)
+    {
+        return false; // Don't reload the map we're on
+    }
+
     auto itr = mapSingleton.mapInternalNameToDBC.find(mapInternalNameHash);
     if (itr == mapSingleton.mapInternalNameToDBC.end())
     {

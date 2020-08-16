@@ -29,6 +29,7 @@
 #include "Commands/AddWaitSemaphore.h"
 #include "Commands/CopyBuffer.h"
 #include "Commands/PipelineBarrier.h"
+#include "Commands/PushConstant.h"
 
 namespace Renderer
 {
@@ -297,5 +298,13 @@ namespace Renderer
         command->barrierType = type;
         command->buffer = buffer;
 
+    }
+    void CommandList::PushConstant(void* data, u32 offset, u32 size)
+    {
+        assert(data != nullptr);
+        Commands::PushConstant* command = AddCommand<Commands::PushConstant>();
+        command->data = data;
+        command->offset = offset;
+        command->size = size;
     }
 }
