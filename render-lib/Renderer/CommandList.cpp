@@ -29,6 +29,7 @@
 #include "Commands/AddWaitSemaphore.h"
 #include "Commands/CopyBuffer.h"
 #include "Commands/PipelineBarrier.h"
+#include "Commands/DrawImgui.h"
 #include "Commands/PushConstant.h"
 
 namespace Renderer
@@ -299,7 +300,10 @@ namespace Renderer
         command->buffer = buffer;
 
     }
-    void CommandList::PushConstant(void* data, u32 offset, u32 size)
+    void CommandList::DrawImgui()
+    {
+        Commands::DrawImgui* command = AddCommand<Commands::DrawImgui>();
+    }    void CommandList::PushConstant(void* data, u32 offset, u32 size)
     {
         assert(data != nullptr);
         Commands::PushConstant* command = AddCommand<Commands::PushConstant>();

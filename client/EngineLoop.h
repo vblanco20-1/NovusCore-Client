@@ -92,6 +92,10 @@ private:
 
     void SetupUpdateFramework();
     void SetMessageHandler();
+
+    void DrawEngineStats(struct EngineStatsSingleton* stats);
+    void DrawImguiMenuBar();
+
 private:
     bool _isRunning;
 
