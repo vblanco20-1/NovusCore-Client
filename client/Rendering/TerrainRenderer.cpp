@@ -692,8 +692,10 @@ bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
     if (!MapLoader::LoadMap(registry, mapInternalNameHash))
         return false;
 
+    // Clear Terrain & WMOs
     _loadedChunks.clear();
     _cellBoundingBoxes.clear();
+    _mapObjectRenderer->Clear();
 
     LoadChunksAround(mapSingleton.currentMap, ivec2(32, 32), 32); // Load everything
     //LoadChunksAround(mapSingleton.currentMap, ivec2(32, 50), 4); // Goldshire

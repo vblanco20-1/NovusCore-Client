@@ -156,6 +156,12 @@ void MapObjectRenderer::LoadMapObjects(const Terrain::Chunk& chunk, StringTable&
     }
 }
 
+void MapObjectRenderer::Clear()
+{
+    _loadedMapObjects.clear();
+    _nameHashToIndexMap.clear();
+}
+
 void MapObjectRenderer::CreatePermanentResources()
 {
     Renderer::TextureArrayDesc textureArrayDesc;

@@ -30,11 +30,6 @@ void Camera::Init()
     inputManager->RegisterKeybind("Camera Up", GLFW_KEY_SPACE, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
     inputManager->RegisterKeybind("Camera Down", GLFW_KEY_LEFT_CONTROL, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
 
-    inputManager->RegisterKeybind("Camera Rotate Up", GLFW_KEY_DOWN, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
-    inputManager->RegisterKeybind("Camera Rotate Down", GLFW_KEY_UP, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
-    inputManager->RegisterKeybind("Camera Rotate Left", GLFW_KEY_LEFT, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
-    inputManager->RegisterKeybind("Camera Rotate Right", GLFW_KEY_RIGHT, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
-
     inputManager->RegisterKeybind("ToggleMouseCapture", GLFW_KEY_TAB, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [this](Window* window, std::shared_ptr<Keybind> keybind)
     {
         _captureMouse = !_captureMouse;

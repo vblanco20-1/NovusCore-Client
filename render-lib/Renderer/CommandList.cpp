@@ -300,10 +300,13 @@ namespace Renderer
         command->buffer = buffer;
 
     }
+
     void CommandList::DrawImgui()
     {
         Commands::DrawImgui* command = AddCommand<Commands::DrawImgui>();
-    }    void CommandList::PushConstant(void* data, u32 offset, u32 size)
+    }    
+    
+    void CommandList::PushConstant(void* data, u32 offset, u32 size)
     {
         assert(data != nullptr);
         Commands::PushConstant* command = AddCommand<Commands::PushConstant>();

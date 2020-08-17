@@ -35,6 +35,7 @@ public:
     void AddMapObjectPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex);
 
     void LoadMapObjects(const Terrain::Chunk& chunk, StringTable& stringTable);
+    void Clear();
 
 private:
     void CreatePermanentResources();

@@ -66,7 +66,7 @@ void LoadMapCommand(EngineLoop& engineLoop, std::vector<std::string> subCommands
         pos.y = static_cast<f32>(std::stol(subCommands[2]));
 
     pos *= 533.33f;
-    pos -= 17066.66656f;
+    pos = 17066.66656f - pos;
 
     u32 mapInternalNameHash = StringUtils::fnv1a_32(mapInternalName.c_str(), mapInternalName.size());
 

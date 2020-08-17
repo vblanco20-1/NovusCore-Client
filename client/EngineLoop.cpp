@@ -284,7 +284,7 @@ bool EngineLoop::Update(f32 deltaTime)
             LoadMapInfo* loadMapInfo = reinterpret_cast<LoadMapInfo*>(message.object);
 
             ServiceLocator::GetClientRenderer()->GetTerrainRenderer()->LoadMap(loadMapInfo->mapInternalNameHash);
-            ServiceLocator::GetCamera()->SetPosition(vec3(loadMapInfo->x, 100, loadMapInfo->y));
+            ServiceLocator::GetCamera()->SetPosition(vec3(loadMapInfo->y, 100, loadMapInfo->x));
 
             delete loadMapInfo;
         }
