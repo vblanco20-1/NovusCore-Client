@@ -93,6 +93,7 @@ private:
     void SetupUpdateFramework();
     void SetMessageHandler();
 
+    void ImguiNewFrame();
     void DrawEngineStats(struct EngineStatsSingleton* stats);
     void DrawImguiMenuBar();
 

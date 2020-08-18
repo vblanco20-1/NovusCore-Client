@@ -195,10 +195,6 @@ void EngineLoop::Run()
         timeSingleton.lifeTimeInMS = timeSingleton.lifeTimeInS * 1000;
         timeSingleton.deltaTime = deltaTime;
 
-        ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
         updateTimer.Reset();
         
         if (!Update(deltaTime))
@@ -250,6 +246,8 @@ bool EngineLoop::Update(f32 deltaTime)
     bool shouldExit = _clientRenderer->UpdateWindow(deltaTime) == false;
     if (shouldExit)
         return false;
+
+    ImguiNewFrame();
 
     Message message;
     while (_inputQueue.try_dequeue(message))
@@ -369,6 +367,13 @@ void EngineLoop::SetMessageHandler()
     MessageHandler* gameSocketMessageHandler = new MessageHandler();
     ServiceLocator::SetGameSocketMessageHandler(gameSocketMessageHandler);
     GameSocket::GameHandlers::Setup(gameSocketMessageHandler);
+}
+
+void EngineLoop::ImguiNewFrame()
+{
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 }
 
 void EngineLoop::DrawEngineStats(EngineStatsSingleton* stats)

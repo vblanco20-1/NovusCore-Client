@@ -140,8 +140,8 @@ void MapObjectRenderer::LoadMapObjects(const Terrain::Chunk& chunk, StringTable&
             pos = vec3(Terrain::MAP_HALF_SIZE - pos.x, pos.y, Terrain::MAP_HALF_SIZE - pos.z); // Go from [0 .. MAP_SIZE] to [-MAP_HALF_SIZE .. MAP_HALF_SIZE]
             pos = vec3(pos.z, pos.y, pos.x); // Swizzle and invert x and z
 
-            vec3 rot = -mapObjectPlacement.rotation;
-            mat4x4 rotationMatrix = glm::eulerAngleXYZ(glm::radians(rot.z), glm::radians(rot.y), glm::radians(rot.x));
+            vec3 rot = mapObjectPlacement.rotation;
+            mat4x4 rotationMatrix = glm::eulerAngleXYZ(glm::radians(rot.z), glm::radians(-rot.y), glm::radians(rot.x));
 
             dst->instanceMatrix = glm::translate(mat4x4(1.0f), pos) * rotationMatrix;
             _renderer->UnmapBuffer(stagingBuffer);
