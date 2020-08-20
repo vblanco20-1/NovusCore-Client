@@ -124,8 +124,7 @@ void TerrainRenderer::Update(f32 deltaTime, const Camera& camera)
 
     _debugRenderer->DrawAABB3D(min, max, 0xff00ff00);    
     
-
-    //DebugRenderCellTriangles(camera);
+    DebugRenderCellTriangles(camera);
 
     if (s_cullingEnabled && !s_gpuCullingEnabled)
     {

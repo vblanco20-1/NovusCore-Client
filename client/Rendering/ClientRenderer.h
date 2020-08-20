@@ -44,6 +44,7 @@ public:
 
     void InitImgui();
     TerrainRenderer* GetTerrainRenderer() { return _terrainRenderer; }
+    DebugRenderer* GetDebugRenderer() { return _debugRenderer; }
 private:
     void CreatePermanentResources();
 

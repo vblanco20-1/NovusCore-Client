@@ -29,7 +29,9 @@
 #include "ECS/Systems/Network/ConnectionSystems.h"
 #include "UI/ECS/Systems/UpdateElementSystem.h"
 #include "ECS/Systems/Rendering/RenderModelSystem.h"
+#include "ECS/Systems/Physics/SimulateDebugCubeSystem.h"
 #include "ECS/Systems/MovementSystem.h"
+
 
 // Handlers
 #include "Network/Handlers/AuthSocket/AuthHandlers.h"
@@ -181,6 +183,8 @@ void EngineLoop::Run()
     _network.gameSocket->SetConnectHandler(std::bind(&ConnectionUpdateSystem::GameSocket_HandleConnect, std::placeholders::_1, std::placeholders::_2));
     _network.gameSocket->SetDisconnectHandler(std::bind(&ConnectionUpdateSystem::GameSocket_HandleDisconnect, std::placeholders::_1));
 
+    SimulateDebugCubeSystem::Init(_updateFramework.gameRegistry);
+
     Timer updateTimer;
     Timer renderTimer;
 
@@ -315,45 +319,54 @@ void EngineLoop::SetupUpdateFramework()
 
     // ConnectionUpdateSystem
     tf::Task connectionUpdateSystemTask = framework.emplace([&gameRegistry]()
-        {
-            ZoneScopedNC("ConnectionUpdateSystem::Update", tracy::Color::Blue2)
-                ConnectionUpdateSystem::Update(gameRegistry);
-            gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
-        });
+    {
+        ZoneScopedNC("ConnectionUpdateSystem::Update", tracy::Color::Blue2)
+            ConnectionUpdateSystem::Update(gameRegistry);
+        gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
+    });
 
     // UpdateElementSystem
     tf::Task updateElementSystemTask = framework.emplace([&uiRegistry, &gameRegistry]()
-        {
-            ZoneScopedNC("UpdateElementSystem::Update", tracy::Color::Gainsboro)
-                UISystem::UpdateElementSystem::Update(uiRegistry);
-            gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
-        });
+    {
+        ZoneScopedNC("UpdateElementSystem::Update", tracy::Color::Gainsboro)
+            UISystem::UpdateElementSystem::Update(uiRegistry);
+        gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
+    });
 
     // MovementSystem
     tf::Task movementSystemTask = framework.emplace([&gameRegistry]()
-        {
-            ZoneScopedNC("MovementSystem::Update", tracy::Color::Blue2)
-                MovementSystem::Update(gameRegistry);
-            gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
-        });
+    {
+        ZoneScopedNC("MovementSystem::Update", tracy::Color::Blue2)
+            MovementSystem::Update(gameRegistry);
+        gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
+    });
     movementSystemTask.gather(connectionUpdateSystemTask);
+
+    // SimulateDebugCubeSystem
+    tf::Task simulateDebugCubeSystemTask = framework.emplace([this, &gameRegistry]()
+    {
+        ZoneScopedNC("SimulateDebugCubeSystem::Update", tracy::Color::Blue2)
+            SimulateDebugCubeSystem::Update(gameRegistry, _clientRenderer->GetDebugRenderer());
+        gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
+    });
+    simulateDebugCubeSystemTask.gather(movementSystemTask);
 
     // RenderModelSystem
     tf::Task renderModelSystemTask = framework.emplace([this, &gameRegistry]()
-        {
-            ZoneScopedNC("RenderModelSystem::Update", tracy::Color::Blue2)
-                RenderModelSystem::Update(gameRegistry, _clientRenderer);
-            gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
-        });
-    renderModelSystemTask.gather(movementSystemTask);
+    {
+        ZoneScopedNC("RenderModelSystem::Update", tracy::Color::Blue2)
+            RenderModelSystem::Update(gameRegistry, _clientRenderer);
+        gameRegistry.ctx<ScriptSingleton>().CompleteSystem();
+    });
+    renderModelSystemTask.gather(simulateDebugCubeSystemTask);
 
     // ScriptSingletonTask
     tf::Task scriptSingletonTask = framework.emplace([&uiRegistry, &gameRegistry]()
-        {
-            ZoneScopedNC("ScriptSingletonTask::Update", tracy::Color::Blue2)
-            gameRegistry.ctx<ScriptSingleton>().ExecuteTransactions();
-            gameRegistry.ctx<ScriptSingleton>().ResetCompletedSystems();
-        });
+    {
+        ZoneScopedNC("ScriptSingletonTask::Update", tracy::Color::Blue2)
+        gameRegistry.ctx<ScriptSingleton>().ExecuteTransactions();
+        gameRegistry.ctx<ScriptSingleton>().ResetCompletedSystems();
+    });
     scriptSingletonTask.gather(updateElementSystemTask);
     scriptSingletonTask.gather(renderModelSystemTask);
 }
