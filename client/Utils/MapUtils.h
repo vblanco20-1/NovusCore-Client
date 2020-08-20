@@ -415,7 +415,7 @@ namespace Terrain
 
             ivec3 vertexIds = GetVertexIDsFromPatchPos(patchPos, patchRemainder, b, c);
 
-            return GetHeightFromVertexIds(vertexIds, &currentChunk.cells[cellId].heightData[0], a, b, c, patchRemainder);
+            return GetHeightFromVertexIds(vertexIds, &currentChunk.cells[cellId].heightData[0], a, b, c, patchRemainder * Terrain::MAP_PATCH_SIZE);
         }
 
         inline i32 IsColliding(const vec3& spherePos, const f32 sphereRadius, const Triangle& triangle)
