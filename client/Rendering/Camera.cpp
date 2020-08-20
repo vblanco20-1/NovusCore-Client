@@ -9,6 +9,7 @@
 #include <Utils/DebugHandler.h>
 #include <Utils/FileReader.h>
 #include "../Utils/ServiceLocator.h"
+#include "../Utils/MapUtils.h"
 
 namespace fs = std::filesystem;
 Camera::Camera(const vec3& pos)
@@ -156,6 +157,12 @@ void Camera::Update(f32 deltaTime, float fovInDegrees, float aspectRatioWH)
 
     UpdateCameraVectors();
     UpdateFrustumPlanes(glm::transpose(_viewProjectionMatrix));
+
+    Terrain::MapUtils::Triangle triangle;
+    if (Terrain::MapUtils::IsPlayerCollidingWithTerrain(_position, triangle))
+    {
+        // Handle Collision
+    }
 }
 
 bool Camera::LoadFromFile(std::string filename)

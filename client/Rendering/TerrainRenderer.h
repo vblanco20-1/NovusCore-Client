@@ -21,7 +21,7 @@ namespace Terrain
 {
     struct Map;
 
-    constexpr u32 NUM_VERTICES_PER_CHUNK = Terrain::CELL_TOTAL_GRID_SIZE * Terrain::MAP_CELLS_PER_CHUNK;
+    constexpr u32 NUM_VERTICES_PER_CHUNK = Terrain::MAP_CELL_TOTAL_GRID_SIZE * Terrain::MAP_CELLS_PER_CHUNK;
     constexpr u32 NUM_INDICES_PER_CELL = 768;
 }
 
@@ -61,6 +61,7 @@ private:
     void LoadChunksAround(Terrain::Map& map, ivec2 middleChunk, u16 drawDistance);
     void CPUCulling(const Camera& camera);
 
+    void DebugRenderCellTriangles(const Camera& camera);
 private:
     Renderer::Renderer* _renderer;
 

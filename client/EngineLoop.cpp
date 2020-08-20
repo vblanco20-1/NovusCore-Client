@@ -46,6 +46,7 @@
 #include "imgui/misc/cpp/imgui_stdlib.h"
 
 #include "ECS/Components/Singletons/StatsSingleton.h"
+#include "Utils/MapUtils.h"
 
 EngineLoop::EngineLoop() : _isRunning(false), _inputQueue(256), _outputQueue(256)
 {
@@ -390,6 +391,34 @@ void EngineLoop::DrawEngineStats(EngineStatsSingleton* stats)
 
     ImGui::Text("Camera Location : %f x, %f y, %f z", cameraLocation.x, cameraLocation.y, cameraLocation.z);
     ImGui::Text("Camera Rotation : %f x, %f y, %f z", cameraRotation.x, cameraRotation.y, cameraRotation.z);
+
+    vec2 adtPos = Terrain::MapUtils::WorldPositionToADTCoordinates(cameraLocation);
+
+    vec2 chunkPos = Terrain::MapUtils::GetChunkFromAdtPosition(adtPos);
+    vec2 chunkRemainder = chunkPos - glm::floor(chunkPos);
+
+    vec2 cellLocalPos = (chunkRemainder * Terrain::MAP_CHUNK_SIZE);
+    vec2 cellPos = cellLocalPos / Terrain::MAP_CELL_SIZE;
+    vec2 cellRemainder = cellPos - glm::floor(cellPos);
+
+    vec2 patchLocalPos = (cellRemainder * Terrain::MAP_CELL_SIZE);
+    vec2 patchPos = patchLocalPos / Terrain::MAP_PATCH_SIZE;
+    vec2 patchRemainder = patchPos - glm::floor(patchPos);
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    ImGui::Text("ADT : %f x, %f y", adtPos.x, adtPos.y);
+    ImGui::Text("Chunk : %f x, %f y", chunkPos.x, chunkPos.y);
+    ImGui::Text("cellPos : %f x, %f y", cellLocalPos.x, cellLocalPos.y);
+    ImGui::Text("patchPos : %f x, %f y", patchLocalPos.x, patchLocalPos.y);
+
+    ImGui::Spacing();
+    ImGui::Text("Chunk Remainder : %f x, %f y", chunkRemainder.x, chunkRemainder.y);
+    ImGui::Text("Cell  Remainder : %f x, %f y", cellRemainder.x, cellRemainder.y);
+    ImGui::Text("Patch Remainder : %f x, %f y", patchRemainder.x, patchRemainder.y);
+
+
 
     static bool advancedStats = false;
     ImGui::Checkbox("Advanced Stats", &advancedStats);
