@@ -100,7 +100,7 @@ TerrainRenderer::~TerrainRenderer()
 
 void TerrainRenderer::Update(f32 deltaTime, const Camera& camera)
 {
-    //for (const BoundingBox& boundingBox : _cellBoundingBoxes)
+    //for (const Terrain::MapUtils::AABoundingBox& boundingBox : _cellBoundingBoxes)
     //{
     //    _debugRenderer->DrawAABB3D(boundingBox.min, boundingBox.max, 0xff00ff00);
     //}
@@ -135,7 +135,7 @@ void TerrainRenderer::Update(f32 deltaTime, const Camera& camera)
     //_mapObjectRenderer->Update(deltaTime);
 }
 
-__forceinline bool IsInsideFrustum(const vec4* planes, const BoundingBox& boundingBox)
+__forceinline bool IsInsideFrustum(const vec4* planes, const Terrain::MapUtils::AABoundingBox& boundingBox)
 {
     // this is why god abandoned us
     for (int i = 0; i < 6; ++i) 
@@ -205,7 +205,7 @@ void TerrainRenderer::CPUCulling(const Camera& camera)
     {
         for (u16 cellId = 0; cellId < Terrain::MAP_CELLS_PER_CHUNK; ++cellId)
         {
-            const BoundingBox& boundingBox = _cellBoundingBoxes[boundingBoxIndex++];
+            const Terrain::MapUtils::AABoundingBox& boundingBox = _cellBoundingBoxes[boundingBoxIndex++];
             if (IsInsideFrustum(frustumPlanes, boundingBox))
             {
                 const u16 chunkId = _loadedChunks[i];
@@ -895,7 +895,7 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
             max.y = *minmax.second;
             max.z = chunkOrigin.y - ((cellX + 1) * Terrain::MAP_CELL_SIZE);
 
-            BoundingBox boundingBox;
+            Terrain::MapUtils::AABoundingBox boundingBox;
             boundingBox.min = glm::max(min, max);
             boundingBox.max = glm::min(min, max);
             _cellBoundingBoxes.push_back(boundingBox);

@@ -6,6 +6,7 @@
 #include <Renderer/Renderer.h>
 #include <InputManager.h>
 #include "../../../Utils/ServiceLocator.h"
+#include "../../../Utils/MapUtils.h"
 #include "../../../Rendering/DebugRenderer.h"
 #include "../../../Rendering/Camera.h"
 
@@ -27,6 +28,7 @@ void SimulateDebugCubeSystem::Init(entt::registry& registry)
 
         Transform& transform = registry.emplace<Transform>(entity);
         transform.position = camera->GetPosition();
+        transform.scale = vec3(0.5f, 1.2f, 0.5f); // "Ish" scale for humans
         transform.isDirty = true;
 
         registry.emplace<Rigidbody>(entity);
@@ -48,7 +50,16 @@ void SimulateDebugCubeSystem::Update(entt::registry& registry, DebugRenderer* de
         // Make all rigidbodies "fall"
         transform.position.y -= GRAVITY_SCALE * timeSingleton.deltaTime;
 
-        // TODO: Add AABB collision test to the terrain and remove Rigidbody if it collides
+
+        Terrain::MapUtils::AABoundingBox box;
+        box.min = transform.position - transform.scale;
+        box.max = transform.position + transform.scale;
+
+        Terrain::MapUtils::Triangle triangle;
+        if (Terrain::MapUtils::Intersect_AABB_TERRAIN(transform.position, box, triangle))
+        {
+            registry.remove<Rigidbody>(entity);
+        }
     });
 
     auto debugCubeView = registry.view<Transform, DebugBox>();

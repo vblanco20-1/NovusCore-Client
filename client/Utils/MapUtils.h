@@ -1,6 +1,7 @@
 #pragma once
 #include <NovusTypes.h>
 #include <entt.hpp>
+#include "ServiceLocator.h"
 #include "../Gameplay/Map/Chunk.h"
 #include "../ECS/Components/Singletons/MapSingleton.h"
 
@@ -13,6 +14,12 @@ namespace Terrain
             vec3 vert1;
             vec3 vert2;
             vec3 vert3;
+        };
+
+        struct AABoundingBox
+        {
+            vec3 min;
+            vec3 max;
         };
 
         inline vec2 WorldPositionToADTCoordinates(const vec3& position) // TODO: Rename this to be poggers later
@@ -137,7 +144,6 @@ namespace Terrain
             constexpr vec2 bottomLeft = vec2(0, Terrain::MAP_PATCH_SIZE);
             constexpr vec2 bottomRight = vec2(Terrain::MAP_PATCH_SIZE, Terrain::MAP_PATCH_SIZE);
 
-
             vec2 patchRemainderPos = patchRemainder * Terrain::MAP_PATCH_SIZE;
 
             // Check North
@@ -180,23 +186,7 @@ namespace Terrain
             return vertexIds;
         }
 
-        inline f32 GetHeightFromVertexIds(const ivec3& vertexIds, const f32* heightData, const vec2& a, const vec2& b, const vec2& c, const vec2& p)
-        {
-            // We do standard barycentric triangle interpolation to get the actual height of the position
-
-            f32 det = (b.y - c.y) * (a.x - c.x) + (c.x - b.x) * (a.y - c.y);
-            f32 factorA = (b.y - c.y) * (p.x - c.x) + (c.x - b.x) * (p.y - c.y);
-            f32 factorB = (c.y - a.y) * (p.x - c.x) + (a.x - c.x) * (p.y - c.y);
-            f32 alpha = factorA / det;
-            f32 beta = factorB / det;
-            f32 gamma = 1.0f - alpha - beta;
-
-            f32 aHeight = heightData[vertexIds.x];
-            f32 bHeight = heightData[vertexIds.y];
-            f32 cHeight = heightData[vertexIds.z];
-
-            return aHeight * alpha + bHeight * beta + cHeight * gamma;
-        }
+        
 
         inline bool GetVerticesFromWorldPosition(const vec3& position, Triangle& triangle)
         {
@@ -235,48 +225,33 @@ namespace Terrain
             vec2 cellWorldPos = glm::floor(cellPos) * Terrain::MAP_CELL_SIZE;
             vec2 patchWorldPos = glm::floor(patchPos) * Terrain::MAP_PATCH_SIZE;
 
-            // Here we subtract Terrain::MAP_HALF_SIZE to go from ADT Coordinate back to World Space
+            // Below we subtract Terrain::MAP_HALF_SIZE to go from ADT Coordinate back to World Space
+            f32 x = chunkWorldPos.y + cellWorldPos.y + patchWorldPos.y;
+            f32 z = chunkWorldPos.x + cellWorldPos.x + patchWorldPos.x;
 
             // Calculate Vertex A
             {
-                vec2 vertexPos = GetLocalPosFromVertexId(vertexIds.x);
-
-                f32 x = Terrain::MAP_HALF_SIZE - (chunkWorldPos.y + cellWorldPos.y + patchWorldPos.y + a.y);
-                f32 z = Terrain::MAP_HALF_SIZE - (chunkWorldPos.x + cellWorldPos.x + patchWorldPos.x + a.x);
-
-                //outVertexA.x = 
-                triangle.vert1.x = x;
-                triangle.vert1.y = currentChunk.cells[cellId].heightData[vertexIds.x] + 0.1f;
-                triangle.vert1.z = z;
+                triangle.vert1.x = Terrain::MAP_HALF_SIZE - (x + a.y);
+                triangle.vert1.y = currentChunk.cells[cellId].heightData[vertexIds.x];
+                triangle.vert1.z = Terrain::MAP_HALF_SIZE - (z + a.x);
             }
 
             // Calculate Vertex B
             {
-                vec2 vertexPos = GetLocalPosFromVertexId(vertexIds.y);
-
-                f32 x = Terrain::MAP_HALF_SIZE - (chunkWorldPos.y + cellWorldPos.y + patchWorldPos.y + b.y);
-                f32 z = Terrain::MAP_HALF_SIZE - (chunkWorldPos.x + cellWorldPos.x + patchWorldPos.x + b.x);
-
-                triangle.vert2.x = x;
-                triangle.vert2.y = currentChunk.cells[cellId].heightData[vertexIds.y] + 0.1f;
-                triangle.vert2.z = z;
+                triangle.vert2.x = Terrain::MAP_HALF_SIZE - (x + b.y);
+                triangle.vert2.y = currentChunk.cells[cellId].heightData[vertexIds.y];
+                triangle.vert2.z = Terrain::MAP_HALF_SIZE - (z + b.x);
             }
 
             // Calculate Vertex C
             {
-                vec2 vertexPos = GetLocalPosFromVertexId(vertexIds.z);
-
-                f32 x = Terrain::MAP_HALF_SIZE - (chunkWorldPos.y + cellWorldPos.y + patchWorldPos.y + c.y);
-                f32 z = Terrain::MAP_HALF_SIZE - (chunkWorldPos.x + cellWorldPos.x + patchWorldPos.x + c.x);
-
-                triangle.vert3.x = x;
-                triangle.vert3.y = currentChunk.cells[cellId].heightData[vertexIds.z] + 0.1f;
-                triangle.vert3.z = z;
+                triangle.vert3.x = Terrain::MAP_HALF_SIZE - (x + c.y);
+                triangle.vert3.y = currentChunk.cells[cellId].heightData[vertexIds.z];
+                triangle.vert3.z = Terrain::MAP_HALF_SIZE - (z + c.x);
             }
 
             return true;
         }
-
         inline std::vector<Triangle> GetCellTrianglesFromWorldPosition(const vec3& position)
         {
             entt::registry* registry = ServiceLocator::GetGameRegistry();
@@ -342,39 +317,31 @@ namespace Terrain
                         vec2 cellWorldPos = glm::floor(cellPos) * Terrain::MAP_CELL_SIZE;
                         vec2 patchWorldPos = glm::floor(vec2(x, y)) * Terrain::MAP_PATCH_SIZE;
 
-                        // Here we subtract Terrain::MAP_HALF_SIZE to go from ADT Coordinate back to World Space
+                        // Below we subtract Terrain::MAP_HALF_SIZE to go from ADT Coordinate back to World Space
+                        f32 x = chunkWorldPos.y + cellWorldPos.y + patchWorldPos.y;
+                        f32 z = chunkWorldPos.x + cellWorldPos.x + patchWorldPos.x;
 
                         Triangle& triangle = triangles.emplace_back();
 
                         // Calculate Vertex A
                         {
-                            f32 x = Terrain::MAP_HALF_SIZE - (chunkWorldPos.y + cellWorldPos.y + patchWorldPos.y + a.y);
-                            f32 z = Terrain::MAP_HALF_SIZE - (chunkWorldPos.x + cellWorldPos.x + patchWorldPos.x + a.x);
-
-                            //outVertexA.x = 
-                            triangle.vert1.x = x;
-                            triangle.vert1.y = currentChunk.cells[cellId].heightData[vertexIds.x] + 0.1f;
-                            triangle.vert1.z = z;
+                            triangle.vert1.x = Terrain::MAP_HALF_SIZE - (x + a.y);
+                            triangle.vert1.y = currentChunk.cells[cellId].heightData[vertexIds.x];
+                            triangle.vert1.z = Terrain::MAP_HALF_SIZE - (z + a.x);
                         }
 
                         // Calculate Vertex B
                         {
-                            f32 x = Terrain::MAP_HALF_SIZE - (chunkWorldPos.y + cellWorldPos.y + patchWorldPos.y + b.y);
-                            f32 z = Terrain::MAP_HALF_SIZE - (chunkWorldPos.x + cellWorldPos.x + patchWorldPos.x + b.x);
-
-                            triangle.vert2.x = x;
-                            triangle.vert2.y = currentChunk.cells[cellId].heightData[vertexIds.y] + 0.1f;
-                            triangle.vert2.z = z;
+                            triangle.vert2.x = Terrain::MAP_HALF_SIZE - (x + b.y);
+                            triangle.vert2.y = currentChunk.cells[cellId].heightData[vertexIds.y];
+                            triangle.vert2.z = Terrain::MAP_HALF_SIZE - (z + b.x);
                         }
 
                         // Calculate Vertex C
                         {
-                            f32 x = Terrain::MAP_HALF_SIZE - (chunkWorldPos.y + cellWorldPos.y + patchWorldPos.y + c.y);
-                            f32 z = Terrain::MAP_HALF_SIZE - (chunkWorldPos.x + cellWorldPos.x + patchWorldPos.x + c.x);
-
-                            triangle.vert3.x = x;
-                            triangle.vert3.y = currentChunk.cells[cellId].heightData[vertexIds.z] + 0.1f;
-                            triangle.vert3.z = z;
+                            triangle.vert3.x = Terrain::MAP_HALF_SIZE - (x + c.y);
+                            triangle.vert3.y = currentChunk.cells[cellId].heightData[vertexIds.z];
+                            triangle.vert3.z = Terrain::MAP_HALF_SIZE - (z + c.x);
                         }
                     }
                 }
@@ -383,6 +350,23 @@ namespace Terrain
             return triangles;
         }
 
+        inline f32 GetHeightFromVertexIds(const ivec3& vertexIds, const f32* heightData, const vec2& a, const vec2& b, const vec2& c, const vec2& p)
+        {
+            // We do standard barycentric triangle interpolation to get the actual height of the position
+
+            f32 det = (b.y - c.y) * (a.x - c.x) + (c.x - b.x) * (a.y - c.y);
+            f32 factorA = (b.y - c.y) * (p.x - c.x) + (c.x - b.x) * (p.y - c.y);
+            f32 factorB = (c.y - a.y) * (p.x - c.x) + (a.x - c.x) * (p.y - c.y);
+            f32 alpha = factorA / det;
+            f32 beta = factorB / det;
+            f32 gamma = 1.0f - alpha - beta;
+
+            f32 aHeight = heightData[vertexIds.x];
+            f32 bHeight = heightData[vertexIds.y];
+            f32 cHeight = heightData[vertexIds.z];
+
+            return aHeight * alpha + bHeight * beta + cHeight * gamma;
+        }
         inline f32 GetHeightFromWorldPosition(const vec3& position)
         {
             entt::registry* registry = ServiceLocator::GetGameRegistry();
@@ -418,14 +402,45 @@ namespace Terrain
             return GetHeightFromVertexIds(vertexIds, &currentChunk.cells[cellId].heightData[0], a, b, c, patchRemainder * Terrain::MAP_PATCH_SIZE);
         }
 
-        inline i32 IsColliding(const vec3& spherePos, const f32 sphereRadius, const Triangle& triangle)
+        inline void Project(const vec3& vertex, const vec3& axis, vec2& minMax)
+        {
+            f32 val = glm::dot(axis, vertex);
+            if (val < minMax.x) minMax.x = val;
+            if (val > minMax.y) minMax.y = val;
+        }
+        inline void ProjectTriangle(const Triangle& triangle, const vec3& axis, vec2& minMax)
+        {
+            minMax.x = 100000.0f;
+            minMax.y = -100000.0f;
+
+            Project(triangle.vert1, axis, minMax);
+            Project(triangle.vert2, axis, minMax);
+            Project(triangle.vert3, axis, minMax);
+        }
+        inline void ProjectBox(const AABoundingBox& box, const vec3& axis, vec2& minMax)
+        {
+             minMax.x = 100000.0f;
+             minMax.y = -100000.0f;
+
+             Project(box.min, axis, minMax);
+             Project({box.min.x, box.min.y, box.max.z}, axis, minMax);
+             Project({box.min.x, box.max.y, box.min.z}, axis, minMax);
+             Project({box.min.x, box.max.y, box.max.z}, axis, minMax);
+
+             Project(box.max, axis, minMax);
+             Project({box.max.x, box.min.y, box.min.z}, axis, minMax);
+             Project({box.max.x, box.max.y, box.min.z}, axis, minMax);
+             Project({box.max.x, box.min.y, box.max.z}, axis, minMax);
+        }
+
+        inline bool Intersect_SPHERE_TRIANGLE(const vec3& spherePos, const f32 sphereRadius, const Triangle& triangle)
         {
             // Translate problem so sphere is centered at origin
             vec3 a = triangle.vert1 - spherePos;
             vec3 b = triangle.vert2 - spherePos;
             vec3 c = triangle.vert3 - spherePos;
             f32 rr = sphereRadius * sphereRadius;
-            
+
             // Compute a vector normal to triangle plane(V), normalize it(N)
             vec3 v = glm::cross(b - a, c - a);
 
@@ -472,13 +487,63 @@ namespace Terrain
             bool seperated = sep1 || sep2 || sep3 || sep4 || sep5 || sep6 || sep7;
             return !seperated;
         }
+        inline bool Intersect_AABB_TRIANGLE(const AABoundingBox& box, const Triangle& triangle)
+        {
+            vec2 triangleMinMax;
+            vec2 boxMinMax;
 
-        inline bool IsPlayerCollidingWithTerrain(const vec3& position, Triangle& triangle)
+            // Test the box normals (x, y and z)
+            constexpr vec3 boxNormals[3] = { vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1) };
+
+            for (i32 i = 0; i < 3; i++)
+            {
+                const vec3& n = boxNormals[i];
+                ProjectTriangle(triangle, n, triangleMinMax);
+
+                // If true, there is no intersection possible
+                if (triangleMinMax.y < box.min[i] || triangleMinMax.x > box.max[i])
+                    return false;
+            }
+
+            // Test the triangle normal
+            vec3 a = triangle.vert2 - triangle.vert1;
+            vec3 b = triangle.vert3 - triangle.vert1;
+            vec3 triangleNormal = vec3((a.y * b.z) - (a.z * b.y), (a.z * b.x) - (a.x * b.z), (a.x * b.y) - (a.y * b.x));
+
+            f32 triangleOffset = glm::dot(triangleNormal, triangle.vert1);
+            ProjectBox(box, triangleNormal, boxMinMax);
+
+            // If true, there is no intersection possible
+            if (boxMinMax.y < triangleOffset || boxMinMax.x > triangleOffset)
+                return false;
+
+            // Test the nine edge cross-products
+            vec3 triangleEdges[3] = { (triangle.vert1 - triangle.vert2), (triangle.vert2 - triangle.vert3), (triangle.vert3 - triangle.vert1) };
+
+            for (i32 i = 0; i < 3; i++)
+            {
+                for (i32 j = 0; j < 3; j++)
+                {
+                    // The box normals are the same as it's edge tangents
+                    vec3 axis = glm::cross(triangleEdges[i], boxNormals[j]);
+
+                    ProjectBox(box, axis, boxMinMax);
+                    ProjectTriangle(triangle, axis, triangleMinMax);
+
+                    // If true, there is no intersection possible
+                    if (boxMinMax.y < triangleMinMax.x || boxMinMax.x > triangleMinMax.y)
+                        return false; 
+                }
+            }
+
+            return true;
+        }
+        inline bool Intersect_AABB_TERRAIN(const vec3& position, const AABoundingBox& box, Triangle& triangle)
         {
             if (!GetVerticesFromWorldPosition(position, triangle))
                 return false;
 
-            return IsColliding(position, 2, triangle);
+            return Intersect_AABB_TRIANGLE(box, triangle);
         }
     }
 }

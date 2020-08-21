@@ -157,12 +157,6 @@ void Camera::Update(f32 deltaTime, float fovInDegrees, float aspectRatioWH)
 
     UpdateCameraVectors();
     UpdateFrustumPlanes(glm::transpose(_viewProjectionMatrix));
-
-    Terrain::MapUtils::Triangle triangle;
-    if (Terrain::MapUtils::IsPlayerCollidingWithTerrain(_position, triangle))
-    {
-        // Handle Collision
-    }
 }
 
 bool Camera::LoadFromFile(std::string filename)

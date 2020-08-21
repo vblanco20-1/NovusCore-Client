@@ -4,6 +4,7 @@
 #include <array>
 
 #include <Utils/StringUtils.h>
+#include "../Utils/MapUtils.h"
 #include <Renderer/Descriptors/ImageDesc.h>
 #include <Renderer/Descriptors/DepthImageDesc.h>
 #include <Renderer/Descriptors/TextureDesc.h>
@@ -36,11 +37,7 @@ class Camera;
 class DebugRenderer;
 class MapObjectRenderer;
 
-struct BoundingBox
-{
-    vec3 min;
-    vec3 max;
-};
+
 
 class TerrainRenderer
 {
@@ -95,7 +92,7 @@ private:
     Renderer::DescriptorSet _cullingPassDescriptorSet;
 
     std::vector<u16> _loadedChunks;
-    std::vector<BoundingBox> _cellBoundingBoxes;
+    std::vector<Terrain::MapUtils::AABoundingBox> _cellBoundingBoxes;
 
     std::vector<u32> _culledInstances;
     
