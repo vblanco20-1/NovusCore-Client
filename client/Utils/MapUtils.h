@@ -540,10 +540,29 @@ namespace Terrain
         }
         inline bool Intersect_AABB_TERRAIN(const vec3& position, const AABoundingBox& box, Triangle& triangle)
         {
-            if (!GetVerticesFromWorldPosition(position, triangle))
-                return false;
+            vec3 scale = (box.max - box.min) / 2.0f;
 
-            return Intersect_AABB_TRIANGLE(box, triangle);
+            vec3 offsets[5] =
+            {
+                {0, 0, 0},
+                {-scale.x, 0, -scale.z},
+                {scale.x, 0, -scale.z},
+                {-scale.x, 0, scale.z},
+                {scale.x, 0, scale.z}
+            };
+
+            for (i32 i = 0; i < 5; i++)
+            {
+                vec3 pos = position + offsets[i];
+
+                if (GetVerticesFromWorldPosition(pos, triangle))
+                {
+                    if (Intersect_AABB_TRIANGLE(box, triangle))
+                        return true;
+                }
+            }
+
+            return false;
         }
     }
 }

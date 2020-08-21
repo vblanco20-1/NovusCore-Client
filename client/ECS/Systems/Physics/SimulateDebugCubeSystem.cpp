@@ -50,7 +50,6 @@ void SimulateDebugCubeSystem::Update(entt::registry& registry, DebugRenderer* de
         // Make all rigidbodies "fall"
         transform.position.y -= GRAVITY_SCALE * timeSingleton.deltaTime;
 
-
         Terrain::MapUtils::AABoundingBox box;
         box.min = transform.position - transform.scale;
         box.max = transform.position + transform.scale;
