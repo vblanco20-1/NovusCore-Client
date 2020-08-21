@@ -79,6 +79,5 @@ private:
     UIRenderer* _uiRenderer;
     TerrainRenderer* _terrainRenderer;
 
-    u8 _debugDrawingMode = 0;
     bool _isMinimized = false;
 };
