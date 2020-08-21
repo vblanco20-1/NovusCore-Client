@@ -230,80 +230,7 @@ void TerrainRenderer::DebugRenderCellTriangles(const Camera& camera)
     }
 }
 
-void TerrainRenderer::AddTerrainDepthPrepass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::DepthImageID depthTarget, u8 frameIndex)
-{
-    return;
-
-    // Terrain Depth Prepass
-    {
-        struct TerrainDepthPrepassData
-        {
-            Renderer::RenderPassMutableResource mainDepth;
-        };
-        renderGraph->AddPass<TerrainDepthPrepassData>("TerrainDepth",
-            [=](TerrainDepthPrepassData& data, Renderer::RenderGraphBuilder& builder) // Setup
-        {
-            data.mainDepth = builder.Write(depthTarget, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
-            
-            return true;// Return true from setup to enable this pass, return false to disable it
-        },
-            [=](TerrainDepthPrepassData& data, Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList) // Execute
-        {
-            GPU_SCOPED_PROFILER_ZONE(commandList, TerrainDepth);
-
-            Renderer::GraphicsPipelineDesc pipelineDesc;
-            resources.InitializePipelineDesc(pipelineDesc);
-            
-            // Shader
-            Renderer::VertexShaderDesc vertexShaderDesc;
-            vertexShaderDesc.path = "Data/shaders/terrain.vs.hlsl.spv";
-            pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
-
-            // Input layouts TODO: Improve on this, if I set state 0 and 3 it won't work etc... Maybe responsibility for this should be moved to ModelHandler and the cooker?
-            pipelineDesc.states.inputLayouts[0].enabled = true;
-            pipelineDesc.states.inputLayouts[0].SetName("INSTANCEID");
-            pipelineDesc.states.inputLayouts[0].format = Renderer::InputFormat::INPUT_FORMAT_R32_UINT;
-            pipelineDesc.states.inputLayouts[0].inputClassification = Renderer::InputClassification::INPUT_CLASSIFICATION_PER_INSTANCE;
-
-            // Depth state
-            pipelineDesc.states.depthStencilState.depthEnable = true;
-            pipelineDesc.states.depthStencilState.depthWriteEnable = true;
-            pipelineDesc.states.depthStencilState.depthFunc = Renderer::ComparisonFunc::COMPARISON_FUNC_LESS;
-
-            // Rasterizer state
-            pipelineDesc.states.rasterizerState.cullMode = Renderer::CullMode::CULL_MODE_BACK;
-            pipelineDesc.states.rasterizerState.frontFaceMode = Renderer::FrontFaceState::FRONT_FACE_STATE_COUNTERCLOCKWISE;
-
-            pipelineDesc.depthStencil = data.mainDepth;
-
-            // Set pipeline
-            Renderer::GraphicsPipelineID pipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
-            commandList.BeginPipeline(pipeline);
-
-            // Set instance buffer
-            commandList.SetBuffer(0, _instanceBuffer);
-
-            // Set index buffer
-            commandList.SetIndexBuffer(_cellIndexBuffer, Renderer::IndexFormat::UInt16);
-
-            // Bind viewbuffer
-            _passDescriptorSet.Bind("ViewData"_h, viewConstantBuffer->GetBuffer(frameIndex));
-            _passDescriptorSet.Bind("_vertexHeights"_h, _vertexBuffer);
-            _passDescriptorSet.Bind("_cellData"_h, _cellBuffer);
-            _passDescriptorSet.Bind("_cellDataVS"_h, _cellBuffer);
-            _passDescriptorSet.Bind("_chunkData"_h, _chunkBuffer);
-
-            // Bind descriptorset
-            commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, frameIndex);
-            commandList.DrawIndexed(Terrain::NUM_INDICES_PER_CELL, Terrain::MAP_CELLS_PER_CHUNK * (u32)_loadedChunks.size(), 0, 0, 0);
-            //commandList.DrawIndexedIndirect(_argumentBuffer, 0, 1 );
-
-            commandList.EndPipeline(pipeline);
-        });
-    }
-}
-
-void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, u8 debugMode, const Camera& camera)
+void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, const Camera& camera)
 {
     // Terrain Pass
     {
@@ -442,7 +369,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
             pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
 
             Renderer::PixelShaderDesc pixelShaderDesc;
-            pixelShaderDesc.path = (debugMode == 0) ? "Data/shaders/terrain.ps.hlsl.spv" : "Data/shaders/terrainDebug.ps.hlsl.spv";
+            pixelShaderDesc.path = "Data/shaders/terrain.ps.hlsl.spv";
             pipelineDesc.states.pixelShader = _renderer->LoadShader(pixelShaderDesc);
 
             // Input layouts TODO: Improve on this, if I set state 0 and 3 it won't work etc... Maybe responsibility for this should be moved to ModelHandler and the cooker?
