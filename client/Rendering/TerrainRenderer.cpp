@@ -16,7 +16,7 @@
 #include <GLFW/glfw3.h>
 #include <tracy/Tracy.hpp>
 
-#include "Camera.h"
+#include "CameraFreelook.h"
 #include "../Gameplay/Map/MapLoader.h"
 
 #define USE_PACKED_HEIGHT_RANGE 1
@@ -98,7 +98,7 @@ TerrainRenderer::~TerrainRenderer()
     delete _mapObjectRenderer;
 }
 
-void TerrainRenderer::Update(f32 deltaTime, const Camera& camera)
+void TerrainRenderer::Update(f32 deltaTime, const CameraFreelook& camera)
 {
     //for (const Terrain::MapUtils::AABoundingBox& boundingBox : _cellBoundingBoxes)
     //{
@@ -132,10 +132,10 @@ void TerrainRenderer::Update(f32 deltaTime, const Camera& camera)
     }
 
     // Subrenderers
-    //_mapObjectRenderer->Update(deltaTime);
+    _mapObjectRenderer->Update(deltaTime);
 }
 
-__forceinline bool IsInsideFrustum(const vec4* planes, const Terrain::MapUtils::AABoundingBox& boundingBox)
+__forceinline bool IsInsideFrustum(const vec4* planes, const Geometry::AABoundingBox& boundingBox)
 {
     // this is why god abandoned us
     for (int i = 0; i < 6; ++i) 
@@ -145,20 +145,24 @@ __forceinline bool IsInsideFrustum(const vec4* planes, const Terrain::MapUtils::
         vec3 vmin, vmax;
 
         // X axis 
-        if (plane.x > 0) {
+        if (plane.x > 0) 
+        {
             vmin.x = boundingBox.min.x;
             vmax.x = boundingBox.max.x;
         }
-        else {
+        else 
+        {
             vmin.x = boundingBox.max.x;
             vmax.x = boundingBox.min.x;
         }
         // Y axis 
-        if (plane.y > 0) {
+        if (plane.y > 0) 
+        {
             vmin.y = boundingBox.min.y;
             vmax.y = boundingBox.max.y;
         }
-        else {
+        else 
+        {
             vmin.y = boundingBox.max.y;
             vmax.y = boundingBox.min.y;
         }
@@ -183,7 +187,7 @@ __forceinline bool IsInsideFrustum(const vec4* planes, const Terrain::MapUtils::
     return true;
 }
 
-void TerrainRenderer::CPUCulling(const Camera& camera)
+void TerrainRenderer::CPUCulling(const CameraFreelook& camera)
 {
     ZoneScoped;
 
@@ -205,7 +209,7 @@ void TerrainRenderer::CPUCulling(const Camera& camera)
     {
         for (u16 cellId = 0; cellId < Terrain::MAP_CELLS_PER_CHUNK; ++cellId)
         {
-            const Terrain::MapUtils::AABoundingBox& boundingBox = _cellBoundingBoxes[boundingBoxIndex++];
+            const Geometry::AABoundingBox& boundingBox = _cellBoundingBoxes[boundingBoxIndex++];
             if (IsInsideFrustum(frustumPlanes, boundingBox))
             {
                 const u16 chunkId = _loadedChunks[i];
@@ -217,12 +221,17 @@ void TerrainRenderer::CPUCulling(const Camera& camera)
     _debugRenderer->DrawFrustum(lockedViewProjectionMatrix, 0xff0000ff);
 }
 
-void TerrainRenderer::DebugRenderCellTriangles(const Camera& camera)
+void TerrainRenderer::DebugRenderCellTriangles(const CameraFreelook& camera)
 {
-    std::vector<Terrain::MapUtils::Triangle> triangles = Terrain::MapUtils::GetCellTrianglesFromWorldPosition(camera.GetPosition());
+    std::vector<Geometry::Triangle> triangles = Terrain::MapUtils::GetCellTrianglesFromWorldPosition(camera.GetPosition());
     {
         for (auto& triangle : triangles)
         {
+            // Offset Y slightly to not be directly drawn on top of the terrain
+            triangle.vert1.y += 0.05f;
+            triangle.vert2.y += 0.05f;
+            triangle.vert3.y += 0.05f;
+
             _debugRenderer->DrawLine3D(triangle.vert1, triangle.vert2, 0xff00ff00);
             _debugRenderer->DrawLine3D(triangle.vert2, triangle.vert3, 0xff00ff00);
             _debugRenderer->DrawLine3D(triangle.vert3, triangle.vert1, 0xff00ff00);
@@ -230,7 +239,7 @@ void TerrainRenderer::DebugRenderCellTriangles(const Camera& camera)
     }
 }
 
-void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, const Camera& camera)
+void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, const CameraFreelook& camera)
 {
     // Terrain Pass
     {
@@ -437,7 +446,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
     }
 
     // Subrenderers
-    //_mapObjectRenderer->AddMapObjectPass(renderGraph, viewConstantBuffer, renderTarget, depthTarget, frameIndex);
+    _mapObjectRenderer->AddMapObjectPass(renderGraph, viewConstantBuffer, renderTarget, depthTarget, frameIndex);
 }
 
 void TerrainRenderer::CreatePermanentResources()
@@ -639,8 +648,8 @@ bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
     _cellBoundingBoxes.clear();
     _mapObjectRenderer->Clear();
 
-    LoadChunksAround(mapSingleton.currentMap, ivec2(32, 32), 32); // Load everything
-    //LoadChunksAround(mapSingleton.currentMap, ivec2(32, 50), 4); // Goldshire
+    //LoadChunksAround(mapSingleton.currentMap, ivec2(32, 32), 32); // Load everything
+    LoadChunksAround(mapSingleton.currentMap, ivec2(32, 50), 2); // Goldshire
     //LoadChunksAround(map, ivec2(40, 32), 8); // Razor Hill
     //LoadChunksAround(map, ivec2(22, 25), 8); // Borean Tundra
 
@@ -822,7 +831,7 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
             max.y = *minmax.second;
             max.z = chunkOrigin.y - ((cellX + 1) * Terrain::MAP_CELL_SIZE);
 
-            Terrain::MapUtils::AABoundingBox boundingBox;
+            Geometry::AABoundingBox boundingBox;
             boundingBox.min = glm::max(min, max);
             boundingBox.max = glm::min(min, max);
             _cellBoundingBoxes.push_back(boundingBox);
@@ -860,7 +869,7 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
         }
     }
 
-    //_mapObjectRenderer->LoadMapObjects(chunk, stringTable);
+    _mapObjectRenderer->LoadMapObjects(chunk, stringTable);
     _loadedChunks.push_back(chunkId);
 }
 

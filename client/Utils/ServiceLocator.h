@@ -8,7 +8,7 @@ class MessageHandler;
 class Window;
 class InputManager;
 class ClientRenderer;
-class Camera;
+class CameraFreelook;
 class SceneManager;
 namespace Renderer
 {
@@ -59,12 +59,12 @@ public:
         return _clientRenderer;
     }
     static void SetClientRenderer(ClientRenderer* clientRenderer);
-    static Camera* GetCamera() 
+    static CameraFreelook* GetCamera() 
     {
         assert(_camera != nullptr);
         return _camera; 
     }
-    static void SetCamera(Camera* camera);
+    static void SetCamera(CameraFreelook* camera);
     static moodycamel::ConcurrentQueue<Message>* GetMainInputQueue() 
     {
         assert(_mainInputQueue != nullptr);
@@ -93,7 +93,7 @@ private:
     static Window* _window;
     static InputManager* _inputManager;
     static ClientRenderer* _clientRenderer;
-    static Camera* _camera;
+    static CameraFreelook* _camera;
     static moodycamel::ConcurrentQueue<Message>* _mainInputQueue;
     static Renderer::Renderer* _renderer;
     static SceneManager* _sceneManager;

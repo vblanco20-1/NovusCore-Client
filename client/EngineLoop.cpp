@@ -1,18 +1,21 @@
 #include "EngineLoop.h"
 #include <Utils/Timer.h>
 #include "Utils/ServiceLocator.h"
+#include "Utils/EntityUtils.h"
+#include "Utils/MapUtils.h"
 #include <SceneManager.h>
 #include <Networking/InputQueue.h>
 #include <Networking/MessageHandler.h>
 #include <Renderer/Renderer.h>
 #include "Rendering/ClientRenderer.h"
 #include "Rendering/TerrainRenderer.h"
-#include "Rendering/Camera.h"
+#include "Rendering/CameraFreelook.h"
 #include "Gameplay/Map/MapLoader.h"
 #include "Gameplay/DBC/DBCLoader.h"
 
 // Component Singletons
 #include "ECS/Components/Singletons/TimeSingleton.h"
+#include "ECS/Components/Singletons/StatsSingleton.h"
 #include "ECS/Components/Singletons/ScriptSingleton.h"
 #include "ECS/Components/Singletons/DataStorageSingleton.h"
 #include "ECS/Components/Singletons/SceneManagerSingleton.h"
@@ -24,6 +27,8 @@
 
 // Components
 #include "ECS/Components/Transform.h"
+#include "ECS/Components/Physics/Rigidbody.h"
+#include "ECS/Components/Rendering/DebugBox.h"
 
 // Systems
 #include "ECS/Systems/Network/ConnectionSystems.h"
@@ -31,7 +36,6 @@
 #include "ECS/Systems/Rendering/RenderModelSystem.h"
 #include "ECS/Systems/Physics/SimulateDebugCubeSystem.h"
 #include "ECS/Systems/MovementSystem.h"
-
 
 // Handlers
 #include "Network/Handlers/AuthSocket/AuthHandlers.h"
@@ -46,9 +50,6 @@
 #include "imgui/imgui_impl_vulkan.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/misc/cpp/imgui_stdlib.h"
-
-#include "ECS/Components/Singletons/StatsSingleton.h"
-#include "Utils/MapUtils.h"
 
 EngineLoop::EngineLoop() : _isRunning(false), _inputQueue(256), _outputQueue(256)
 {
@@ -118,9 +119,6 @@ void EngineLoop::Run()
     connectionSingleton.authConnection = _network.authSocket;
     connectionSingleton.gameConnection = _network.gameSocket;
 
-    Timer timer;
-    f32 targetDelta = 1.0f / 60.f;
-
     // Set up SceneManager. This has to happen before the ClientRenderer is created.
     SceneManager* sceneManager = new SceneManager();
     sceneManager->SetAvailableScenes({ "LoginScreen"_h, "CharacterSelection"_h, "CharacterCreation"_h });
@@ -135,39 +133,16 @@ void EngineLoop::Run()
     inputManager->RegisterKeybind("Move Left", GLFW_KEY_A, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE);
     inputManager->RegisterKeybind("Move Right", GLFW_KEY_D, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE);
 
-    inputManager->RegisterMousePositionCallback("MouseLook - Player", [this](Window* window, f32 xPos, f32 yPos)
-        {
-            entt::registry* registry = ServiceLocator::GetGameRegistry();
+    // Initialize Localplayer
+    localplayerSingleton.entity = _updateFramework.gameRegistry.create();
+    Transform& transform = _updateFramework.gameRegistry.emplace<Transform>(localplayerSingleton.entity);
 
-            LocalplayerSingleton& localplayerSingleton = registry->ctx<LocalplayerSingleton>();
-            if (localplayerSingleton.entity == entt::null)
-                return;
+    transform.position = vec3(-9321.f, 108.11f, 50.f);
+    transform.scale = vec3(0.5f, 1.2f, 0.5f); // "Ish" scale for humans
 
-            Camera* camera = ServiceLocator::GetCamera();
-            if (camera->IsMouseCaptured())
-            {
-                ConnectionSingleton& connectionSingleton = registry->ctx<ConnectionSingleton>();
-                Transform& transform = registry->get<Transform>(localplayerSingleton.entity);
-
-                std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<128>();
-                buffer->Put(Opcode::MSG_MOVE_ENTITY);
-
-                buffer->PutU16(32);
-
-                vec3 position = camera->GetPosition();
-                vec3 rotation = camera->GetRotation();
-
-                buffer->Put(localplayerSingleton.entity);
-                buffer->Put(transform.moveFlags);
-                buffer->Put(position);
-                buffer->Put(rotation);
-                connectionSingleton.gameConnection->Send(buffer);
-
-                transform.position = position;
-                transform.rotation = rotation;
-                transform.isDirty = true;
-            }
-        });
+    _updateFramework.gameRegistry.emplace<Rigidbody>(localplayerSingleton.entity);
+    _updateFramework.gameRegistry.emplace<DebugBox>(localplayerSingleton.entity);
+    Model& model = EntityUtils::CreateModelComponent(_updateFramework.gameRegistry, localplayerSingleton.entity, "Data/models/Cube.novusmodel");
 
     // Load Scripts
     std::string scriptPath = "./Data/scripts";
@@ -185,6 +160,9 @@ void EngineLoop::Run()
 
     SimulateDebugCubeSystem::Init(_updateFramework.gameRegistry);
 
+    f32 targetDelta = 1.0f / 240.f;
+
+    Timer timer;
     Timer updateTimer;
     Timer renderTimer;
 
@@ -394,7 +372,7 @@ void EngineLoop::DrawEngineStats(EngineStatsSingleton* stats)
 {
     ImGui::Begin("Engine Info");
 
-    EngineStatsSingleton::Frame average = stats->AverageFrame(60);
+    EngineStatsSingleton::Frame average = stats->AverageFrame(240);
 
     ImGui::Text("FPS : %f ", 1.f/  average.deltaTime);
     ImGui::Text("global frametime : %f ms", average.deltaTime * 1000);
@@ -430,8 +408,6 @@ void EngineLoop::DrawEngineStats(EngineStatsSingleton* stats)
     ImGui::Text("Chunk Remainder : %f x, %f y", chunkRemainder.x, chunkRemainder.y);
     ImGui::Text("Cell  Remainder : %f x, %f y", cellRemainder.x, cellRemainder.y);
     ImGui::Text("Patch Remainder : %f x, %f y", patchRemainder.x, patchRemainder.y);
-
-
 
     static bool advancedStats = false;
     ImGui::Checkbox("Advanced Stats", &advancedStats);

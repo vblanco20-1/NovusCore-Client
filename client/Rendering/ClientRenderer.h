@@ -24,7 +24,7 @@ namespace Memory
 }
 
 class Window;
-class Camera;
+class CameraFreelook;
 class UIRenderer;
 class TerrainRenderer;
 class InputManager;
@@ -50,7 +50,7 @@ private:
 
 private:
     Window* _window;
-    Camera* _camera;
+    CameraFreelook* _camera;
     InputManager* _inputManager;
     Renderer::Renderer* _renderer;
     Memory::StackAllocator* _frameAllocator;

@@ -5,10 +5,11 @@
 #include <tracy/Tracy.hpp>
 #include <Renderer/Renderer.h>
 #include <InputManager.h>
+#include <Math/Geometry.h>
 #include "../../../Utils/ServiceLocator.h"
 #include "../../../Utils/MapUtils.h"
 #include "../../../Rendering/DebugRenderer.h"
-#include "../../../Rendering/Camera.h"
+#include "../../../Rendering/CameraFreelook.h"
 
 #include "../../Components/Singletons/TimeSingleton.h"
 #include "../../Components/Transform.h"
@@ -21,7 +22,7 @@ void SimulateDebugCubeSystem::Init(entt::registry& registry)
 
     inputManager->RegisterKeybind("SpawnDebugBox", GLFW_KEY_B, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [&registry](Window* window, std::shared_ptr<Keybind> keybind)
     {
-        Camera* camera = ServiceLocator::GetCamera();
+        CameraFreelook* camera = ServiceLocator::GetCamera();
 
         // Create ENTT entity
         entt::entity entity = registry.create();
@@ -48,17 +49,25 @@ void SimulateDebugCubeSystem::Update(entt::registry& registry, DebugRenderer* de
     rigidbodyView.each([&](const auto entity, Transform& transform)
     {
         // Make all rigidbodies "fall"
-        transform.position.y -= GRAVITY_SCALE * timeSingleton.deltaTime;
+        f32 dist = GRAVITY_SCALE * timeSingleton.deltaTime;
 
-        Terrain::MapUtils::AABoundingBox box;
+        Geometry::AABoundingBox box;
         box.min = transform.position - transform.scale;
         box.max = transform.position + transform.scale;
 
-        Terrain::MapUtils::Triangle triangle;
-        if (Terrain::MapUtils::Intersect_AABB_TERRAIN(transform.position, box, triangle))
+        Geometry::Triangle triangle;
+        f32 height = 0;
+
+        // If we 
+        f32 distToCollision = dist;
+
+        if (Terrain::MapUtils::Intersect_AABB_TERRAIN_SWEEP(box, triangle, height, dist, distToCollision))
         {
+            dist = distToCollision;
             registry.remove<Rigidbody>(entity);
         }
+
+        transform.position.y -= dist;
     });
 
     auto debugCubeView = registry.view<Transform, DebugBox>();

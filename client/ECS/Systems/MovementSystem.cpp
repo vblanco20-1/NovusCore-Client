@@ -4,7 +4,7 @@
 #include <Utils/StringUtils.h>
 #include <Networking/Opcode.h>
 #include "../../Utils/ServiceLocator.h"
-#include "../../Rendering/Camera.h"
+#include "../../Rendering/CameraFreelook.h"
 #include "../Components/Singletons/TimeSingleton.h"
 #include "../Components/Network/ConnectionSingleton.h"
 #include "../Components/LocalplayerSingleton.h"
@@ -23,53 +23,44 @@ void MovementSystem::Update(entt::registry& registry)
     transform.moveFlags = MovementFlags::NONE;
 
     bool movingForward = transform.HasMoveFlag(MovementFlags::FORWARD);
-    if (inputManager->IsKeyPressed("Move Forward"_h))
+    if (inputManager->IsKeyPressed("Move Forward"_h) && !movingForward)
     {
-        if (!movingForward)
-        {
-            transform.AddMoveFlag(MovementFlags::FORWARD);
-        }
+        transform.AddMoveFlag(MovementFlags::FORWARD);
     }
-    else
+    else if (movingForward)
     {
-        if (movingForward)
-            transform.RemoveMoveFlag(MovementFlags::FORWARD);
+        transform.RemoveMoveFlag(MovementFlags::FORWARD);
     }
 
     bool movingBackward = transform.HasMoveFlag(MovementFlags::BACKWARD);
-    if (inputManager->IsKeyPressed("Move Backward"_h))
+    if (inputManager->IsKeyPressed("Move Backward"_h) && !movingBackward)
     {
-        if (!movingBackward)
-            transform.AddMoveFlag(MovementFlags::BACKWARD);
+        transform.AddMoveFlag(MovementFlags::BACKWARD);
     }
-    else
+    else if (movingBackward)
     {
-        if (movingBackward)
-            transform.RemoveMoveFlag(MovementFlags::BACKWARD);
+        transform.RemoveMoveFlag(MovementFlags::BACKWARD);
     }
 
     bool movingLeft = transform.HasMoveFlag(MovementFlags::LEFT);
-    if (inputManager->IsKeyPressed("Move Left"_h))
+    if (inputManager->IsKeyPressed("Move Left"_h) && !movingLeft)
     {
-        if (!movingLeft)
-            transform.AddMoveFlag(MovementFlags::LEFT);
+        transform.AddMoveFlag(MovementFlags::LEFT);
     }
-    else
+    else if (movingLeft)
     {
-        if (movingLeft)
-            transform.RemoveMoveFlag(MovementFlags::LEFT);
+        transform.RemoveMoveFlag(MovementFlags::LEFT);
     }
 
     bool movingRight = transform.HasMoveFlag(MovementFlags::RIGHT);
-    if (inputManager->IsKeyPressed("Move Right"_h))
+    if (inputManager->IsKeyPressed("Move Right"_h) && !movingRight)
     {
-        if (!movingRight)
-            transform.AddMoveFlag(MovementFlags::RIGHT);
+        transform.AddMoveFlag(MovementFlags::RIGHT);
     }
-    else
+    else if(movingRight)
     {
-        if (movingRight)
-            transform.RemoveMoveFlag(MovementFlags::RIGHT);
+        
+        transform.RemoveMoveFlag(MovementFlags::RIGHT);
     }
 
 
@@ -90,40 +81,30 @@ void MovementSystem::Update(entt::registry& registry)
     if (transform.moveFlags != MovementFlags::NONE)
         transform.RemoveMoveFlag(MovementFlags::NONE);
 
+
     // Tell server we stopped moving
     if (transform.HasMoveFlag(MovementFlags::NONE))
     {
         // Make sure we only send stop once
         if (transform.moveFlags != originalFlags)
         {
-            Camera* camera = ServiceLocator::GetCamera();
-
             ConnectionSingleton& connectionSingleton = registry.ctx<ConnectionSingleton>();
+
             std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<128>();
             buffer->Put(Opcode::MSG_MOVE_STOP_ENTITY);
             buffer->PutU16(32);
 
-            vec3 position = camera->GetPosition();
-            vec3 rotation = camera->GetRotation();
-
             buffer->Put(localplayerSingleton.entity);
             buffer->Put(transform.moveFlags);
-            buffer->Put(position);
-            buffer->Put(rotation);
+            buffer->Put(transform.position);
+            buffer->Put(transform.rotation);
             connectionSingleton.gameConnection->Send(buffer);
 
-            transform.position = position;
-            transform.rotation = rotation;
             transform.isDirty = true;
         }
     }
     else
     {
-        // Calculate new position
-        Camera* camera = ServiceLocator::GetCamera();
-        TimeSingleton& timeSingleton = registry.ctx<TimeSingleton>();
-        //transform.position.x += 1 * timeSingleton.deltaTime;
-
         // Send Packet
         ConnectionSingleton& connectionSingleton = registry.ctx<ConnectionSingleton>();
 
@@ -139,17 +120,13 @@ void MovementSystem::Update(entt::registry& registry)
 
         buffer->PutU16(32);
 
-        vec3 position = camera->GetPosition();
-        vec3 rotation = camera->GetRotation();
-
         buffer->Put(localplayerSingleton.entity);
         buffer->Put(transform.moveFlags);
-        buffer->Put(position);
-        buffer->Put(rotation);
+        buffer->Put(transform.position);
+        buffer->Put(transform.rotation);
+
         connectionSingleton.gameConnection->Send(buffer);
 
-        transform.position = position;
-        transform.rotation = rotation;
         transform.isDirty = true;
     }
 }

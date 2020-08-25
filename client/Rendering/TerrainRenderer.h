@@ -4,7 +4,7 @@
 #include <array>
 
 #include <Utils/StringUtils.h>
-#include "../Utils/MapUtils.h"
+#include <Math/Geometry.h>
 #include <Renderer/Descriptors/ImageDesc.h>
 #include <Renderer/Descriptors/DepthImageDesc.h>
 #include <Renderer/Descriptors/TextureDesc.h>
@@ -33,7 +33,7 @@ namespace Renderer
     class DescriptorSet;
 }
 
-class Camera;
+class CameraFreelook;
 class DebugRenderer;
 class MapObjectRenderer;
 
@@ -45,9 +45,9 @@ public:
     TerrainRenderer(Renderer::Renderer* renderer, DebugRenderer* debugRenderer);
     ~TerrainRenderer();
 
-    void Update(f32 deltaTime, const Camera& camera);
+    void Update(f32 deltaTime, const CameraFreelook& camera);
 
-    void AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, const Camera& camera);
+    void AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, const CameraFreelook& camera);
 
     bool LoadMap(u32 mapInternalNameHash);
 private:
@@ -55,9 +55,9 @@ private:
 
     void LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY);
     void LoadChunksAround(Terrain::Map& map, ivec2 middleChunk, u16 drawDistance);
-    void CPUCulling(const Camera& camera);
+    void CPUCulling(const CameraFreelook& camera);
 
-    void DebugRenderCellTriangles(const Camera& camera);
+    void DebugRenderCellTriangles(const CameraFreelook& camera);
 private:
     Renderer::Renderer* _renderer;
 
@@ -91,7 +91,7 @@ private:
     Renderer::DescriptorSet _cullingPassDescriptorSet;
 
     std::vector<u16> _loadedChunks;
-    std::vector<Terrain::MapUtils::AABoundingBox> _cellBoundingBoxes;
+    std::vector<Geometry::AABoundingBox> _cellBoundingBoxes;
 
     std::vector<u32> _culledInstances;
     

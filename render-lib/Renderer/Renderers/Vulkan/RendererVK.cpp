@@ -372,23 +372,12 @@ namespace Renderer
     {
         VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
 
-        if (_renderPassOpenCount <= 0)
-        {
-            NC_LOG_FATAL("You tried to dispatch without first calling BeginPipeline!");
-        }
-
         vkCmdDispatch(commandBuffer, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
     }
 
     void RendererVK::DispatchIndirect(CommandListID commandListID, BufferID argumentBuffer, u32 argumentBufferOffset)
     {
         VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
-
-        if (_renderPassOpenCount <= 0)
-        {
-            NC_LOG_FATAL("You tried to dispatch without first calling BeginPipeline!");
-        }
-
         VkBuffer vkArgumentBuffer = _bufferHandler->GetBuffer(argumentBuffer);
 
         vkCmdDispatchIndirect(commandBuffer, vkArgumentBuffer, argumentBufferOffset);

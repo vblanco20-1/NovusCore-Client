@@ -7,7 +7,7 @@ MessageHandler* ServiceLocator::_gameSocketMessageHandler = nullptr;
 Window* ServiceLocator::_window = nullptr;
 InputManager* ServiceLocator::_inputManager = nullptr;
 ClientRenderer* ServiceLocator::_clientRenderer = nullptr;
-Camera* ServiceLocator::_camera = nullptr;
+CameraFreelook* ServiceLocator::_camera = nullptr;
 Renderer::Renderer* ServiceLocator::_renderer = nullptr;
 SceneManager* ServiceLocator::_sceneManager = nullptr;
 
@@ -51,7 +51,7 @@ void ServiceLocator::SetClientRenderer(ClientRenderer* clientRenderer)
     _clientRenderer = clientRenderer;
 }
 
-void ServiceLocator::SetCamera(Camera* camera)
+void ServiceLocator::SetCamera(CameraFreelook* camera)
 {
     assert(_camera == nullptr);
     _camera = camera;
