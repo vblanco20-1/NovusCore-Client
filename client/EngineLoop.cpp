@@ -10,6 +10,7 @@
 #include "Rendering/ClientRenderer.h"
 #include "Rendering/TerrainRenderer.h"
 #include "Rendering/CameraFreelook.h"
+#include "Rendering/CameraOrbital.h"
 #include "Gameplay/Map/MapLoader.h"
 #include "Gameplay/DBC/DBCLoader.h"
 
@@ -126,8 +127,43 @@ void EngineLoop::Run()
 
     _clientRenderer = new ClientRenderer();
 
+    CameraFreeLook* cameraFreeLook = new CameraFreeLook(vec3(-8000.0f, 100.0f, 1600.0f)); // Stormwind Harbor
+    //CameraFreeLook* cameraFreeLook = new CameraFreeLook(vec3(300.0f, 0.0f, -4700.0f)); // Razor Hill
+    //CameraFreeLook* cameraFreeLook = new CameraFreeLook(vec3(3308.0f, 0.0f, 5316.0f)); // Borean Tundra
+    //CameraFreeLook* cameraFreeLook = new CameraFreeLook(vec3(0.0f, 0.0f, 0.0f)); // Center of Map (0, 0)
+    cameraFreeLook->Init();
+    ServiceLocator::SetCameraFreeLook(cameraFreeLook);
+
+    CameraOrbital* cameraOrbital = new CameraOrbital();
+    cameraOrbital->Init();
+    cameraOrbital->SetPosition(vec3(-8000.0f, 100.0f, 1600.0f));
+    ServiceLocator::SetCameraOrbital(cameraOrbital);
+
     // Bind Movement Keys
     InputManager* inputManager = ServiceLocator::GetInputManager();
+    inputManager->RegisterKeybind("Switch Camera Mode", GLFW_KEY_C, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE, [this](Window* window, std::shared_ptr<Keybind> keybind)
+    {
+        Camera* freeLook = ServiceLocator::GetCameraFreeLook();
+        Camera* orbital = ServiceLocator::GetCameraOrbital();
+
+        bool freeLookActive = freeLook->IsActive();
+
+        freeLook->SetActive(!freeLookActive);
+        orbital->SetActive(freeLookActive);
+
+        if (freeLookActive)
+        {
+            freeLook->Disabled();
+            orbital->Enabled();
+        }
+        else
+        {
+            orbital->Disabled();
+            freeLook->Enabled();
+        }
+
+        return true;
+    });
     inputManager->RegisterKeybind("Move Forward", GLFW_KEY_W, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE);
     inputManager->RegisterKeybind("Move Backward", GLFW_KEY_S, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE);
     inputManager->RegisterKeybind("Move Left", GLFW_KEY_A, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE);
@@ -271,6 +307,8 @@ bool EngineLoop::Update(f32 deltaTime)
         }
     }
 
+    Camera* camera = ServiceLocator::GetCamera();
+    camera->Update(deltaTime, 75.0f, static_cast<f32>(_clientRenderer->WIDTH) / static_cast<f32>(_clientRenderer->HEIGHT));
     _clientRenderer->Update(deltaTime);
 
     UpdateSystems();

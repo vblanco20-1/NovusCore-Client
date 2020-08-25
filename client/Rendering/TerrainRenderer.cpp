@@ -16,7 +16,7 @@
 #include <GLFW/glfw3.h>
 #include <tracy/Tracy.hpp>
 
-#include "CameraFreelook.h"
+#include "Camera.h"
 #include "../Gameplay/Map/MapLoader.h"
 
 #define USE_PACKED_HEIGHT_RANGE 1
@@ -98,16 +98,18 @@ TerrainRenderer::~TerrainRenderer()
     delete _mapObjectRenderer;
 }
 
-void TerrainRenderer::Update(f32 deltaTime, const CameraFreelook& camera)
+void TerrainRenderer::Update(f32 deltaTime)
 {
     //for (const Terrain::MapUtils::AABoundingBox& boundingBox : _cellBoundingBoxes)
     //{
     //    _debugRenderer->DrawAABB3D(boundingBox.min, boundingBox.max, 0xff00ff00);
     //}
 
+    Camera* camera = ServiceLocator::GetCamera();
+
     if (!s_lockDebugPosition)
     {
-        s_debugPosition = camera.GetPosition();
+        s_debugPosition = camera->GetPosition();
         s_debugPosition.y = Terrain::MapUtils::GetHeightFromWorldPosition(s_debugPosition);
     }
     
@@ -187,7 +189,7 @@ __forceinline bool IsInsideFrustum(const vec4* planes, const Geometry::AABoundin
     return true;
 }
 
-void TerrainRenderer::CPUCulling(const CameraFreelook& camera)
+void TerrainRenderer::CPUCulling(const Camera* camera)
 {
     ZoneScoped;
 
@@ -196,8 +198,8 @@ void TerrainRenderer::CPUCulling(const CameraFreelook& camera)
 
     if (!s_lockCullingFrustum)
     {
-        memcpy(frustumPlanes, camera.GetFrustumPlanes(), sizeof(frustumPlanes));
-        lockedViewProjectionMatrix = camera.GetViewProjectionMatrix();
+        memcpy(frustumPlanes, camera->GetFrustumPlanes(), sizeof(frustumPlanes));
+        lockedViewProjectionMatrix = camera->GetViewProjectionMatrix();
     }
 
     _culledInstances.clear();
@@ -221,9 +223,9 @@ void TerrainRenderer::CPUCulling(const CameraFreelook& camera)
     _debugRenderer->DrawFrustum(lockedViewProjectionMatrix, 0xff0000ff);
 }
 
-void TerrainRenderer::DebugRenderCellTriangles(const CameraFreelook& camera)
+void TerrainRenderer::DebugRenderCellTriangles(const Camera* camera)
 {
-    std::vector<Geometry::Triangle> triangles = Terrain::MapUtils::GetCellTrianglesFromWorldPosition(camera.GetPosition());
+    std::vector<Geometry::Triangle> triangles = Terrain::MapUtils::GetCellTrianglesFromWorldPosition(camera->GetPosition());
     {
         for (auto& triangle : triangles)
         {
@@ -239,7 +241,7 @@ void TerrainRenderer::DebugRenderCellTriangles(const CameraFreelook& camera)
     }
 }
 
-void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, const CameraFreelook& camera)
+void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex)
 {
     // Terrain Pass
     {
@@ -261,59 +263,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
         {
             GPU_SCOPED_PROFILER_ZONE(commandList, TerrainPass);
 
-            // Upload culled instances
-            if (s_cullingEnabled && !s_gpuCullingEnabled && !_culledInstances.empty())
-            {
-                Renderer::BufferDesc uploadBufferDesc;
-                uploadBufferDesc.name = "TerrainInstanceUploadBuffer";
-                uploadBufferDesc.cpuAccess = Renderer::BufferCPUAccess::WriteOnly;
-                uploadBufferDesc.size = sizeof(u32) * _culledInstances.size();
-                uploadBufferDesc.usage = Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
-
-                Renderer::BufferID instanceUploadBuffer = _renderer->CreateBuffer(uploadBufferDesc);
-                _renderer->QueueDestroyBuffer(instanceUploadBuffer);
-                
-                void* instanceBufferMemory = _renderer->MapBuffer(instanceUploadBuffer);
-                memcpy(instanceBufferMemory, _culledInstances.data(), uploadBufferDesc.size);
-                _renderer->UnmapBuffer(instanceUploadBuffer);
-                commandList.CopyBuffer(_culledInstanceBuffer, 0, instanceUploadBuffer, 0, uploadBufferDesc.size);
-
-                commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToIndirectArguments, _culledInstanceBuffer);
-            }
-
-            // Cull instances on GPU
-            if (s_cullingEnabled && s_gpuCullingEnabled)
-            {
-                Renderer::ComputePipelineDesc pipelineDesc;
-                resources.InitializePipelineDesc(pipelineDesc);
-
-                Renderer::ComputeShaderDesc shaderDesc;
-                shaderDesc.path = "Data/shaders/terrainCulling.cs.hlsl.spv";
-                pipelineDesc.computeShader = _renderer->LoadShader(shaderDesc);
-
-                Renderer::ComputePipelineID pipeline = _renderer->CreatePipeline(pipelineDesc);
-                commandList.BindPipeline(pipeline);
-
-                if (!s_lockCullingFrustum)
-                {
-                    memcpy(_cullingConstantBuffer->resource.frustumPlanes, camera.GetFrustumPlanes(), sizeof(vec4[6]));
-                    _cullingConstantBuffer->Apply(frameIndex);
-                }
-
-                _cullingPassDescriptorSet.Bind("_instances", _instanceBuffer);
-                _cullingPassDescriptorSet.Bind("_heightRanges", _cellHeightRangeBuffer);
-                _cullingPassDescriptorSet.Bind("_culledInstances", _culledInstanceBuffer);
-                _cullingPassDescriptorSet.Bind("_argumentBuffer", _argumentBuffer);
-                _cullingPassDescriptorSet.Bind("_constants", _cullingConstantBuffer->GetBuffer(frameIndex));
-
-                commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_cullingPassDescriptorSet, frameIndex);
-
-                const u32 cellCount = (u32)_loadedChunks.size() * Terrain::MAP_CELLS_PER_CHUNK;
-                commandList.Dispatch((cellCount + 31) / 32, 1, 1);
-
-                commandList.PipelineBarrier(Renderer::PipelineBarrierType::ComputeWriteToIndirectArguments, _culledInstanceBuffer);
-                commandList.PipelineBarrier(Renderer::PipelineBarrierType::ComputeWriteToIndirectArguments, _argumentBuffer);
-            }
+            Camera* camera = ServiceLocator::GetCamera();
 
             // Upload culled instances
             if (s_cullingEnabled && !s_gpuCullingEnabled && !_culledInstances.empty())
@@ -350,7 +300,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
 
                 if (!s_lockCullingFrustum)
                 {
-                    memcpy(_cullingConstantBuffer->resource.frustumPlanes, camera.GetFrustumPlanes(), sizeof(vec4[6]));
+                    memcpy(_cullingConstantBuffer->resource.frustumPlanes, camera->GetFrustumPlanes(), sizeof(vec4[6]));
                     _cullingConstantBuffer->Apply(frameIndex);
                 }
 

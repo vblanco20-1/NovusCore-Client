@@ -24,7 +24,7 @@ namespace Memory
 }
 
 class Window;
-class CameraFreelook;
+class CameraFreeLook;
 class UIRenderer;
 class TerrainRenderer;
 class InputManager;
@@ -45,12 +45,14 @@ public:
     void InitImgui();
     TerrainRenderer* GetTerrainRenderer() { return _terrainRenderer; }
     DebugRenderer* GetDebugRenderer() { return _debugRenderer; }
+
+    const i32 WIDTH = 1920;
+    const i32 HEIGHT = 1080;
 private:
     void CreatePermanentResources();
 
 private:
     Window* _window;
-    CameraFreelook* _camera;
     InputManager* _inputManager;
     Renderer::Renderer* _renderer;
     Memory::StackAllocator* _frameAllocator;

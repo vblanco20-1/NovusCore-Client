@@ -28,12 +28,12 @@ SkyboxRenderer::~SkyboxRenderer()
 
 }
 
-void SkyboxRenderer::Update(f32 deltaTime, const CameraFreelook& camera)
+void SkyboxRenderer::Update(f32 deltaTime, const CameraFreeLook& camera)
 {
 
 }
 
-void SkyboxRenderer::AddSkyboxPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, const CameraFreelook& camera)
+void SkyboxRenderer::AddSkyboxPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, const CameraFreeLook& camera)
 {
     struct TerrainPassData
     {

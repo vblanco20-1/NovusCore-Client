@@ -16,6 +16,14 @@ namespace fs = std::filesystem;
 void CameraOrbital::Init()
 {
     InputManager* inputManager = ServiceLocator::GetInputManager();
+    inputManager->RegisterMouseScrollCallback("CameraOrbital Mouse Scroll", [this](Window* window, f32 xPos, f32 yPos)
+    {
+        if (!IsActive())
+            return;
+
+        _distance = glm::clamp(_distance - yPos, 5.f, 30.f);
+    });
+
     inputManager->RegisterMousePositionCallback("CameraOrbital MouseLook", [this](Window* window, f32 xPos, f32 yPos)
     {
         if (!IsActive())
@@ -29,7 +37,31 @@ void CameraOrbital::Init()
                 vec2 deltaPosition = _prevMousePosition - mousePosition;
 
                 _yaw -= deltaPosition.x * _mouseSensitivity;
-                _pitch = Math::Clamp(_pitch - (deltaPosition.y * _mouseSensitivity), -89.0f, 89.0f);
+                _pitch = Math::Clamp(_pitch + (deltaPosition.y * _mouseSensitivity), -89.0f, 89.0f);;
+                
+                /* TODO: Add proper collision for the camera so we don't go through the ground
+                         the below code will do a quick test for the pitch but not the yaw.
+                         We also need to use "distToCollision" to possibly add an offset.
+                
+                f32 tmpPitch = Math::Clamp(_pitch + (deltaPosition.y * _mouseSensitivity), -89.0f, 89.0f);
+                f32 dist = tmpPitch - _pitch;
+
+                mat4x4 rotationMatrix = glm::yawPitchRoll(glm::radians(_yaw), glm::radians(_pitch), 0.0f);
+                vec3 t = vec3(_rotationMatrix * vec4(vec3(0, 0, _distance), 0.0f));
+                vec3 position = _position + t;
+
+                Geometry::AABoundingBox box;
+                box.min = position - vec3(0.5f, 2.5f, 0.5f);
+                box.max = position + vec3(0.5f, 2.5f, 0.5f);
+
+                Geometry::Triangle triangle;
+                f32 height = 0;
+                f32 distToCollision = 0;
+
+                if (!Terrain::MapUtils::Intersect_AABB_TERRAIN_SWEEP(box, triangle, height, dist, distToCollision))
+                {
+                    _pitch = tmpPitch;
+                }*/
             }
             else
                 _captureMouseHasMoved = true;
@@ -60,14 +92,26 @@ void CameraOrbital::Init()
     UpdateCameraVectors();
 }
 
+void CameraOrbital::Enabled()
+{
+}
+
+void CameraOrbital::Disabled()
+{
+    _captureMouse = false;
+    _captureMouseHasMoved = false;
+    glfwSetInputMode(_window->GetWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+}
+
 void CameraOrbital::Update(f32 deltaTime, float fovInDegrees, float aspectRatioWH)
 {
     // Compute matrices
     _rotationMatrix = glm::yawPitchRoll(glm::radians(_yaw), glm::radians(_pitch), 0.0f);
 
-    const mat4x4 cameraMatrix = glm::translate(mat4x4(1.0f), _position) * _rotationMatrix;
-    _viewMatrix = glm::inverse(cameraMatrix);
+    vec3 t = vec3(_rotationMatrix * vec4(vec3(0, 0, _distance), 0.0f));
+    vec3 position = _position + t;
 
+    _viewMatrix = glm::lookAt(position, _position, worldUp);
     _projectionMatrix = glm::perspective(glm::radians(fovInDegrees), aspectRatioWH, _nearClip, _farClip);
     _viewProjectionMatrix = _projectionMatrix * _viewMatrix;
 

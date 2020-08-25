@@ -33,11 +33,9 @@ namespace Renderer
     class DescriptorSet;
 }
 
-class CameraFreelook;
+class Camera;
 class DebugRenderer;
 class MapObjectRenderer;
-
-
 
 class TerrainRenderer
 {
@@ -45,9 +43,9 @@ public:
     TerrainRenderer(Renderer::Renderer* renderer, DebugRenderer* debugRenderer);
     ~TerrainRenderer();
 
-    void Update(f32 deltaTime, const CameraFreelook& camera);
+    void Update(f32 deltaTime);
 
-    void AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, const CameraFreelook& camera);
+    void AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex);
 
     bool LoadMap(u32 mapInternalNameHash);
 private:
@@ -55,9 +53,9 @@ private:
 
     void LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY);
     void LoadChunksAround(Terrain::Map& map, ivec2 middleChunk, u16 drawDistance);
-    void CPUCulling(const CameraFreelook& camera);
+    void CPUCulling(const Camera* camera);
 
-    void DebugRenderCellTriangles(const CameraFreelook& camera);
+    void DebugRenderCellTriangles(const Camera* camera);
 private:
     Renderer::Renderer* _renderer;
 

@@ -20,12 +20,16 @@ struct CameraSaveData
 };
 
 constexpr vec3 worldUp = vec3(0, 1, 0);
+
+class Window;
 class Camera
 {
 public:
-    Camera(bool isActive) : _active(isActive) { }
+    Camera(bool isActive);
 
     virtual void Init() = 0;
+    virtual void Enabled() = 0;
+    virtual void Disabled() = 0;
     virtual void Update(f32 deltaTime, float fovInDegrees, float aspectRatioWH) = 0;
 
     void SetActive(bool state) { _active = state; }
@@ -62,6 +66,8 @@ protected:
     void UpdateFrustumPlanes(const mat4x4& m);
 
 protected:
+    Window* _window = nullptr;
+
     bool _active;
     f32 _nearClip = 1.0f;
     f32 _farClip = 100000.0f;
@@ -86,6 +92,7 @@ protected:
     // Mouse States
     vec2 _prevMousePosition = vec2(0, 0);
     bool _captureMouse = false;
+    bool _captureMouseHasMoved = false;
     f32 _movementSpeed = 50.0f;
     f32 _mouseSensitivity = 0.05f;
 

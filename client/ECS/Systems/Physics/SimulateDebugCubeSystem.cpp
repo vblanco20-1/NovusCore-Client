@@ -9,7 +9,7 @@
 #include "../../../Utils/ServiceLocator.h"
 #include "../../../Utils/MapUtils.h"
 #include "../../../Rendering/DebugRenderer.h"
-#include "../../../Rendering/CameraFreelook.h"
+#include "../../../Rendering/Camera.h"
 
 #include "../../Components/Singletons/TimeSingleton.h"
 #include "../../Components/Transform.h"
@@ -22,7 +22,7 @@ void SimulateDebugCubeSystem::Init(entt::registry& registry)
 
     inputManager->RegisterKeybind("SpawnDebugBox", GLFW_KEY_B, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [&registry](Window* window, std::shared_ptr<Keybind> keybind)
     {
-        CameraFreelook* camera = ServiceLocator::GetCamera();
+        Camera* camera = ServiceLocator::GetCamera();
 
         // Create ENTT entity
         entt::entity entity = registry.create();
@@ -57,8 +57,6 @@ void SimulateDebugCubeSystem::Update(entt::registry& registry, DebugRenderer* de
 
         Geometry::Triangle triangle;
         f32 height = 0;
-
-        // If we 
         f32 distToCollision = dist;
 
         if (Terrain::MapUtils::Intersect_AABB_TERRAIN_SWEEP(box, triangle, height, dist, distToCollision))

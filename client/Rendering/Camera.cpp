@@ -1,8 +1,11 @@
 #include "Camera.h"
 #include <filesystem>
 #include <Utils/FileReader.h>
+#include "../Utils/ServiceLocator.h"
 
 namespace fs = std::filesystem;
+
+Camera::Camera(bool isActive) : _active(isActive), _window(ServiceLocator::GetWindow()) { }
 
 bool Camera::LoadFromFile(std::string filename)
 {

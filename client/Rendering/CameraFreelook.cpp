@@ -13,17 +13,15 @@
 
 namespace fs = std::filesystem;
 
-void CameraFreelook::Init()
+void CameraFreeLook::Init()
 {
-    _window = ServiceLocator::GetWindow();
-
     InputManager* inputManager = ServiceLocator::GetInputManager();
-    inputManager->RegisterKeybind("CameraFreelook Forward", GLFW_KEY_W, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
-    inputManager->RegisterKeybind("CameraFreelook Backward", GLFW_KEY_S, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
-    inputManager->RegisterKeybind("CameraFreelook Left", GLFW_KEY_A, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
-    inputManager->RegisterKeybind("CameraFreelook Right", GLFW_KEY_D, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
-    inputManager->RegisterKeybind("CameraFreelook Up", GLFW_KEY_SPACE, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
-    inputManager->RegisterKeybind("CameraFreelook Down", GLFW_KEY_LEFT_CONTROL, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
+    inputManager->RegisterKeybind("CameraFreeLook Forward", GLFW_KEY_W, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
+    inputManager->RegisterKeybind("CameraFreeLook Backward", GLFW_KEY_S, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
+    inputManager->RegisterKeybind("CameraFreeLook Left", GLFW_KEY_A, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
+    inputManager->RegisterKeybind("CameraFreeLook Right", GLFW_KEY_D, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
+    inputManager->RegisterKeybind("CameraFreeLook Up", GLFW_KEY_SPACE, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
+    inputManager->RegisterKeybind("CameraFreeLook Down", GLFW_KEY_LEFT_CONTROL, KEYBIND_ACTION_PRESS | KEYBIND_ACTION_REPEAT, KEYBIND_MOD_ANY);
 
     inputManager->RegisterKeybind("CameraFreeLook ToggleMouseCapture", GLFW_KEY_TAB, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [this](Window* window, std::shared_ptr<Keybind> keybind)
     {
@@ -66,14 +64,18 @@ void CameraFreelook::Init()
     {
         if (!IsActive())
             return;
-
         if (_captureMouse)
         {
             vec2 mousePosition = vec2(xPos, yPos);
-            vec2 deltaPosition = _prevMousePosition - mousePosition;
+            if (_captureMouseHasMoved)
+            {
+                vec2 deltaPosition = _prevMousePosition - mousePosition;
 
-            _yaw -= deltaPosition.x * _mouseSensitivity;
-            _pitch = Math::Clamp(_pitch - (deltaPosition.y * _mouseSensitivity), -89.0f, 89.0f);
+                _yaw -= deltaPosition.x * _mouseSensitivity;
+                _pitch = Math::Clamp(_pitch - (deltaPosition.y * _mouseSensitivity), -89.0f, 89.0f);
+            }
+            else
+                _captureMouseHasMoved = true;
 
             _prevMousePosition = mousePosition;
         }
@@ -114,10 +116,20 @@ void CameraFreelook::Init()
     });
 
     UpdateCameraVectors();
-    ServiceLocator::SetCamera(this);
 }
 
-void CameraFreelook::Update(f32 deltaTime, float fovInDegrees, float aspectRatioWH)
+void CameraFreeLook::Enabled()
+{
+    _captureMouseHasMoved = false;
+    glfwSetInputMode(_window->GetWindow(), GLFW_CURSOR, _captureMouse ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+}
+
+void CameraFreeLook::Disabled()
+{
+    glfwSetInputMode(_window->GetWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+}
+
+void CameraFreeLook::Update(f32 deltaTime, float fovInDegrees, float aspectRatioWH)
 {
     if (!IsActive())
         return;
@@ -125,27 +137,27 @@ void CameraFreelook::Update(f32 deltaTime, float fovInDegrees, float aspectRatio
     InputManager* inputManager = ServiceLocator::GetInputManager();
 
     // Movement
-    if (inputManager->IsKeyPressed("CameraFreelook Forward"_h))
+    if (inputManager->IsKeyPressed("CameraFreeLook Forward"_h))
     {
         _position += _front * _movementSpeed * deltaTime;
     }
-    if (inputManager->IsKeyPressed("CameraFreelook Backward"_h))
+    if (inputManager->IsKeyPressed("CameraFreeLook Backward"_h))
     {
         _position -= _front * _movementSpeed * deltaTime;
     }
-    if (inputManager->IsKeyPressed("CameraFreelook Left"_h))
+    if (inputManager->IsKeyPressed("CameraFreeLook Left"_h))
     {
         _position += _left * _movementSpeed * deltaTime;
     }
-    if (inputManager->IsKeyPressed("CameraFreelook Right"_h))
+    if (inputManager->IsKeyPressed("CameraFreeLook Right"_h))
     {
         _position -= _left * _movementSpeed * deltaTime;
     }
-    if (inputManager->IsKeyPressed("CameraFreelook Up"_h))
+    if (inputManager->IsKeyPressed("CameraFreeLook Up"_h))
     {
         _position += worldUp * _movementSpeed * deltaTime;
     }
-    if (inputManager->IsKeyPressed("CameraFreelook Down"_h))
+    if (inputManager->IsKeyPressed("CameraFreeLook Down"_h))
     {
         _position -= worldUp * _movementSpeed * deltaTime;
     }
@@ -155,10 +167,7 @@ void CameraFreelook::Update(f32 deltaTime, float fovInDegrees, float aspectRatio
     const mat4x4 cameraMatrix = glm::translate(mat4x4(1.0f), _position) * _rotationMatrix;
     _viewMatrix = glm::inverse(cameraMatrix);
 
-    const f32 nearClip = 1.0f;
-    const f32 farClip = 100000.0f;
-
-    _projectionMatrix = glm::perspective(glm::radians(fovInDegrees), aspectRatioWH, nearClip, farClip);
+    _projectionMatrix = glm::perspective(glm::radians(fovInDegrees), aspectRatioWH, _nearClip, _farClip);
     _viewProjectionMatrix = _projectionMatrix * _viewMatrix;
 
     UpdateCameraVectors();

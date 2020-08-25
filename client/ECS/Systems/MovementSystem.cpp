@@ -4,7 +4,7 @@
 #include <Utils/StringUtils.h>
 #include <Networking/Opcode.h>
 #include "../../Utils/ServiceLocator.h"
-#include "../../Rendering/CameraFreelook.h"
+#include "../../Rendering/CameraOrbital.h"
 #include "../Components/Singletons/TimeSingleton.h"
 #include "../Components/Network/ConnectionSingleton.h"
 #include "../Components/LocalplayerSingleton.h"
@@ -14,6 +14,10 @@ void MovementSystem::Update(entt::registry& registry)
 {
     LocalplayerSingleton& localplayerSingleton = registry.ctx<LocalplayerSingleton>();
     if (localplayerSingleton.entity == entt::null)
+        return;
+
+    CameraOrbital* camera = ServiceLocator::GetCameraOrbital();
+    if (!camera->IsActive())
         return;
 
     InputManager* inputManager = ServiceLocator::GetInputManager();
@@ -62,7 +66,6 @@ void MovementSystem::Update(entt::registry& registry)
         
         transform.RemoveMoveFlag(MovementFlags::RIGHT);
     }
-
 
     // If we are moving in directions that counter themselves unset them
     if (transform.HasMoveFlag(MovementFlags::ALL))
@@ -129,4 +132,6 @@ void MovementSystem::Update(entt::registry& registry)
 
         transform.isDirty = true;
     }
+
+    camera->SetPosition(transform.position);
 }
