@@ -200,7 +200,7 @@ namespace Terrain
             return aHeight * alpha + bHeight * beta + cHeight * gamma;
         }
 
-        inline bool GetVerticesFromWorldPosition(const vec3& position, Geometry::Triangle& triangle, f32& height)
+        inline bool GetTriangleFromWorldPosition(const vec3& position, Geometry::Triangle& triangle, f32& height)
         {
             entt::registry* registry = ServiceLocator::GetGameRegistry();
             MapSingleton& mapSingleton = registry->ctx<MapSingleton>();
@@ -722,7 +722,7 @@ namespace Terrain
             {
                 vec3 pos = position + offsets[i];
 
-                if (GetVerticesFromWorldPosition(pos, triangle, height))
+                if (GetTriangleFromWorldPosition(pos, triangle, height))
                 {
                     if (Intersect_AABB_TRIANGLE(box, triangle))
                         return true;
@@ -731,7 +731,7 @@ namespace Terrain
 
             return false;
         }
-        inline bool Intersect_AABB_TERRAIN_SWEEP(const Geometry::AABoundingBox& box, Geometry::Triangle& triangle, f32& height, f32 maxDist, f32& outDistToCollision)
+        inline bool Intersect_AABB_TERRAIN_SWEEP(const Geometry::AABoundingBox& box, Geometry::Triangle& triangle, const vec3& direction, f32& height, f32 maxDist, vec3& outDistToCollision)
         {
             vec3 scale = (box.max - box.min) / 2.0f;
             vec3 center = box.max - scale;
@@ -751,14 +751,15 @@ namespace Terrain
             //       check for chunk/cell borders, but we could speed this part up
             //       by doing that manually instead of calling GetVerticiesFromWorldPosition
             //       5 times.
-            outDistToCollision = f32MaxValue;
+
+            f32 timeToCollision = f32MaxValue;
 
             for (i32 i = 0; i < 5; i++)
             {
                 vec3 pos = center + offsets[i];
                 Geometry::Triangle tri;
 
-                if (GetVerticesFromWorldPosition(pos, tri, height))
+                if (GetTriangleFromWorldPosition(pos, tri, height))
                 {
                     // First store tri in triangle and then translate tri's position so that center is origin(0,0)
                     triangle = tri;
@@ -768,16 +769,17 @@ namespace Terrain
                     tri.vert3 -= center;
 
                     // We need to find the "shortest" collision here and not just "any" collision (Not doing this causes issues when testing against multiple triangles
-                    f32 distToCollision = 0;
-                    if (Intersect_AABB_TRIANGLE_SWEEP(scale, tri, vec3(0, -1, 0), maxDist, distToCollision, true))
+                    f32 tmpTimeToCollision = 0;
+                    if (Intersect_AABB_TRIANGLE_SWEEP(scale, tri, direction, maxDist, tmpTimeToCollision, true))
                     {
-                        if (distToCollision < outDistToCollision)
-                            outDistToCollision = distToCollision;
+                        if (tmpTimeToCollision < timeToCollision)
+                            timeToCollision = tmpTimeToCollision;
                     }
                 }
             }
 
-            return outDistToCollision != f32MaxValue;
+            outDistToCollision = timeToCollision * direction;
+            return timeToCollision != f32MaxValue;
         }
     }
 }

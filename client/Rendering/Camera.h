@@ -54,12 +54,24 @@ public:
         _position = position;
     }
     vec3 GetPosition() const { return _position; }
+    
+    void SetPreviousMousePosition(vec2 position)
+    {
+        _prevMousePosition = position;
+    }
+    vec2 GetPreviousMousePosition() const { return _prevMousePosition; }
 
     void SetYaw(f32 value) { _yaw = value; }
+    f32 GetYaw() { return _yaw; }
     void SetPitch(f32 value) { _pitch = value; }
+    f32 GetPitch() { return _pitch; }
     vec3 GetRotation() const { return vec3(0, _yaw, _pitch); }
 
+    void SetMouseCaptured(bool state) { _captureMouse = state; }
     bool IsMouseCaptured() const { return _captureMouse; }
+
+    void SetCapturedMouseMoved(bool state) { _captureMouseHasMoved = state; }
+    bool GetCapturedMouseMoved() const { return _captureMouseHasMoved; }
 
 protected:
     void UpdateCameraVectors();

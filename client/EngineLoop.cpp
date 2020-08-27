@@ -136,7 +136,6 @@ void EngineLoop::Run()
 
     CameraOrbital* cameraOrbital = new CameraOrbital();
     cameraOrbital->Init();
-    cameraOrbital->SetPosition(vec3(-8000.0f, 100.0f, 1600.0f));
     ServiceLocator::SetCameraOrbital(cameraOrbital);
 
     // Bind Movement Keys
@@ -174,9 +173,8 @@ void EngineLoop::Run()
     Transform& transform = _updateFramework.gameRegistry.emplace<Transform>(localplayerSingleton.entity);
 
     transform.position = vec3(-9321.f, 108.11f, 50.f);
-    transform.scale = vec3(0.5f, 1.2f, 0.5f); // "Ish" scale for humans
+    transform.scale = vec3(0.5f, 2.f, 0.5f); // "Ish" scale for humans
 
-    _updateFramework.gameRegistry.emplace<Rigidbody>(localplayerSingleton.entity);
     _updateFramework.gameRegistry.emplace<DebugBox>(localplayerSingleton.entity);
     Model& model = EntityUtils::CreateModelComponent(_updateFramework.gameRegistry, localplayerSingleton.entity, "Data/models/Cube.novusmodel");
 
@@ -194,9 +192,10 @@ void EngineLoop::Run()
     _network.gameSocket->SetConnectHandler(std::bind(&ConnectionUpdateSystem::GameSocket_HandleConnect, std::placeholders::_1, std::placeholders::_2));
     _network.gameSocket->SetDisconnectHandler(std::bind(&ConnectionUpdateSystem::GameSocket_HandleDisconnect, std::placeholders::_1));
 
+    MovementSystem::Init(_updateFramework.gameRegistry);
     SimulateDebugCubeSystem::Init(_updateFramework.gameRegistry);
 
-    f32 targetDelta = 1.0f / 240.f;
+    f32 targetDelta = 1.0f / 60.f;
 
     Timer timer;
     Timer updateTimer;

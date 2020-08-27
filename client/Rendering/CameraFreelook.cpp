@@ -94,7 +94,7 @@ void CameraFreeLook::Init()
         if (!IsActive())
             return false;
 
-        _movementSpeed = glm::max(_movementSpeed - 10.0f, 7.3333f);
+        _movementSpeed = glm::max(_movementSpeed - 10.0f, 7.1111f);
         return true;
     });
     

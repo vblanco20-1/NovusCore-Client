@@ -24,7 +24,7 @@ void CameraOrbital::Init()
         _distance = glm::clamp(_distance - yPos, 5.f, 30.f);
     });
 
-    inputManager->RegisterMousePositionCallback("CameraOrbital MouseLook", [this](Window* window, f32 xPos, f32 yPos)
+    inputManager->RegisterMousePositionCallback("CameraOrbital MouseLook", [this, inputManager](Window* window, f32 xPos, f32 yPos)
     {
         if (!IsActive())
             return;
@@ -38,11 +38,11 @@ void CameraOrbital::Init()
 
                 _yaw -= deltaPosition.x * _mouseSensitivity;
                 _pitch = Math::Clamp(_pitch + (deltaPosition.y * _mouseSensitivity), -89.0f, 89.0f);;
-                
+
                 /* TODO: Add proper collision for the camera so we don't go through the ground
                          the below code will do a quick test for the pitch but not the yaw.
                          We also need to use "distToCollision" to possibly add an offset.
-                
+
                 f32 tmpPitch = Math::Clamp(_pitch + (deltaPosition.y * _mouseSensitivity), -89.0f, 89.0f);
                 f32 dist = tmpPitch - _pitch;
 
@@ -72,6 +72,31 @@ void CameraOrbital::Init()
     inputManager->RegisterKeybind("CameraOrbital Left Mouseclick", GLFW_MOUSE_BUTTON_1, KEYBIND_ACTION_CLICK, KEYBIND_MOD_ANY, [this, inputManager](Window* window, std::shared_ptr<Keybind> keybind)
     {
         if (!IsActive())
+            return false;
+
+        if (inputManager->IsKeyPressed("CameraOrbital Right Mouseclick"_h))
+            return false;
+
+        if (keybind->state == GLFW_PRESS)
+        {
+            glfwSetInputMode(window->GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            _prevMousePosition = vec2(inputManager->GetMousePositionX(), inputManager->GetMousePositionY());
+        }
+        else
+        {
+            _captureMouseHasMoved = false;
+            glfwSetInputMode(window->GetWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+
+        _captureMouse = !_captureMouse;
+        return true;
+    });
+    inputManager->RegisterKeybind("CameraOrbital Right Mouseclick", GLFW_MOUSE_BUTTON_2, KEYBIND_ACTION_CLICK, KEYBIND_MOD_ANY, [this, inputManager](Window* window, std::shared_ptr<Keybind> keybind)
+    {
+        if (!IsActive())
+            return false;
+
+        if (inputManager->IsKeyPressed("CameraOrbital Left Mouseclick"_h))
             return false;
 
         if (keybind->state == GLFW_PRESS)

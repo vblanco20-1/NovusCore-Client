@@ -57,21 +57,24 @@ void SimulateDebugCubeSystem::Update(entt::registry& registry, DebugRenderer* de
 
         Geometry::Triangle triangle;
         f32 height = 0;
-        f32 distToCollision = dist;
 
-        if (Terrain::MapUtils::Intersect_AABB_TERRAIN_SWEEP(box, triangle, height, dist, distToCollision))
+        vec3 distToCollision;
+        if (Terrain::MapUtils::Intersect_AABB_TERRAIN_SWEEP(box, triangle, vec3(0, -1, 0), height, dist, distToCollision))
         {
-            dist = distToCollision;
+            transform.position += distToCollision;
             registry.remove<Rigidbody>(entity);
         }
+        else
+            transform.position.y -= dist;
 
-        transform.position.y -= dist;
     });
 
     auto debugCubeView = registry.view<Transform, DebugBox>();
     debugCubeView.each([&](const auto entity, Transform& transform)
     {
-        vec3 min = transform.position - transform.scale;
+        vec3 min = transform.position;
+        min.x -= transform.scale.x;
+        min.z -= transform.scale.z;
         vec3 max = transform.position + transform.scale;
 
         u32 color = 0xff0000ff; // Red if it doesn't have a rigidbody
