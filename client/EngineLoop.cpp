@@ -306,11 +306,12 @@ bool EngineLoop::Update(f32 deltaTime)
         }
     }
 
-    Camera* camera = ServiceLocator::GetCamera();
-    camera->Update(deltaTime, 75.0f, static_cast<f32>(_clientRenderer->WIDTH) / static_cast<f32>(_clientRenderer->HEIGHT));
+    UpdateSystems();
     _clientRenderer->Update(deltaTime);
 
-    UpdateSystems();
+    Camera* camera = ServiceLocator::GetCamera();
+    camera->Update(deltaTime, 75.0f, static_cast<f32>(_clientRenderer->WIDTH) / static_cast<f32>(_clientRenderer->HEIGHT));
+
     return true;
 }
 

@@ -86,7 +86,9 @@ struct MovementData
 
 struct Transform
 {
-    vec3 position;
+    vec3 position = vec3(0, 0, 0);
+    vec3 velocityDirection = vec3(0, 0, 0);
+    vec3 velocity = vec3(0, 0, 0);
     vec3 scale = vec3(1, 1, 1);
     
     // Rotation

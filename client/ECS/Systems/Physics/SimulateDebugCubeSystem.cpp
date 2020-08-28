@@ -53,6 +53,9 @@ void SimulateDebugCubeSystem::Update(entt::registry& registry, DebugRenderer* de
 
         Geometry::AABoundingBox box;
         box.min = transform.position;
+        box.min.x -= transform.scale.x;
+        box.min.z -= transform.scale.z;
+
         box.max = transform.position + transform.scale;
 
         Geometry::Triangle triangle;

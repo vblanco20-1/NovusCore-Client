@@ -34,7 +34,7 @@ void MovementSystem::Init(entt::registry& registry)
             return false;
 
         Transform& transform = registry->get<Transform>(localplayerSingleton.entity);
-        transform.movementData.speed += 10.0f;
+        transform.movementData.speed += 7.1111f;
 
         return true;
     });
@@ -51,7 +51,7 @@ void MovementSystem::Init(entt::registry& registry)
             return false;
 
         Transform& transform = registry->get<Transform>(localplayerSingleton.entity);
-        transform.movementData.speed = glm::max(transform.movementData.speed - 10.0f, 7.1111f);
+        transform.movementData.speed = glm::max(transform.movementData.speed - 7.1111f, 7.1111f);
 
         return true;
     });
@@ -75,46 +75,57 @@ void MovementSystem::Update(entt::registry& registry)
     MovementFlags originalFlags = transform.movementData.flags;
     movementData.flags = MovementFlags::NONE;
 
-    f32 gravityDist = 10.f * timeSingleton.deltaTime;
-    f32 terrainHeight = Terrain::MapUtils::GetHeightFromWorldPosition(transform.position);
-
-    // Apply Gravity
-    transform.position.y -= gravityDist;
-
     InputManager* inputManager = ServiceLocator::GetInputManager();
 
+    f32 terrainHeight = Terrain::MapUtils::GetHeightFromWorldPosition(transform.position);
     bool isGrounded = transform.position.y <= terrainHeight;
     bool isRightClickDown = inputManager->IsKeyPressed("CameraOrbital Right Mouseclick"_h);
+    if (isRightClickDown)
+    {
+        transform.yaw = camera->GetYaw();
+        
+        // Only set Pitch if we are flying
+        //transform.pitch = camera->GetPitch();
+
+        transform.rotationMatrix = glm::yawPitchRoll(glm::radians(transform.yaw), glm::radians(transform.pitch), 0.0f);
+        transform.UpdateVectors();
+    }
 
     if (isGrounded)
     {
+        transform.velocityDirection = vec3(0, 0, 0);
+        transform.velocity = vec3(0, 0, 0);
+
         // Clip to Terrain
         transform.position.y = terrainHeight;
-
-        vec3 moveDirection = vec3(0, 0, 0);
 
         movementData.AddMoveFlag(MovementFlags::GROUNDED);
 
         if (inputManager->IsKeyPressed("Move Forward"_h) || (inputManager->IsKeyPressed("CameraOrbital Left Mouseclick"_h) && isRightClickDown))
         {
             movementData.AddMoveFlag(MovementFlags::FORWARD);
-            moveDirection += transform.front;
+            transform.velocityDirection += transform.front;
         }
         if (inputManager->IsKeyPressed("Move Backward"_h))
         {
             movementData.AddMoveFlag(MovementFlags::BACKWARD);
-            moveDirection -= transform.front;
+            transform.velocityDirection -= transform.front;
         }
 
         if (inputManager->IsKeyPressed("Move Left"_h))
         {
             movementData.AddMoveFlag(MovementFlags::LEFT);
-            moveDirection += transform.left;
+            transform.velocityDirection += transform.left;
         }
         if (inputManager->IsKeyPressed("Move Right"_h))
         {
             movementData.AddMoveFlag(MovementFlags::RIGHT);
-            moveDirection -= transform.left;
+            transform.velocityDirection -= transform.left;
+        }
+
+        if (glm::length2(transform.velocityDirection) != 0)
+        {
+            transform.velocity = glm::normalize(transform.velocityDirection) * movementData.speed;
         }
 
         // If we are moving in directions that counter themselves unset them
@@ -129,26 +140,6 @@ void MovementSystem::Update(entt::registry& registry)
         else if (movementData.HasMoveFlag(MovementFlags::HORIZONTAL))
         {
             movementData.RemoveMoveFlag(MovementFlags::HORIZONTAL);
-        }
-        if (glm::length2(moveDirection) != 0)
-        {
-            vec3 moveDelta = glm::normalize(moveDirection) * movementData.speed * timeSingleton.deltaTime;
-            vec3 newPosition = transform.position + moveDelta;
-
-            Geometry::Triangle triangle;
-            f32 terrainHeight = 0;
-
-            if (Terrain::MapUtils::GetTriangleFromWorldPosition(newPosition, triangle, terrainHeight))
-            {
-                newPosition.y = glm::max(newPosition.y, terrainHeight);
-                f32 angle = triangle.GetSteepnessAngle();
-
-                // TODO: Properly Push the player down the slope
-                if (angle <= 50 || newPosition.y <= transform.position.y)
-                {
-                    transform.position = newPosition;
-                }
-            }
         }
 
         if (movementData.flags == MovementFlags::NONE)
@@ -196,16 +187,46 @@ void MovementSystem::Update(entt::registry& registry)
             connectionSingleton.gameConnection->Send(buffer);
         }
     }
-
-    if (isRightClickDown)
+    else
     {
-        transform.yaw = camera->GetYaw();
-        
-        // Only set Pitch if we are flying
-        //transform.pitch = camera->GetPitch();
-
-        transform.rotationMatrix = glm::yawPitchRoll(glm::radians(transform.yaw), glm::radians(transform.pitch), 0.0f);
-        transform.UpdateVectors();
+        transform.velocityDirection.y -= 1.f * timeSingleton.deltaTime;
+        transform.velocity = glm::normalize(transform.velocityDirection) * movementData.speed;
     }
+
+    if (glm::length2(transform.velocity) != 0)
+    {
+        vec3 newPosition = transform.position + (transform.velocity * timeSingleton.deltaTime);
+
+        Geometry::Triangle triangle;
+        f32 terrainHeight = 0;
+
+        if (Terrain::MapUtils::GetTriangleFromWorldPosition(newPosition, triangle, terrainHeight))
+        {
+            newPosition.y = glm::max(newPosition.y, terrainHeight);
+
+            if (isGrounded)
+            {
+                f32 angle = triangle.GetSteepnessAngle();
+
+                // TODO: Properly Push the player down the slope
+                if (angle <= 50 || newPosition.y <= transform.position.y)
+                {
+                    transform.position = newPosition;
+                }
+            }
+            else
+                transform.position = newPosition;
+        }
+
+        if (!isGrounded)
+        {
+            //f32 velocityDecay = (7.1111f * 0.5f) * timeSingleton.deltaTime;
+            //transform.velocity.x = glm::max(transform.velocity.x - velocityDecay, 0.f);
+            //transform.velocity.y = glm::max(transform.velocity.y - velocityDecay, 0.f);
+            //transform.velocity.z = glm::max(transform.velocity.z - velocityDecay, 0.f);
+        }
+    }
+
+    
     camera->SetPosition(transform.position);
 }
