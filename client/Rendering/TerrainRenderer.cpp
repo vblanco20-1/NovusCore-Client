@@ -134,7 +134,7 @@ void TerrainRenderer::Update(f32 deltaTime)
     }
 
     // Subrenderers
-    _mapObjectRenderer->Update(deltaTime);
+    //_mapObjectRenderer->Update(deltaTime);
 }
 
 __forceinline bool IsInsideFrustum(const vec4* planes, const Geometry::AABoundingBox& boundingBox)
@@ -396,7 +396,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
     }
 
     // Subrenderers
-    _mapObjectRenderer->AddMapObjectPass(renderGraph, viewConstantBuffer, renderTarget, depthTarget, frameIndex);
+    //_mapObjectRenderer->AddMapObjectPass(renderGraph, viewConstantBuffer, renderTarget, depthTarget, frameIndex);
 }
 
 void TerrainRenderer::CreatePermanentResources()
@@ -598,8 +598,8 @@ bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
     _cellBoundingBoxes.clear();
     _mapObjectRenderer->Clear();
 
-    //LoadChunksAround(mapSingleton.currentMap, ivec2(32, 32), 32); // Load everything
-    LoadChunksAround(mapSingleton.currentMap, ivec2(32, 50), 2); // Goldshire
+    LoadChunksAround(mapSingleton.currentMap, ivec2(32, 32), 32); // Load everything
+    //LoadChunksAround(mapSingleton.currentMap, ivec2(32, 50), 2); // Goldshire
     //LoadChunksAround(map, ivec2(40, 32), 8); // Razor Hill
     //LoadChunksAround(map, ivec2(22, 25), 8); // Borean Tundra
 
@@ -819,7 +819,7 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
         }
     }
 
-    _mapObjectRenderer->LoadMapObjects(chunk, stringTable);
+    //_mapObjectRenderer->LoadMapObjects(chunk, stringTable);
     _loadedChunks.push_back(chunkId);
 }
 

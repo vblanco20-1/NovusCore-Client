@@ -29,7 +29,7 @@ void SimulateDebugCubeSystem::Init(entt::registry& registry)
 
         Transform& transform = registry.emplace<Transform>(entity);
         transform.position = camera->GetPosition();
-        transform.scale = vec3(0.5f, 1.2f, 0.5f); // "Ish" scale for humans
+        transform.scale = vec3(0.5f, 2.f, 0.5f); // "Ish" scale for humans
         transform.isDirty = true;
 
         registry.emplace<Rigidbody>(entity);
@@ -52,7 +52,7 @@ void SimulateDebugCubeSystem::Update(entt::registry& registry, DebugRenderer* de
         f32 dist = GRAVITY_SCALE * timeSingleton.deltaTime;
 
         Geometry::AABoundingBox box;
-        box.min = transform.position - transform.scale;
+        box.min = transform.position;
         box.max = transform.position + transform.scale;
 
         Geometry::Triangle triangle;
