@@ -84,6 +84,8 @@ void MovementSystem::Update(entt::registry& registry)
     InputManager* inputManager = ServiceLocator::GetInputManager();
 
     bool isGrounded = transform.position.y <= terrainHeight;
+    bool isRightClickDown = inputManager->IsKeyPressed("CameraOrbital Right Mouseclick"_h);
+
     if (isGrounded)
     {
         // Clip to Terrain
@@ -93,7 +95,7 @@ void MovementSystem::Update(entt::registry& registry)
 
         movementData.AddMoveFlag(MovementFlags::GROUNDED);
 
-        if (inputManager->IsKeyPressed("Move Forward"_h))
+        if (inputManager->IsKeyPressed("Move Forward"_h) || (inputManager->IsKeyPressed("CameraOrbital Left Mouseclick"_h) && isRightClickDown))
         {
             movementData.AddMoveFlag(MovementFlags::FORWARD);
             moveDirection += transform.front;
@@ -195,7 +197,7 @@ void MovementSystem::Update(entt::registry& registry)
         }
     }
 
-    if (inputManager->IsKeyPressed("CameraOrbital Right Mouseclick"_h))
+    if (isRightClickDown)
     {
         transform.yaw = camera->GetYaw();
         
