@@ -24,7 +24,7 @@
 #pragma once
 #include <NovusTypes.h>
 #include <Utils/FileReader.h>
-#include <entt.hpp>
+#include <entity/fwd.hpp>
 #include <vector>
 
 class StringTable;

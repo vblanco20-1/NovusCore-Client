@@ -1,11 +1,13 @@
 #include "TextureLoader.h"
 #include <Containers/StringTable.h>
 #include <filesystem>
+#include <entt.hpp>
+
+#include "../../ECS/Components/Singletons/TextureSingleton.h"
 
 namespace fs = std::filesystem;
-StringTable* TextureLoader::textureStringTable = nullptr;
 
-bool TextureLoader::Load()
+bool TextureLoader::Load(entt::registry* registry)
 {
     fs::path absolutePath = std::filesystem::absolute("Data/extracted/Textures");
     if (!fs::is_directory(absolutePath))
@@ -28,15 +30,14 @@ bool TextureLoader::Load()
         return false;
     }
 
-    assert(textureStringTable == nullptr);
-    textureStringTable = new StringTable();
+    TextureSingleton& textureSingleton = registry->set<TextureSingleton>();
 
     std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<8388608>();
     stringTableFile.Read(buffer.get(), buffer->size);
 
-    textureStringTable->Deserialize(buffer.get());
+    textureSingleton.textureStringTable.Deserialize(buffer.get());
     assert(textureStringTable->GetNumStrings() > 0); // We always expect to have at least 1 string in our texture stringtable
 
-    NC_LOG_SUCCESS("Loaded Texture StringTable with %u entries", textureStringTable->GetNumStrings());
+    NC_LOG_SUCCESS("Loaded Texture StringTable with %u entries", textureSingleton.textureStringTable.GetNumStrings());
     return true;
 }

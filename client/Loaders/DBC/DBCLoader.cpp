@@ -1,4 +1,5 @@
 #include "DBCLoader.h"
+#include <entt.hpp>
 
 #include "../../ECS/Components/Singletons/DBCSingleton.h"
 

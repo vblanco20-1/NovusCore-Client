@@ -4,12 +4,14 @@
 #include <Utils/FileReader.h>
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/euler_angles.hpp>
+#include "../Utils/ServiceLocator.h"
 
 #include "../Gameplay/Map/Map.h"
 #include "../Gameplay/Map/Chunk.h"
 #include "../Gameplay/Map/MapObjectRoot.h"
 #include "../Gameplay/Map/MapObject.h"
-#include "../Gameplay/Texture/TextureLoader.h"
+
+#include "../ECS/Components/Singletons/TextureSingleton.h"
 
 
 MapObjectRenderer::MapObjectRenderer(Renderer::Renderer* renderer)
@@ -254,6 +256,9 @@ bool MapObjectRenderer::LoadMapObject(u32 nameID, StringTable& stringTable, u32&
     // Read number of groups
     nmorBuffer.Get<u32>(mapObjectRoot.numMapObjects);
 
+    entt::registry* registry = ServiceLocator::GetGameRegistry();
+    TextureSingleton& textureSingleton = registry->ctx<TextureSingleton>();
+
     // -- Create Materials Buffer
     {
         constexpr size_t numTexturePerMaterial = 3;
@@ -299,7 +304,7 @@ bool MapObjectRenderer::LoadMapObject(u32 nameID, StringTable& stringTable, u32&
                 if (material.textureNameID[j] < Terrain::INVALID_TEXTURE_ID)
                 {
                     Renderer::TextureDesc textureDesc;
-                    textureDesc.path = "Data/extracted/Textures/" + TextureLoader::textureStringTable->GetString(material.textureNameID[j]);
+                    textureDesc.path = "Data/extracted/Textures/" + textureSingleton.textureStringTable.GetString(material.textureNameID[j]);
 
                     _renderer->LoadTextureIntoArray(textureDesc, _mapObjectTextures, renderMaterial.textureIDs[j]);
                 }

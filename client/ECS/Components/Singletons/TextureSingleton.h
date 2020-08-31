@@ -23,21 +23,11 @@
 */
 #pragma once
 #include <NovusTypes.h>
-#include <robin_hood.h>
-#include "../../../Gameplay/Map/Map.h"
-#include "../../../Loaders/DBC/DBC.h"
+#include <Containers/StringTable.h>
 
-struct MapSingleton
+struct TextureSingleton
 {
-    MapSingleton() {}
+	TextureSingleton() {}
 
-    Terrain::Map currentMap;
-	u32 loadedMapHash = 0;
-
-	robin_hood::unordered_map<u16, DBC::Map*> mapIdToDBC;
-	robin_hood::unordered_map<u32, DBC::Map*> mapNameToDBC;
-	robin_hood::unordered_map<u32, DBC::Map*> mapInternalNameToDBC;
-	std::vector<DBC::Map> mapDBCFiles;
-
-	StringTable mapsDBCStringTable;
+	StringTable textureStringTable;
 };

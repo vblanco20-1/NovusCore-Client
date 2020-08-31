@@ -6,6 +6,7 @@
 #include "../Utils/MapUtils.h"
 
 #include "../ECS/Components/Singletons/MapSingleton.h"
+#include "../ECS/Components/Singletons/TextureSingleton.h"
 
 #include <Renderer/Renderer.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -17,8 +18,7 @@
 #include <tracy/Tracy.hpp>
 
 #include "Camera.h"
-#include "../Gameplay/Map/MapLoader.h"
-#include "../Gameplay/Texture/TextureLoader.h"
+#include "../Loaders/Map/MapLoader.h"
 
 #define USE_PACKED_HEIGHT_RANGE 1
 
@@ -654,6 +654,9 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
     const Terrain::Chunk& chunk = chunkIt->second;
     StringTable& stringTable = map.stringTables[chunkId];
 
+    entt::registry* registry = ServiceLocator::GetGameRegistry();
+    TextureSingleton& textureSingleton = registry->ctx<TextureSingleton>();
+
     // Upload cell data.
     {
         Renderer::BufferDesc cellDataUploadBufferDesc;
@@ -682,7 +685,7 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
                 if (layer.textureId == Terrain::LayerData::TextureIdInvalid)
                     break;
 
-                const std::string& texturePath = TextureLoader::textureStringTable->GetString(layer.textureId);
+                const std::string& texturePath = textureSingleton.textureStringTable.GetString(layer.textureId);
                 
                 Renderer::TextureDesc textureDesc;
                 textureDesc.path = "Data/extracted/Textures/" + texturePath;

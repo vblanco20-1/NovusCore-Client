@@ -1,7 +1,7 @@
 #pragma once
 #include <NovusTypes.h>
 #include <Utils/FileReader.h>
-#include <entt.hpp>
+#include <entity/fwd.hpp>
 
 class StringTable;
 class TextureLoader
@@ -9,6 +9,5 @@ class TextureLoader
 public:
     TextureLoader() { }
 
-    static bool Load();
-    static StringTable* textureStringTable;
+    static bool Load(entt::registry* registry);
 };

@@ -1,7 +1,7 @@
 #include "NM2Renderer.h"
 #include "DebugRenderer.h"
 #include "../Utils/ServiceLocator.h"
-#include "../Gameplay/NM2/NM2.h"
+#include "../Rendering/NM2/NM2.h"
 
 #include <filesystem>
 #include <GLFW/glfw3.h>

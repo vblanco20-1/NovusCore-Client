@@ -24,7 +24,7 @@
 #pragma once
 #include <NovusTypes.h>
 #include <robin_hood.h>
-#include "../../../Gameplay/DBC/DBC.h"
+#include "../../../Loaders/DBC/DBC.h"
 
 struct DBCSingleton
 {

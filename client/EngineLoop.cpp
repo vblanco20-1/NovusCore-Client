@@ -11,9 +11,9 @@
 #include "Rendering/TerrainRenderer.h"
 #include "Rendering/CameraFreelook.h"
 #include "Rendering/CameraOrbital.h"
-#include "Gameplay/Texture/TextureLoader.h"
-#include "Gameplay/Map/MapLoader.h"
-#include "Gameplay/DBC/DBCLoader.h"
+#include "Loaders/Texture/TextureLoader.h"
+#include "Loaders/Map/MapLoader.h"
+#include "Loaders/DBC/DBCLoader.h"
 
 // Component Singletons
 #include "ECS/Components/Singletons/TimeSingleton.h"
@@ -106,7 +106,7 @@ void EngineLoop::Run()
     _updateFramework.uiRegistry.create();
     SetupUpdateFramework();
 
-    TextureLoader::Load();
+    TextureLoader::Load(&_updateFramework.gameRegistry);
     DBCLoader::Load(&_updateFramework.gameRegistry);
     MapLoader::Init(&_updateFramework.gameRegistry);
 
@@ -309,11 +309,14 @@ bool EngineLoop::Update(f32 deltaTime)
         }
     }
 
+    // Update Systems will Modify the Camera, so we wait with updating the Camera 
+    // until we are sure it is static for the rest of the frame
     UpdateSystems();
-    _clientRenderer->Update(deltaTime);
 
     Camera* camera = ServiceLocator::GetCamera();
     camera->Update(deltaTime, 75.0f, static_cast<f32>(_clientRenderer->WIDTH) / static_cast<f32>(_clientRenderer->HEIGHT));
+
+    _clientRenderer->Update(deltaTime);
 
     return true;
 }

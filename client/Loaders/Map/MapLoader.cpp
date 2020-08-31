@@ -3,6 +3,7 @@
 #include <Utils/DebugHandler.h>
 #include <Utils/StringUtils.h>
 #include <filesystem>
+#include <entt.hpp>
 
 #include "../DBC/DBC.h"
 #include "../../ECS/Components/Singletons/MapSingleton.h"
