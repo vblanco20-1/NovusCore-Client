@@ -55,6 +55,21 @@ void MovementSystem::Init(entt::registry& registry)
 
         return true;
     });
+    inputManager->RegisterKeybind("MovementSystem Auto Run", GLFW_KEY_HOME, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [](Window* window, std::shared_ptr<Keybind> keybind)
+    {
+        CameraOrbital* camera = ServiceLocator::GetCameraOrbital();
+        if (!camera->IsActive())
+            return false;
+
+        entt::registry* registry = ServiceLocator::GetGameRegistry();
+
+        LocalplayerSingleton& localplayerSingleton = registry->ctx<LocalplayerSingleton>();
+        if (localplayerSingleton.entity == entt::null)
+            return false;
+
+        localplayerSingleton.autoRun = !localplayerSingleton.autoRun;
+        return true;
+    });
 }
 
 void MovementSystem::Update(entt::registry& registry)
@@ -101,13 +116,25 @@ void MovementSystem::Update(entt::registry& registry)
 
         movementData.AddMoveFlag(MovementFlags::GROUNDED);
 
-        if (inputManager->IsKeyPressed("Move Forward"_h) || (inputManager->IsKeyPressed("CameraOrbital Left Mouseclick"_h) && isRightClickDown))
+        bool moveForwardIsPressed = inputManager->IsKeyPressed("Move Forward"_h);
+        bool isLeftClickDown = inputManager->IsKeyPressed("CameraOrbital Left Mouseclick"_h);
+        if (moveForwardIsPressed || (isLeftClickDown && isRightClickDown) || localplayerSingleton.autoRun)
         {
+            if (localplayerSingleton.autoRun && (moveForwardIsPressed || isLeftClickDown))
+            {
+                localplayerSingleton.autoRun = false;
+            }
+
             movementData.AddMoveFlag(MovementFlags::FORWARD);
             transform.velocityDirection += transform.front;
         }
         if (inputManager->IsKeyPressed("Move Backward"_h))
         {
+            if (localplayerSingleton.autoRun && movementData.HasMoveFlag(MovementFlags::FORWARD))
+            {
+                localplayerSingleton.autoRun = false;
+            }
+
             movementData.AddMoveFlag(MovementFlags::BACKWARD);
             transform.velocityDirection -= transform.front;
         }
@@ -215,7 +242,9 @@ void MovementSystem::Update(entt::registry& registry)
                 }
             }
             else
+            {
                 transform.position = newPosition;
+            }
         }
 
         if (!isGrounded)

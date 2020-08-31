@@ -27,6 +27,7 @@ class Window;
 class CameraFreeLook;
 class UIRenderer;
 class TerrainRenderer;
+class NM2Renderer;
 class InputManager;
 class DebugRenderer;
 
@@ -80,6 +81,7 @@ private:
     DebugRenderer* _debugRenderer;
     UIRenderer* _uiRenderer;
     TerrainRenderer* _terrainRenderer;
+    NM2Renderer* _nm2Renderer;
 
     bool _isMinimized = false;
 };

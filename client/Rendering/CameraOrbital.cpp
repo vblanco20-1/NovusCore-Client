@@ -79,16 +79,25 @@ void CameraOrbital::Init()
 
         if (keybind->state == GLFW_PRESS)
         {
-            glfwSetInputMode(window->GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-            _prevMousePosition = vec2(inputManager->GetMousePositionX(), inputManager->GetMousePositionY());
+            if (!_captureMouse)
+            {
+                _captureMouse = true;
+                _prevMousePosition = vec2(inputManager->GetMousePositionX(), inputManager->GetMousePositionY());
+
+                glfwSetInputMode(window->GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            }
         }
         else
         {
-            _captureMouseHasMoved = false;
-            glfwSetInputMode(window->GetWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            if (_captureMouse)
+            {
+                _captureMouse = false;
+                _captureMouseHasMoved = false;
+
+                glfwSetInputMode(window->GetWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            }
         }
 
-        _captureMouse = !_captureMouse;
         return true;
     });
     inputManager->RegisterKeybind("CameraOrbital Right Mouseclick", GLFW_MOUSE_BUTTON_2, KEYBIND_ACTION_CLICK, KEYBIND_MOD_ANY, [this, inputManager](Window* window, std::shared_ptr<Keybind> keybind)
@@ -101,16 +110,25 @@ void CameraOrbital::Init()
 
         if (keybind->state == GLFW_PRESS)
         {
-            glfwSetInputMode(window->GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-            _prevMousePosition = vec2(inputManager->GetMousePositionX(), inputManager->GetMousePositionY());
+            if (!_captureMouse)
+            {
+                _captureMouse = true;
+                _prevMousePosition = vec2(inputManager->GetMousePositionX(), inputManager->GetMousePositionY());
+
+                glfwSetInputMode(window->GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            }
         }
         else
         {
-            _captureMouseHasMoved = false;
-            glfwSetInputMode(window->GetWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            if (_captureMouse)
+            {
+                _captureMouse = false;
+                _captureMouseHasMoved = false;
+
+                glfwSetInputMode(window->GetWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            }
         }
 
-        _captureMouse = !_captureMouse;
         return true;
     });
 

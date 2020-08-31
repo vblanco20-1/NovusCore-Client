@@ -9,6 +9,7 @@
 #include "../Gameplay/Map/Chunk.h"
 #include "../Gameplay/Map/MapObjectRoot.h"
 #include "../Gameplay/Map/MapObject.h"
+#include "../Gameplay/Texture/TextureLoader.h"
 
 
 MapObjectRenderer::MapObjectRenderer(Renderer::Renderer* renderer)
@@ -253,9 +254,6 @@ bool MapObjectRenderer::LoadMapObject(u32 nameID, StringTable& stringTable, u32&
     // Read number of groups
     nmorBuffer.Get<u32>(mapObjectRoot.numMapObjects);
 
-    StringTable textureStringTable;
-    textureStringTable.Deserialize(&nmorBuffer);
-
     // -- Create Materials Buffer
     {
         constexpr size_t numTexturePerMaterial = 3;
@@ -301,7 +299,7 @@ bool MapObjectRenderer::LoadMapObject(u32 nameID, StringTable& stringTable, u32&
                 if (material.textureNameID[j] < Terrain::INVALID_TEXTURE_ID)
                 {
                     Renderer::TextureDesc textureDesc;
-                    textureDesc.path = "Data/extracted/Textures/" + textureStringTable.GetString(material.textureNameID[j]);
+                    textureDesc.path = "Data/extracted/Textures/" + TextureLoader::textureStringTable->GetString(material.textureNameID[j]);
 
                     _renderer->LoadTextureIntoArray(textureDesc, _mapObjectTextures, renderMaterial.textureIDs[j]);
                 }

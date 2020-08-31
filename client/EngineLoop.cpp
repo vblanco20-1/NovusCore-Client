@@ -11,6 +11,7 @@
 #include "Rendering/TerrainRenderer.h"
 #include "Rendering/CameraFreelook.h"
 #include "Rendering/CameraOrbital.h"
+#include "Gameplay/Texture/TextureLoader.h"
 #include "Gameplay/Map/MapLoader.h"
 #include "Gameplay/DBC/DBCLoader.h"
 
@@ -105,6 +106,7 @@ void EngineLoop::Run()
     _updateFramework.uiRegistry.create();
     SetupUpdateFramework();
 
+    TextureLoader::Load();
     DBCLoader::Load(&_updateFramework.gameRegistry);
     MapLoader::Init(&_updateFramework.gameRegistry);
 
@@ -142,22 +144,23 @@ void EngineLoop::Run()
     InputManager* inputManager = ServiceLocator::GetInputManager();
     inputManager->RegisterKeybind("Switch Camera Mode", GLFW_KEY_C, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE, [this](Window* window, std::shared_ptr<Keybind> keybind)
     {
-        Camera* freeLook = ServiceLocator::GetCameraFreeLook();
-        Camera* orbital = ServiceLocator::GetCameraOrbital();
+        CameraFreeLook* freeLook = ServiceLocator::GetCameraFreeLook();
+        CameraOrbital* orbital = ServiceLocator::GetCameraOrbital();
 
-        bool freeLookActive = freeLook->IsActive();
-
-        freeLook->SetActive(!freeLookActive);
-        orbital->SetActive(freeLookActive);
-
-        if (freeLookActive)
+        if (freeLook->IsActive())
         {
+            freeLook->SetActive(false);
             freeLook->Disabled();
+
+            orbital->SetActive(true);
             orbital->Enabled();
         }
-        else
+        else if (orbital->IsActive())
         {
+            orbital->SetActive(false);
             orbital->Disabled();
+
+            freeLook->SetActive(true);
             freeLook->Enabled();
         }
 

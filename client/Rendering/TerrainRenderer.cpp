@@ -18,6 +18,7 @@
 
 #include "Camera.h"
 #include "../Gameplay/Map/MapLoader.h"
+#include "../Gameplay/Texture/TextureLoader.h"
 
 #define USE_PACKED_HEIGHT_RANGE 1
 
@@ -229,14 +230,16 @@ void TerrainRenderer::DebugRenderCellTriangles(const Camera* camera)
     {
         for (auto& triangle : triangles)
         {
+            f32 steepnessAngle = triangle.GetSteepnessAngle();
+            u32 color = steepnessAngle <= 50 ? 0xff00ff00 : 0xff0000ff;
             // Offset Y slightly to not be directly drawn on top of the terrain
             triangle.vert1.y += 0.05f;
             triangle.vert2.y += 0.05f;
             triangle.vert3.y += 0.05f;
 
-            _debugRenderer->DrawLine3D(triangle.vert1, triangle.vert2, 0xff00ff00);
-            _debugRenderer->DrawLine3D(triangle.vert2, triangle.vert3, 0xff00ff00);
-            _debugRenderer->DrawLine3D(triangle.vert3, triangle.vert1, 0xff00ff00);
+            _debugRenderer->DrawLine3D(triangle.vert1, triangle.vert2, color);
+            _debugRenderer->DrawLine3D(triangle.vert2, triangle.vert3, color);
+            _debugRenderer->DrawLine3D(triangle.vert3, triangle.vert1, color);
         }
     }
 }
@@ -679,7 +682,7 @@ void TerrainRenderer::LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY)
                 if (layer.textureId == Terrain::LayerData::TextureIdInvalid)
                     break;
 
-                const std::string& texturePath = stringTable.GetString(layer.textureId);
+                const std::string& texturePath = TextureLoader::textureStringTable->GetString(layer.textureId);
                 
                 Renderer::TextureDesc textureDesc;
                 textureDesc.path = "Data/extracted/Textures/" + texturePath;
