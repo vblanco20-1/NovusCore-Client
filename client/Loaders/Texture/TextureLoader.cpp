@@ -36,7 +36,7 @@ bool TextureLoader::Load(entt::registry* registry)
     stringTableFile.Read(buffer.get(), buffer->size);
 
     textureSingleton.textureStringTable.Deserialize(buffer.get());
-    assert(textureStringTable->GetNumStrings() > 0); // We always expect to have at least 1 string in our texture stringtable
+    assert(textureSingleton.textureStringTable.GetNumStrings() > 0); // We always expect to have at least 1 string in our texture stringtable
 
     NC_LOG_SUCCESS("Loaded Texture StringTable with %u entries", textureSingleton.textureStringTable.GetNumStrings());
     return true;

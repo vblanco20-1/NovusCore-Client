@@ -13,6 +13,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
+#include "../ECS/Components/Singletons/TextureSingleton.h"
+
 #include <tracy/TracyVulkan.hpp>
 
 namespace fs = std::filesystem;
@@ -89,6 +91,8 @@ void NM2Renderer::AddNM2Pass(Renderer::RenderGraph* renderGraph, Renderer::Buffe
 
             _passDescriptorSet.Bind("ViewData", viewConstantBuffer->GetBuffer(frameIndex));
             _passDescriptorSet.Bind("_instanceData", loadedNM2.instanceBuffer);
+            _passDescriptorSet.Bind("_materialData", loadedNM2.materialsBuffer);
+            _passDescriptorSet.Bind("_textures", _m2Textures);
             commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, frameIndex);
 
             for (Mesh& mesh : loadedNM2.meshes)
@@ -107,6 +111,8 @@ void NM2Renderer::AddNM2Pass(Renderer::RenderGraph* renderGraph, Renderer::Buffe
                 for (size_t i = _startSubMeshIndexToRender; i < numSubMeshes; i++)
                 {
                     SubMesh& subMesh = mesh.subMeshes[i];
+
+                    commandList.PushConstant(&subMesh.materialNum, 0, 4);
 
                     commandList.SetIndexBuffer(subMesh.indexBuffer, Renderer::IndexFormat::UInt16);
                     commandList.DrawIndexed(subMesh.indexCount, loadedNM2.numInstances, 0, 0, 0);
@@ -147,7 +153,9 @@ void NM2Renderer::CreatePermanentResources()
     });
     inputManager->RegisterKeybind("M2Renderer Draw Submesh Index Decrease", GLFW_KEY_DOWN, KEYBIND_ACTION_PRESS, KEYBIND_MOD_NONE, [&](Window* window, std::shared_ptr<Keybind> keybind)
     {
-        _startSubMeshIndexToRender = glm::max(_startSubMeshIndexToRender - 1, static_cast<size_t>(0));
+        if (_startSubMeshIndexToRender > 0)
+            _startSubMeshIndexToRender--;
+
         return true;
     });
 
@@ -164,12 +172,10 @@ void NM2Renderer::CreatePermanentResources()
     _passDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
     _passDescriptorSet.Bind("_sampler", _sampler);
 
-    //u32 objectID = 0;
-    //if (LoadNM2("Crate01.nm2", objectID))
+    /*u32 objectID = 0;
     //if (LoadNM2("CHARACTER\\Scourge\\Male\\ScourgeMale.nm2", objectID))
-    //if (LoadNM2("IceCrown_Axe_ShadowsEdge.nm2", objectID))
-    //if (LoadNM2("ElwynnTreeMid01.nm2", objectID))
-    /*if (LoadNM2("ElwynnTreeCanopy02.nm2", objectID))
+    //if (LoadNM2("Creature\\Anduin\\Anduin.nm2", objectID))
+    //if (LoadNM2("World\\Expansion02\\Doodads\\IceCrown\\Weapon\\IceCrown_Axe_ShadowsEdge.nm2", objectID))
     {
         LoadedNM2& nm2 = _loadedNM2s[objectID];
 
@@ -257,9 +263,33 @@ bool NM2Renderer::LoadNM2(std::string nm2Name, u32& objectID)
         nm2Buffer.GetBytes(reinterpret_cast<u8*>(nm2.vertices.data()), numVertices * sizeof(NM2::M2Vertex));
     }
 
+    u32 numTextures = 0;
+    if (!nm2Buffer.GetU32(numTextures))
+        return false;
+
+    if (numTextures > 0)
+    {
+        nm2.textures.resize(numTextures);
+        nm2Buffer.GetBytes(reinterpret_cast<u8*>(nm2.textures.data()), numTextures * sizeof(NM2::M2Texture));
+    }
+
+    u32 numTextureCombos = 0;
+    if (!nm2Buffer.GetU32(numTextureCombos))
+        return false;
+
+    if (numTextureCombos > 0)
+    {
+        nm2.textureCombos.resize(numTextureCombos);
+        if (!nm2Buffer.GetBytes(reinterpret_cast<u8*>(nm2.textureCombos.data()), numTextureCombos * sizeof(u16)))
+            return false;
+    }
+
     u32 numSkins = 0;
     if (!nm2Buffer.GetU32(numSkins))
         return false;
+
+    std::vector<Material> materials;
+    materials.reserve(8);
 
     if (numSkins > 0)
     {
@@ -339,6 +369,24 @@ bool NM2Renderer::LoadNM2(std::string nm2Name, u32& objectID)
                 if (!nm2Buffer.GetU16(subMesh.materialIndex))
                     return false;
 
+                if (!nm2Buffer.GetU16(subMesh.textureCount))
+                    return false;
+
+                if (!nm2Buffer.GetU16(subMesh.textureComboIndex))
+                    return false;
+
+                subMesh.materialNum = static_cast<u32>(materials.size());
+
+                Material& material = materials.emplace_back();
+                material.flags = subMesh.flags;
+
+                u16 offset = subMesh.textureComboIndex;
+                for (u16 x = subMesh.textureComboIndex; x < subMesh.textureComboIndex + subMesh.textureCount; x++)
+                {
+                    // Set TextureId to the offset into nm2.textures (Below we will load all textures and then we will resolve the actual texture id)
+                    material.textureIDs[x - offset] = nm2.textureCombos[x];
+                }
+
                 // -- Create Index Buffer --
                 {
                     const size_t bufferSize = subMesh.indexCount * sizeof(u16);
@@ -372,7 +420,6 @@ bool NM2Renderer::LoadNM2(std::string nm2Name, u32& objectID)
                     _renderer->CopyBuffer(subMesh.indexBuffer, 0, stagingBuffer, 0, bufferSize);
                 }
             }
-            
 
             // -- Create Vertex Buffer --
             {
@@ -442,6 +489,83 @@ bool NM2Renderer::LoadNM2(std::string nm2Name, u32& objectID)
                 _renderer->CopyBuffer(mesh.vertexUVsBuffer, 0, stagingBuffer, 0, bufferSize);
             }
         }
+    }
+
+    entt::registry* registry = ServiceLocator::GetGameRegistry();
+    TextureSingleton& textureSingleton = registry->ctx<TextureSingleton>();
+
+    // Load all textures into TextureArray
+    for (u32 i = 0; i < numTextures; i++)
+    {
+        const NM2::M2Texture& texture = nm2.textures[i];
+        u32& textureId = loadedNM2.textureIds.emplace_back();
+
+        if (texture.type == 0 && texture.textureNameIndex != std::numeric_limits<u32>().max())
+        {
+            Renderer::TextureDesc textureDesc;
+            textureDesc.path = "Data/extracted/Textures/" + textureSingleton.textureStringTable.GetString(texture.textureNameIndex);
+
+            _renderer->LoadTextureIntoArray(textureDesc, _m2Textures, textureId);
+        }
+        else
+        {
+            textureId = INVALID_M2_TEXTURE_ID;
+        }
+    }
+
+    // Resolve all material texture ids
+    for (Material& material : materials)
+    {
+        for (i32 i = 0; i < 4; i++)
+        {
+            u32& textureId = material.textureIDs[i];
+            if (textureId == INVALID_M2_TEXTURE_ID)
+                continue;
+
+            textureId = loadedNM2.textureIds[textureId];
+        }
+    }
+
+    // -- Create Materials Buffer
+    {
+        const size_t oneBufferSize = sizeof(Material);
+        const size_t totalBufferSize = materials.size() * oneBufferSize;
+
+        // Create buffer
+        Renderer::BufferDesc desc;
+        desc.name = "Materials";
+        desc.size = totalBufferSize;
+        desc.usage = Renderer::BufferUsage::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BufferUsage::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.cpuAccess = Renderer::BufferCPUAccess::None;
+
+        loadedNM2.materialsBuffer = _renderer->CreateBuffer(desc);
+
+        // Create staging buffer
+        desc.name = "MaterialsStaging";
+        desc.size = totalBufferSize;
+        desc.usage = Renderer::BufferUsage::BUFFER_USAGE_TRANSFER_SOURCE;
+        desc.cpuAccess = Renderer::BufferCPUAccess::WriteOnly;
+
+        Renderer::BufferID stagingBuffer = _renderer->CreateBuffer(desc);
+
+        // Upload to staging buffer
+        void* dst = _renderer->MapBuffer(stagingBuffer);
+
+        for (i32 i = 0; i < materials.size(); i++)
+        {
+            Material& material = materials[i];
+
+            size_t offset = i * oneBufferSize;
+            memcpy(static_cast<u8*>(dst) + offset, &material, oneBufferSize);
+        }
+
+        _renderer->UnmapBuffer(stagingBuffer);
+
+        // Queue destroy staging buffer
+        _renderer->QueueDestroyBuffer(stagingBuffer);
+
+        // Copy from staging buffer to buffer
+        _renderer->CopyBuffer(loadedNM2.materialsBuffer, 0, stagingBuffer, 0, totalBufferSize);
     }
 
     // -- Create Instance Buffer

@@ -309,7 +309,7 @@ bool EngineLoop::Update(f32 deltaTime)
         }
     }
 
-    // Update Systems will Modify the Camera, so we wait with updating the Camera 
+    // Update Systems will modify the Camera, so we wait with updating the Camera 
     // until we are sure it is static for the rest of the frame
     UpdateSystems();
 

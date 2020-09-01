@@ -2,6 +2,7 @@
 #include <NovusTypes.h>
 #include <vector>
 
+#pragma pack(push, 1)
 namespace NM2
 {
     struct NM2Header
@@ -44,6 +45,9 @@ namespace NM2
         NM2Header header;
 
         std::vector<M2Vertex> vertices;
+        std::vector<M2Texture> textures;
+        std::vector<u16> textureCombos;
         std::vector<M2Skin> skins;
     };
 }
+#pragma pack(pop)
