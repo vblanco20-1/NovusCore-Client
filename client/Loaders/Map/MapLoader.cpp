@@ -177,7 +177,14 @@ bool MapLoader::ExtractChunkData(FileReader& reader, Terrain::Chunk& chunk, Stri
 
     if (chunk.chunkHeader.version != Terrain::MAP_CHUNK_VERSION)
     {
-        NC_LOG_FATAL("Loaded map chunk has version of %u instead of expected version of %u, try reextracting your data", chunk.chunkHeader.version, Terrain::MAP_CHUNK_VERSION);
+        if (chunk.chunkHeader.version < Terrain::MAP_CHUNK_VERSION)
+        {
+            NC_LOG_FATAL("Loaded map chunk with too old version %u instead of expected version of %u, rerun dataextractor", chunk.chunkHeader.version, Terrain::MAP_CHUNK_VERSION);
+        }
+        else
+        {
+            NC_LOG_FATAL("Loaded map chunk with too new version %u instead of expected version of %u, update your client", chunk.chunkHeader.version, Terrain::MAP_CHUNK_VERSION);
+        }
     }
 
     buffer.Get<Terrain::HeightHeader>(chunk.heightHeader);

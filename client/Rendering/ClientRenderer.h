@@ -12,6 +12,7 @@
 #include <Renderer/Buffer.h>
 
 #include "ViewConstantBuffer.h"
+#include "LightConstantBuffer.h"
 
 namespace Renderer
 {
@@ -73,7 +74,9 @@ private:
     FrameResource<Renderer::GPUSemaphoreID, 2> _frameSyncSemaphores; // This semaphore makes sure the GPU handles frames in order
 
     Renderer::Buffer<ViewConstantBuffer>* _viewConstantBuffer;
+    Renderer::Buffer<LightConstantBuffer>* _lightConstantBuffer;
 
+    Renderer::DescriptorSet _globalDescriptorSet;
     Renderer::DescriptorSet _passDescriptorSet;
     Renderer::DescriptorSet _drawDescriptorSet;
 

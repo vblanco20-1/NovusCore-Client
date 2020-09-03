@@ -36,7 +36,7 @@ void NM2Renderer::Update(f32 deltaTime)
 
 }
 
-void NM2Renderer::AddNM2Pass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex)
+void NM2Renderer::AddNM2Pass(Renderer::RenderGraph* renderGraph, Renderer::DescriptorSet* globalDescriptorSet, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex)
 {
     struct NM2PassData
     {
@@ -85,11 +85,12 @@ void NM2Renderer::AddNM2Pass(Renderer::RenderGraph* renderGraph, Renderer::Buffe
         Renderer::GraphicsPipelineID pipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
         commandList.BeginPipeline(pipeline);
 
+        commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, globalDescriptorSet, frameIndex);
+
         for (LoadedNM2& loadedNM2 : _loadedNM2s)
         {
             commandList.PushMarker("NM2", Color::White);
 
-            _passDescriptorSet.Bind("ViewData", viewConstantBuffer->GetBuffer(frameIndex));
             _passDescriptorSet.Bind("_instanceData", loadedNM2.instanceBuffer);
             _passDescriptorSet.Bind("_materialData", loadedNM2.materialsBuffer);
             _passDescriptorSet.Bind("_textures", _m2Textures);
@@ -112,7 +113,7 @@ void NM2Renderer::AddNM2Pass(Renderer::RenderGraph* renderGraph, Renderer::Buffe
                 {
                     SubMesh& subMesh = mesh.subMeshes[i];
 
-                    commandList.PushConstant(&subMesh.materialNum, 0, 4);
+                    commandList.PushConstant(&subMesh.materialNum, 0, sizeof(u32));
 
                     commandList.SetIndexBuffer(subMesh.indexBuffer, Renderer::IndexFormat::UInt16);
                     commandList.DrawIndexed(subMesh.indexCount, loadedNM2.numInstances, 0, 0, 0);
@@ -175,7 +176,7 @@ void NM2Renderer::CreatePermanentResources()
     /*u32 objectID = 0;
     //if (LoadNM2("CHARACTER\\Scourge\\Male\\ScourgeMale.nm2", objectID))
     //if (LoadNM2("Creature\\Anduin\\Anduin.nm2", objectID))
-    //if (LoadNM2("World\\Expansion02\\Doodads\\IceCrown\\Weapon\\IceCrown_Axe_ShadowsEdge.nm2", objectID))
+    if (LoadNM2("World\\Expansion02\\Doodads\\IceCrown\\Weapon\\IceCrown_Axe_ShadowsEdge.nm2", objectID))
     {
         LoadedNM2& nm2 = _loadedNM2s[objectID];
 
@@ -192,7 +193,7 @@ void NM2Renderer::CreatePermanentResources()
         // Upload to staging buffer
         Instance* dst = reinterpret_cast<Instance*>(_renderer->MapBuffer(stagingBuffer));
 
-        vec3 pos = vec3(-9321.f, 108.11f, 50.f);
+        vec3 pos = vec3(-8000, 100.f, 1600.f);
         mat4x4 rotationMatrix = glm::eulerAngleXYZ(glm::radians(0.f), glm::radians(0.f), glm::radians(0.f));
 
         dst->instanceMatrix = glm::translate(mat4x4(1.0f), pos) * rotationMatrix;

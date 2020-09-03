@@ -1,10 +1,6 @@
+#include "globalData.inc.hlsl"
 
-[[vk::binding(0, PER_PASS)]] cbuffer ViewData
-{
-    float4x4 viewProjectionMatrix : packoffset(c0);
-};
-
-[[vk::binding(1, PER_PASS)]] ByteAddressBuffer _instanceData;
+[[vk::binding(0, PER_PASS)]] ByteAddressBuffer _instanceData;
 
 [[vk::binding(0, PER_DRAW)]] ByteAddressBuffer _vertexPositions;
 [[vk::binding(1, PER_DRAW)]] ByteAddressBuffer _vertexUVs;
@@ -64,7 +60,7 @@ VSOutput main(VSInput input)
     float4 position = float4(vertex.position, 1.0f);
     position = mul(position, instanceData.instanceMatrix);
 
-    output.position = mul(position, viewProjectionMatrix);
+    output.position = mul(position, _viewData.viewProjectionMatrix);
     output.uv = vertex.uv;
 
     return output;

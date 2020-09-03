@@ -134,7 +134,13 @@ void ClientRenderer::Render()
     _viewConstantBuffer->resource.viewProjectionMatrix = camera->GetViewProjectionMatrix();
     _viewConstantBuffer->Apply(_frameIndex);
 
-    _passDescriptorSet.Bind("_viewData"_h, _viewConstantBuffer->GetBuffer(_frameIndex));
+    _lightConstantBuffer->resource.ambientColor = vec4(0.407f, 0.498f, 0.596f, 1.0f);
+    _lightConstantBuffer->resource.lightColor = vec4(1.0f, 0.525f, 0.0f, 1.0f);
+    _lightConstantBuffer->resource.lightDir = vec4(0.0f, -1.0f, -1.0f, 1.0f);
+    _lightConstantBuffer->Apply(_frameIndex);
+
+    _globalDescriptorSet.Bind("_viewData"_h, _viewConstantBuffer->GetBuffer(_frameIndex));
+    _globalDescriptorSet.Bind("_lightData"_h, _lightConstantBuffer->GetBuffer(_frameIndex));
 
     // Depth Prepass
     {
@@ -200,7 +206,7 @@ void ClientRenderer::Render()
             commandList.SetViewport(0, 0, static_cast<f32>(WIDTH), static_cast<f32>(HEIGHT), 0.0f, 1.0f);
             commandList.SetScissorRect(0, WIDTH, 0, HEIGHT);
 
-            commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, _frameIndex);
+            commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, &_globalDescriptorSet, _frameIndex);
 
             // Render depth prepass layer
             //Renderer::RenderLayer& layer = _renderer->GetRenderLayer(DEPTH_PREPASS_RENDER_LAYER);
@@ -296,6 +302,7 @@ void ClientRenderer::Render()
 
             _drawDescriptorSet.Bind("_texture", _cubeTexture); // TODO: Actually select textures etc per draw
 
+            commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, &_globalDescriptorSet, _frameIndex);
             commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, _frameIndex);
 
             // Render main layer
@@ -319,11 +326,11 @@ void ClientRenderer::Render()
         });
     }
 
-    _terrainRenderer->AddTerrainPass(&renderGraph, _viewConstantBuffer, _mainColor, _mainDepth, _frameIndex);
+    _terrainRenderer->AddTerrainPass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
 
-    _nm2Renderer->AddNM2Pass(&renderGraph, _viewConstantBuffer, _mainColor, _mainDepth, _frameIndex);
+    _nm2Renderer->AddNM2Pass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
     
-    _debugRenderer->Add3DPass(&renderGraph, _viewConstantBuffer->GetBuffer(_frameIndex), _mainColor, _mainDepth, _frameIndex);
+    _debugRenderer->Add3DPass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
 
     _uiRenderer->AddUIPass(&renderGraph, _mainColor, _frameIndex);
 
@@ -409,7 +416,12 @@ void ClientRenderer::CreatePermanentResources()
     // View Constant Buffer (for camera data)
     _viewConstantBuffer = new Renderer::Buffer<ViewConstantBuffer>(_renderer, "ViewConstantBuffer", Renderer::BUFFER_USAGE_UNIFORM_BUFFER, Renderer::BufferCPUAccess::WriteOnly);
 
+    // Light Constant Buffer
+    _lightConstantBuffer = new Renderer::Buffer<LightConstantBuffer>(_renderer, "LightConstantBufffer", Renderer::BUFFER_USAGE_UNIFORM_BUFFER, Renderer::BufferCPUAccess::WriteOnly);
+
     // Create descriptor sets
+    _globalDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
+
     _passDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
     _passDescriptorSet.Bind("_sampler"_h, _linearSampler);
 

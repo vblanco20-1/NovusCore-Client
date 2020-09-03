@@ -39,30 +39,49 @@ class MapObjectRenderer;
 
 class TerrainRenderer
 {
+    struct ChunkToBeLoaded
+    {
+        Terrain::Map* map = nullptr;
+        Terrain::Chunk* chunk = nullptr;
+        u16 chunkPosX;
+        u16 chunkPosY;
+        u16 chunkID;
+    };
+
+    struct CullingConstants
+    {
+        vec4 frustumPlanes[6];
+    };
+
+    struct CellInstance
+    {
+        u32 packedChunkCellID;
+        u32 instanceID;
+    };
+
 public:
     TerrainRenderer(Renderer::Renderer* renderer, DebugRenderer* debugRenderer);
     ~TerrainRenderer();
 
     void Update(f32 deltaTime);
 
-    void AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::Buffer<ViewConstantBuffer>* viewConstantBuffer, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex);
+    void AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::DescriptorSet* globalDescriptorSet, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex);
 
     bool LoadMap(u32 mapInternalNameHash);
 private:
     void CreatePermanentResources();
 
-    void LoadChunk(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY);
-    void LoadChunksAround(Terrain::Map& map, ivec2 middleChunk, u16 drawDistance);
+    void RegisterChunksToBeLoaded(Terrain::Map& map, ivec2 middleChunk, u16 drawDistance);
+    void RegisterChunkToBeLoaded(Terrain::Map& map, u16 chunkPosX, u16 chunkPosY);
+    void ExecuteLoad();
+
+    void LoadChunk(const ChunkToBeLoaded& chunkToBeLoaded);
+    //void LoadChunksAround(Terrain::Map& map, ivec2 middleChunk, u16 drawDistance);
     void CPUCulling(const Camera* camera);
 
     void DebugRenderCellTriangles(const Camera* camera);
 private:
     Renderer::Renderer* _renderer;
-
-    struct CullingConstants
-    {
-        vec4 frustumPlanes[6];
-    };
 
     Renderer::Buffer<CullingConstants>* _cullingConstantBuffer;
 
@@ -91,7 +110,9 @@ private:
     std::vector<u16> _loadedChunks;
     std::vector<Geometry::AABoundingBox> _cellBoundingBoxes;
 
-    std::vector<u32> _culledInstances;
+    std::vector<CellInstance> _culledInstances;
+
+    std::vector<ChunkToBeLoaded> _chunksToBeLoaded;
     
     // Subrenderers
     MapObjectRenderer* _mapObjectRenderer = nullptr;
