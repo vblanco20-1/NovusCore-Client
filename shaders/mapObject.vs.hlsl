@@ -57,6 +57,8 @@ Vertex LoadVertex(uint vertexID)
 
     vertex.uv01 = _vertexUVs.Load<float4>(vertexID * 16); // 16 = sizeof(float4)
 
+    //vertex.normal = float3(-vertex.normal.x, vertex.normal.y, -vertex.normal.z);
+
     return vertex;
 }
 
@@ -71,7 +73,7 @@ VSOutput main(VSInput input)
     position = mul(position, instanceData.instanceMatrix);
 
     output.position = mul(position, _viewData.viewProjectionMatrix);
-    output.normal = mul(normalize(vertex.normal), (float3x3)instanceData.instanceMatrix);
+    output.normal = mul(vertex.normal, (float3x3)instanceData.instanceMatrix);
 
     output.color0 = vertex.color0;
     output.color1 = vertex.color1;

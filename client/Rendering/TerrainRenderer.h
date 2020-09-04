@@ -59,6 +59,13 @@ class TerrainRenderer
         u32 instanceID;
     };
 
+    struct TerrainVertex
+    {
+        vec4 normal;
+        vec4 color;
+        f32 height;
+    };
+
 public:
     TerrainRenderer(Renderer::Renderer* renderer, DebugRenderer* debugRenderer);
     ~TerrainRenderer();
@@ -92,6 +99,7 @@ private:
 
     Renderer::BufferID _chunkBuffer = Renderer::BufferID::Invalid();
     Renderer::BufferID _cellBuffer = Renderer::BufferID::Invalid();
+
     Renderer::BufferID _vertexBuffer = Renderer::BufferID::Invalid();
 
     Renderer::BufferID _cellIndexBuffer = Renderer::BufferID::Invalid();

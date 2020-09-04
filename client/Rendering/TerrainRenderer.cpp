@@ -372,7 +372,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
             commandList.SetIndexBuffer(_cellIndexBuffer, Renderer::IndexFormat::UInt16);
 
             // Bind viewbuffer
-            _passDescriptorSet.Bind("_vertexHeights"_h, _vertexBuffer);
+            _passDescriptorSet.Bind("_vertices"_h, _vertexBuffer);
             _passDescriptorSet.Bind("_cellData"_h, _cellBuffer);
             _passDescriptorSet.Bind("_cellDataVS"_h, _cellBuffer);
             _passDescriptorSet.Bind("_chunkData"_h, _chunkBuffer);
@@ -652,10 +652,11 @@ void TerrainRenderer::ExecuteLoad()
     {
         Renderer::BufferDesc desc;
         desc.name = "TerrainVertexBuffer";
-        desc.size = sizeof(f32) * Terrain::NUM_VERTICES_PER_CHUNK * numChunksToLoad;
+        desc.size = sizeof(TerrainVertex) * Terrain::NUM_VERTICES_PER_CHUNK * numChunksToLoad;
         desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
         _vertexBuffer = _renderer->CreateBuffer(desc);
     }
+
 
     if (_cellHeightRangeBuffer != Renderer::BufferID::Invalid())
     {
@@ -787,7 +788,7 @@ void TerrainRenderer::LoadChunk(const ChunkToBeLoaded& chunkToBeLoaded)
         }
 
         _renderer->UnmapBuffer(cellUploadBuffer);
-        const u64 cellBufferOffset = (currentChunkIndex * Terrain::MAP_CELLS_PER_CHUNK) * sizeof(TerrainCellData); // TODO: This is gonna be bad, look into it
+        const u64 cellBufferOffset = (currentChunkIndex * Terrain::MAP_CELLS_PER_CHUNK) * sizeof(TerrainCellData);
         _renderer->CopyBuffer(_cellBuffer, cellBufferOffset, cellUploadBuffer, 0, cellDataUploadBufferDesc.size);
     }
 
@@ -817,7 +818,7 @@ void TerrainRenderer::LoadChunk(const ChunkToBeLoaded& chunkToBeLoaded)
         chunkData->alphaMapID = alphaID;
 
         _renderer->UnmapBuffer(chunkUploadBuffer);
-        const u64 chunkBufferOffset = currentChunkIndex * sizeof(TerrainChunkData); // TODO: This is gonna be bad, look into it
+        const u64 chunkBufferOffset = currentChunkIndex * sizeof(TerrainChunkData);
         _renderer->CopyBuffer(_chunkBuffer, chunkBufferOffset, chunkUploadBuffer, 0, chunkDataUploadBufferDesc.size);
     }
 
@@ -825,23 +826,39 @@ void TerrainRenderer::LoadChunk(const ChunkToBeLoaded& chunkToBeLoaded)
     {
         Renderer::BufferDesc vertexUploadBufferDesc;
         vertexUploadBufferDesc.name = "TerrainVertexUploadBuffer";
-        vertexUploadBufferDesc.size = sizeof(f32) * Terrain::NUM_VERTICES_PER_CHUNK;
+        vertexUploadBufferDesc.size = sizeof(TerrainVertex) * Terrain::NUM_VERTICES_PER_CHUNK;
         vertexUploadBufferDesc.usage = Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
         vertexUploadBufferDesc.cpuAccess = Renderer::BufferCPUAccess::WriteOnly;
 
         Renderer::BufferID vertexUploadBuffer = _renderer->CreateBuffer(vertexUploadBufferDesc);
         _renderer->QueueDestroyBuffer(vertexUploadBuffer);
 
-        void* vertexBufferMemory = _renderer->MapBuffer(vertexUploadBuffer);
-        for (size_t i = 0; i < Terrain::MAP_CELLS_PER_CHUNK; ++i)
+        TerrainVertex* vertexBufferMemory = reinterpret_cast<TerrainVertex*>(_renderer->MapBuffer(vertexUploadBuffer));
+        for (size_t i = 0; i < Terrain::MAP_CELLS_PER_CHUNK; i++)
         {
-            void* dstVertices = static_cast<u8*>(vertexBufferMemory) + (i * Terrain::MAP_CELL_TOTAL_GRID_SIZE * sizeof(f32));
-            const void* srcVertices = chunk.cells[i].heightData;
-            memcpy(dstVertices, srcVertices, Terrain::MAP_CELL_TOTAL_GRID_SIZE * sizeof(f32));
+            size_t cellOffset = i * Terrain::MAP_CELL_TOTAL_GRID_SIZE;
+            for (size_t j = 0; j < Terrain::MAP_CELL_TOTAL_GRID_SIZE; j++)
+            {
+                size_t offset = cellOffset + j;
+
+                vertexBufferMemory[offset].height = chunk.cells[i].heightData[j];
+
+                f32 nX = static_cast<f32>(chunk.cells[i].normalData[j][0]);
+                f32 nY = static_cast<f32>(chunk.cells[i].normalData[j][1]);
+                f32 nZ = static_cast<f32>(chunk.cells[i].normalData[j][2]);
+
+                vertexBufferMemory[offset].normal = vec4(nX / 127.0f, nY / 127.0f, nZ / 127.0f, 1.0f);
+
+                f32 cX = static_cast<f32>(chunk.cells[i].colorData[j][0]);
+                f32 cY = static_cast<f32>(chunk.cells[i].colorData[j][1]);
+                f32 cZ = static_cast<f32>(chunk.cells[i].colorData[j][2]);
+
+                vertexBufferMemory[offset].color = vec4(cX / 127.0f, cY / 127.0f, cZ / 127.0f, 1.0f);
+            }
         }
 
         _renderer->UnmapBuffer(vertexUploadBuffer);
-        const u64 chunkVertexBufferOffset = currentChunkIndex * sizeof(f32) * Terrain::NUM_VERTICES_PER_CHUNK; // TODO: This is gonna be bad, look into it
+        const u64 chunkVertexBufferOffset = currentChunkIndex * sizeof(TerrainVertex) * Terrain::NUM_VERTICES_PER_CHUNK;
         _renderer->CopyBuffer(_vertexBuffer, chunkVertexBufferOffset, vertexUploadBuffer, 0, vertexUploadBufferDesc.size);
     }
 
@@ -907,7 +924,7 @@ void TerrainRenderer::LoadChunk(const ChunkToBeLoaded& chunkToBeLoaded)
             memcpy(heightRangeBufferMemory, heightRanges.data(), heightRangeUploadBufferDesc.size);
             _renderer->UnmapBuffer(heightRangeUploadBuffer);
 
-            const u64 chunkVertexBufferOffset = currentChunkIndex * sizeof(TerrainCellHeightRange) * Terrain::MAP_CELLS_PER_CHUNK; // TODO: This is gonna be bad, look into it
+            const u64 chunkVertexBufferOffset = currentChunkIndex * sizeof(TerrainCellHeightRange) * Terrain::MAP_CELLS_PER_CHUNK;
             _renderer->CopyBuffer(_cellHeightRangeBuffer, chunkVertexBufferOffset, heightRangeUploadBuffer, 0, heightRangeUploadBufferDesc.size);
         }
     }

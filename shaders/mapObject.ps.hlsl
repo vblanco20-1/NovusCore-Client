@@ -82,37 +82,39 @@ PSOutput main(PSInput input)
         discard;
     }
 
+    float3 normal = normalize(input.normal);
+
     if (material.materialType == 0) // Diffuse
     {
         float3 matDiffuse = tex0.rgb;
-        output.color = float4(Lighting(matDiffuse, input.color0, input.normal, material), input.color0.a);
+        output.color = float4(Lighting(matDiffuse, input.color0, normal, material), input.color0.a);
     }
     else if (material.materialType == 1) // Specular
     {
         float3 matDiffuse = tex0.rgb;
-        output.color = float4(Lighting(matDiffuse, input.color0, input.normal, material), input.color0.a);
+        output.color = float4(Lighting(matDiffuse, input.color0, normal, material), input.color0.a);
     }
     else if (material.materialType == 2) // Metal
     {
         float3 matDiffuse = tex0.rgb;
-        output.color = float4(Lighting(matDiffuse, input.color0, input.normal, material), input.color0.a);
+        output.color = float4(Lighting(matDiffuse, input.color0, normal, material), input.color0.a);
     }
     else if (material.materialType == 3) // Environment
     {
         float3 matDiffuse = tex0.rgb;
         float3 env = tex1.rgb * tex0.a;
-        output.color = float4(Lighting(matDiffuse, input.color0, input.normal, material) + env, input.color0.a);
+        output.color = float4(Lighting(matDiffuse, input.color0, normal, material) + env, input.color0.a);
     }
     else if (material.materialType == 4) // Opaque
     {
         float3 matDiffuse = tex0.rgb;
-        output.color = float4(Lighting(matDiffuse, input.color0, input.normal, material), input.color0.a);
+        output.color = float4(Lighting(matDiffuse, input.color0, normal, material), input.color0.a);
     }
     else if (material.materialType == 5) // Environment metal
     {
         float3 matDiffuse = tex0.rgb;
         float3 env = (tex0.rgb * tex0.a) * tex1.rgb;
-        output.color = float4(Lighting(tex0.rgb, input.color0, input.normal, material) + env, input.color0.a);
+        output.color = float4(Lighting(tex0.rgb, input.color0, normal, material) + env, input.color0.a);
     }
     else if (material.materialType == 6) // Two Layer Diffuse
     {
@@ -120,7 +122,7 @@ PSOutput main(PSInput input)
         float3 layer1 = lerp(layer0, tex1.rgb, tex1.a);
         float3 matDiffuse = (input.color0.rgb * 2.0) * lerp(layer1, layer0, input.color1.a);
 
-        output.color = float4(Lighting(matDiffuse, input.color0, input.normal, material), 1.0f);
+        output.color = float4(Lighting(matDiffuse, input.color0, normal, material), 1.0f);
     }
 
     return output;

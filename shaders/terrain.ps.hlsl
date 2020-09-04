@@ -15,7 +15,8 @@ struct PSInput
     uint packedChunkCellID : TEXCOORD0;
     float2 uv : TEXCOORD1;
     float3 normal : TEXCOORD2;
-    uint cellIndex : TEXCOORD3;
+    float3 color : TEXCOORD3;
+    uint cellIndex : TEXCOORD4;
 };
 
 struct PSOutput
@@ -83,7 +84,10 @@ PSOutput main(PSInput input)
     color = (diffuse3 * alpha.z) + (color * (1.0f - alpha.z));
 
     // Apply lighting
-    float lightFactor = max(dot(input.normal, normalize(_lightData.lightDir.xyz)), 0.0);
+    float3 normal = normalize(input.normal);
+
+    float lightFactor = max(dot(normal, -normalize(_lightData.lightDir.xyz)), 0.0);
+    color.rgb *= input.color;
     color = color * (saturate(_lightData.lightColor * lightFactor) + _lightData.ambientColor);
 
     output.color = color;
