@@ -36,18 +36,24 @@ namespace Terrain
 namespace DBC
 {
     struct File;
-    struct Map;
+    struct CreatureDisplayInfo;
+    struct CreatureModelData;
 }
 
-class MapLoader
+struct DBCSingleton;
+struct DisplayInfoSingleton;
+
+class DisplayInfoLoader
 {
 public:
-    MapLoader() { }
+    DisplayInfoLoader() { }
 
     static bool Init(entt::registry* registry);
-    static bool LoadMap(entt::registry* registry, u32 mapInternalNameHash);
 
 private:
-    static bool ExtractMapDBC(DBC::File& file, std::vector<DBC::Map>& maps);
-    static bool ExtractChunkData(FileReader& reader, Terrain::Chunk& chunk, StringTable& stringTable);
+    static bool LoadCreatureModelDataDBC(DBCSingleton& dbcSingleton, DisplayInfoSingleton& displayInfoSingleton);
+    static bool LoadCreatureDisplayInfoDBC(DBCSingleton& dbcSingleton, DisplayInfoSingleton& displayInfoSingleton);
+
+    static bool ExtractCreatureModelDataDBC(DBC::File& file, std::vector<DBC::CreatureModelData>& creatureDisplayInfos);
+    static bool ExtractCreatureDisplayInfoDBC(DBC::File& file, std::vector<DBC::CreatureDisplayInfo>& creatureDisplayInfos);
 };

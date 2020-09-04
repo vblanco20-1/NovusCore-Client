@@ -30,5 +30,6 @@ struct DBCSingleton
 {
 	DBCSingleton() {}
 
-    robin_hood::unordered_map<u32, DBC::File> dbcs;
+    robin_hood::unordered_map<u32, DBC::File> nameHashToDBCFile;
+	StringTable stringTable;
 };

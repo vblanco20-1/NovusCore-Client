@@ -20,9 +20,28 @@ namespace NM2
         vec2 uvCords[2] = { vec2(0, 0), vec2(0, 0) };
     };
 
+    enum class TextureTypes : u32
+    {
+        DEFAULT,
+        SKIN,
+        OBJECT_SKIN,
+        WEAPON_BLADE,
+        WEAPON_HANDLE,
+        ENVIRONMENT, // OBSOLETE according to https://wowdev.wiki/M2#Textures
+        CHARACTER_HAIR,
+        CHARACTER_FACIAL_HAIR, // OBSOLETE according to https://wowdev.wiki/M2#Textures
+        SKIN_EXTRA,
+        UI_SKIN,
+        TAUREN_MANE, // OBSOLETE according to https://wowdev.wiki/M2#Textures
+        MONSTER_SKIN_1,
+        MONSTER_SKIN_2,
+        MONSTER_SKIN_3,
+        ITEM_ICON
+    };
+
     struct M2Texture
     {
-        u32 type = 0; // Check https://wowdev.wiki/M2#Textures
+        TextureTypes type = TextureTypes::DEFAULT; // Check https://wowdev.wiki/M2#Textures
         struct M2TextureFlags
         {
             u32 wrapX : 1;
@@ -30,6 +49,20 @@ namespace NM2
         } flags;
 
         u32 textureNameIndex = 0;
+    };
+
+    struct M2Material
+    {
+        struct M2MaterialFlags
+        {
+            u16 unLit : 1;
+            u16 unFogged : 1;
+            u16 disableBackfaceCulling : 1;
+            u16 depthTest;
+            u16 depthWrite;
+            u16 : 5;
+        } flags;
+        u16 blendingMode; // Check https://wowdev.wiki/M2/Rendering#M2BLEND
     };
 
     struct M2Skin
@@ -46,8 +79,10 @@ namespace NM2
 
         std::vector<M2Vertex> vertices;
         std::vector<M2Texture> textures;
+        std::vector<M2Material> materials;
+        std::vector<u16> textureIndicesToId;
         std::vector<u16> textureCombos;
-        std::vector<M2Skin> skins;
+        M2Skin skin;
     };
 }
 #pragma pack(pop)

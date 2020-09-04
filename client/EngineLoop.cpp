@@ -14,6 +14,7 @@
 #include "Loaders/Texture/TextureLoader.h"
 #include "Loaders/Map/MapLoader.h"
 #include "Loaders/DBC/DBCLoader.h"
+#include "Loaders/DisplayInfo/DisplayInfoLoader.h"
 
 // Component Singletons
 #include "ECS/Components/Singletons/TimeSingleton.h"
@@ -108,6 +109,7 @@ void EngineLoop::Run()
 
     TextureLoader::Load(&_updateFramework.gameRegistry);
     DBCLoader::Load(&_updateFramework.gameRegistry);
+    DisplayInfoLoader::Init(&_updateFramework.gameRegistry);
     MapLoader::Init(&_updateFramework.gameRegistry);
 
     TimeSingleton& timeSingleton = _updateFramework.gameRegistry.set<TimeSingleton>();

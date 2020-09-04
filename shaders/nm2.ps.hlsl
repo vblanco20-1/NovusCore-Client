@@ -1,3 +1,4 @@
+#include "globalData.inc.hlsl"
 
 [[vk::binding(1, PER_PASS)]] SamplerState _sampler;
 [[vk::binding(2, PER_PASS)]] ByteAddressBuffer _materialData;
@@ -12,13 +13,16 @@ struct MaterialParam
 
 struct Material
 {
-    uint flag;
+    uint type;
+    uint blendingMode;
     uint textureIDs[4];
 };
 
 struct PSInput
 {
-    float2 uv : TEXCOORD0;
+    float3 normal : TEXCOORD0;
+    float2 uv0 : TEXCOORD1;
+    float2 uv1 : TEXCOORD2;
 };
 
 struct PSOutput
@@ -29,7 +33,7 @@ struct PSOutput
 Material LoadMaterial()
 {
     Material material;
-    material = _materialData.Load<Material>(materialParam.materialID * 20); // 20 = sizeof(Material)
+    material = _materialData.Load<Material>(materialParam.materialID * 24); // 24 = sizeof(Material)
 
     return material;
 }
@@ -40,8 +44,16 @@ PSOutput main(PSInput input)
 
     Material material = LoadMaterial();
 
-    float4 color0 = _textures[material.textureIDs[0]].Sample(_sampler, input.uv);
-    output.color = float4(color0.xyz, 1);
+    //float4 outColor = float4(0, 0, 0, 0);
+    float4 texture1 = _textures[material.textureIDs[0]].Sample(_sampler, input.uv0);
 
+
+    // Apply Lighting
+    float3 normal = normalize(input.normal);
+
+    float lightFactor = max(dot(normal, -normalize(_lightData.lightDir.xyz)), 0.0);
+    texture1 = texture1 * (saturate(_lightData.lightColor * lightFactor) + _lightData.ambientColor);
+
+    output.color = texture1;
     return output;
 }

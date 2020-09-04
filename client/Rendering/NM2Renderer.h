@@ -24,6 +24,12 @@ namespace Renderer
     class DescriptorSet;
 }
 
+namespace DBC
+{
+    struct CreatureDisplayInfo;
+    struct CreatureModelData;
+}
+
 class CameraFreeLook;
 class DebugRenderer;
 class MapObjectRenderer;
@@ -39,13 +45,17 @@ public:
 
     void AddNM2Pass(Renderer::RenderGraph* renderGraph, Renderer::DescriptorSet* globalDescriptorSet, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex);
 
+    bool LoadCreature(u32 displayId, u32& objectID);
 private:
     void CreatePermanentResources();
+
     bool LoadNM2(std::string nm2Name, u32& objectID);
+    bool LoadCreatureNM2(std::string modelPath, DBC::CreatureDisplayInfo* displayInfo, DBC::CreatureModelData* modelData, u32& objectID);
 
     struct Material
     {
-        u32 flags = 0; // Check https://wowdev.wiki/M2/.skin#Texture_units
+        u32 type = 0;
+        u32 blendingMode = 0;
         u32 textureIDs[4] = { INVALID_M2_TEXTURE_ID, INVALID_M2_TEXTURE_ID, INVALID_M2_TEXTURE_ID, INVALID_M2_TEXTURE_ID };
     };
 
@@ -59,24 +69,30 @@ private:
         u16 indexStart = 0;
         u16 indexCount = 0;
 
+        u32 materialNum = 0;
+        Renderer::BufferID indexBuffer;
+    };
+
+    struct TextureUnits
+    {
         u8 flags = 0;
         u16 shaderId = 0;
         u16 skinSectionIndex = 0;
         u16 geosetIndex = 0;
-        u16 materialIndex = 0; 
-        u16 textureCount = 0; 
-        u16 textureComboIndex = 0; 
-        
-        u32 materialNum = 0;
-        Renderer::BufferID indexBuffer;
+        u16 materialIndex = 0;
+        u16 textureCount = 0;
+        u16 textureComboIndex = 0;
     };
 
     struct Mesh
     {
         std::vector<SubMesh> subMeshes;
+        std::vector<TextureUnits> textureUnits;
 
         Renderer::BufferID vertexPositionsBuffer;
-        Renderer::BufferID vertexUVsBuffer;
+        Renderer::BufferID vertexNormalsBuffer;
+        Renderer::BufferID vertexUVs0Buffer;
+        Renderer::BufferID vertexUVs1Buffer;
     };
 
     static const u32 MAX_INSTANCES = 256;
@@ -84,7 +100,7 @@ private:
     {
         std::string debugName = "";
 
-        std::vector<Mesh> meshes;
+        Mesh mesh;
         std::vector<u32> textureIds;
 
         u32 numInstances;
@@ -105,6 +121,5 @@ private:
 
     bool _debugSubMeshRendering = false;
     size_t _numSubMeshesToRender = 0;
-    size_t _startSubMeshIndexToRender = 0;
     DebugRenderer* _debugRenderer;
 };

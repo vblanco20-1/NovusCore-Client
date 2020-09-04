@@ -24,18 +24,15 @@
 #pragma once
 #include <NovusTypes.h>
 #include <robin_hood.h>
-#include "../../../Gameplay/Map/Map.h"
 #include "../../../Loaders/DBC/DBC.h"
 
-struct MapSingleton
+struct DisplayInfoSingleton
 {
-    MapSingleton() {}
+	DisplayInfoSingleton() {}
 
-    Terrain::Map currentMap;
-	u32 loadedMapHash = 0;
+	robin_hood::unordered_map<u32, DBC::CreatureDisplayInfo*> creatureDisplayIdToDisplayInfo;
+	robin_hood::unordered_map<u32, DBC::CreatureModelData*> creatureModelIdToModelData;
 
-	robin_hood::unordered_map<u16, DBC::Map*> mapIdToDBC;
-	robin_hood::unordered_map<u32, DBC::Map*> mapNameToDBC;
-	robin_hood::unordered_map<u32, DBC::Map*> mapInternalNameToDBC;
-	std::vector<DBC::Map> mapDBCFiles;
+	std::vector<DBC::CreatureModelData> creatureModelDataDBCFiles;
+	std::vector<DBC::CreatureDisplayInfo> creatureDisplayInfoDBCFiles;
 };
