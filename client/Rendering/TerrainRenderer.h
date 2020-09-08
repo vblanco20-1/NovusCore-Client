@@ -59,12 +59,14 @@ class TerrainRenderer
         u32 instanceID;
     };
 
+#pragma pack(push, 1)
     struct TerrainVertex
     {
-        vec4 normal;
-        vec4 color;
-        f32 height;
+        u8 normal[3];
+        u8 color[3];
+        f16 height;
     };
+#pragma pack(pop)
 
 public:
     TerrainRenderer(Renderer::Renderer* renderer, DebugRenderer* debugRenderer);

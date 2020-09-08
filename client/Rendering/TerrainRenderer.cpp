@@ -798,7 +798,7 @@ void TerrainRenderer::LoadChunk(const ChunkToBeLoaded& chunkToBeLoaded)
     if (alphaMapStringID < stringTable.GetNumStrings())
     {
         Renderer::TextureDesc chunkAlphaMapDesc;
-        chunkAlphaMapDesc.path = stringTable.GetString(alphaMapStringID);
+        chunkAlphaMapDesc.path = "Data/extracted/" + stringTable.GetString(alphaMapStringID);
 
         _renderer->LoadTextureIntoArray(chunkAlphaMapDesc, _terrainAlphaTextureArray, alphaID);
     }
@@ -841,19 +841,23 @@ void TerrainRenderer::LoadChunk(const ChunkToBeLoaded& chunkToBeLoaded)
             {
                 size_t offset = cellOffset + j;
 
-                vertexBufferMemory[offset].height = chunk.cells[i].heightData[j];
+                // Set height
+                f32 height = chunk.cells[i].heightData[j];
+                vertexBufferMemory[offset].height = height;
 
-                f32 nX = static_cast<f32>(chunk.cells[i].normalData[j][0]);
-                f32 nY = static_cast<f32>(chunk.cells[i].normalData[j][1]);
-                f32 nZ = static_cast<f32>(chunk.cells[i].normalData[j][2]);
+                u8 x = chunk.cells[i].normalData[j][0];
+                u8 y = chunk.cells[i].normalData[j][1];
+                u8 z = chunk.cells[i].normalData[j][2];
 
-                vertexBufferMemory[offset].normal = vec4(nX / 127.0f, nY / 127.0f, nZ / 127.0f, 1.0f);
+                // Set normal
+                vertexBufferMemory[offset].normal[0] = x;
+                vertexBufferMemory[offset].normal[1] = y;
+                vertexBufferMemory[offset].normal[2] = z;
 
-                f32 cX = static_cast<f32>(chunk.cells[i].colorData[j][0]);
-                f32 cY = static_cast<f32>(chunk.cells[i].colorData[j][1]);
-                f32 cZ = static_cast<f32>(chunk.cells[i].colorData[j][2]);
-
-                vertexBufferMemory[offset].color = vec4(cX / 127.0f, cY / 127.0f, cZ / 127.0f, 1.0f);
+                // Set color
+                vertexBufferMemory[offset].color[0] = chunk.cells[i].colorData[j][0];
+                vertexBufferMemory[offset].color[1] = chunk.cells[i].colorData[j][1];
+                vertexBufferMemory[offset].color[2] = chunk.cells[i].colorData[j][2];
             }
         }
 
