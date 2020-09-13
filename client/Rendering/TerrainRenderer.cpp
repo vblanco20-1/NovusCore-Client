@@ -405,7 +405,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
     }
 
     // Subrenderers
-    //_mapObjectRenderer->AddMapObjectPass(renderGraph, globalDescriptorSet, renderTarget, depthTarget, frameIndex);
+    _mapObjectRenderer->AddMapObjectPass(renderGraph, globalDescriptorSet, renderTarget, depthTarget, frameIndex);
 }
 
 void TerrainRenderer::CreatePermanentResources()
@@ -435,6 +435,8 @@ void TerrainRenderer::CreatePermanentResources()
 
     u32 index;
     _renderer->CreateDataTextureIntoArray(zeroColorTexture, _terrainColorTextureArray, index);
+
+    delete[] zeroColorTexture.data;
 
     // Samplers
     Renderer::SamplerDesc alphaSamplerDesc;
@@ -565,9 +567,9 @@ void TerrainRenderer::RegisterChunksToBeLoaded(Terrain::Map& map, ivec2 middleCh
     ivec2 endPos = ivec2(middleChunk.x + radius, middleChunk.y + radius);
     endPos = glm::min(endPos, ivec2(63, 63));
 
-    for (i32 y = startPos.y; y < endPos.y; y++)
+    for (i32 y = startPos.y; y <= endPos.y; y++)
     {
-        for (i32 x = startPos.x; x < endPos.x; x++)
+        for (i32 x = startPos.x; x <= endPos.x; x++)
         {
             RegisterChunkToBeLoaded(map, x, y);
         }
@@ -690,8 +692,13 @@ bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
     _cellBoundingBoxes.clear();
     _mapObjectRenderer->Clear();
 
+    // Unload everything but the first texture in our color array
+    _renderer->UnloadTexturesInArray(_terrainColorTextureArray, 1);
+    // Unload everything in our alpha array
+    _renderer->UnloadTexturesInArray(_terrainAlphaTextureArray, 0);
+
     RegisterChunksToBeLoaded(mapSingleton.currentMap, ivec2(32, 32), 32); // Load everything
-    //RegisterChunksToBeLoaded(mapSingleton.currentMap, ivec2(32, 50), 4); // Goldshire
+    //RegisterChunksToBeLoaded(mapSingleton.currentMap, ivec2(31, 52), 1); // Goldshire
     //RegisterChunksToBeLoaded(map, ivec2(40, 32), 8); // Razor Hill
     //RegisterChunksToBeLoaded(map, ivec2(22, 25), 8); // Borean Tundra
 
@@ -726,6 +733,8 @@ bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
         _renderer->UnmapBuffer(instanceUploadBuffer);
         _renderer->CopyBuffer(_instanceBuffer, 0, instanceUploadBuffer, 0, uploadBufferDesc.size);
     }
+
+    _mapObjectRenderer->ExecuteLoad();
 
     return true;
 }
@@ -933,6 +942,6 @@ void TerrainRenderer::LoadChunk(const ChunkToBeLoaded& chunkToBeLoaded)
         }
     }
 
-    //_mapObjectRenderer->LoadMapObjects(chunk, stringTable);
+    _mapObjectRenderer->RegisterMapObjectsToBeLoaded(chunk, stringTable);
     _loadedChunks.push_back(chunkID);
 }

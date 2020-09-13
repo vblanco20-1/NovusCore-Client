@@ -369,6 +369,16 @@ void ClientRenderer::InitImgui()
     _renderer->InitImgui();
 }
 
+size_t ClientRenderer::GetVRAMUsage()
+{
+    return _renderer->GetVRAMUsage();
+}
+
+size_t ClientRenderer::GetVRAMBudget()
+{
+    return _renderer->GetVRAMBudget();
+}
+
 void ClientRenderer::CreatePermanentResources()
 {
     // Main color rendertarget

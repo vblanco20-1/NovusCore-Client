@@ -7,6 +7,7 @@
 #include <Networking/InputQueue.h>
 #include <Networking/MessageHandler.h>
 #include <Renderer/Renderer.h>
+#include <Memory/MemoryTracker.h>
 #include "Rendering/ClientRenderer.h"
 #include "Rendering/TerrainRenderer.h"
 #include "Rendering/CameraFreelook.h"
@@ -224,6 +225,7 @@ void EngineLoop::Run()
             break;
         
         DrawEngineStats(&statsSingleton);
+        DrawMemoryStats();
         DrawImguiMenuBar();
 
         timings.simulationFrameTime = updateTimer.GetLifeTime();
@@ -483,6 +485,46 @@ void EngineLoop::DrawEngineStats(EngineStatsSingleton* stats)
     ImGui::End();
 }
 
+void EngineLoop::DrawMemoryStats()
+{
+    ImGui::Begin("Memory Info");
+
+    // RAM
+    size_t ramUsage = Memory::MemoryTracker::GetMemoryUsage() / 1000000;
+    size_t ramBudget = Memory::MemoryTracker::GetMemoryBudget() / 1000000;
+    f32 ramPercent = (static_cast<f32>(ramUsage) / static_cast<f32>(ramBudget)) * 100;
+
+    ImGui::Text("RAM Usage: %luMB / %luMB (%.2f%%)", ramUsage, ramBudget, ramPercent);
+
+    size_t ramMinBudget = 3500;
+    f32 ramMinPercent = (static_cast<f32>(ramUsage) / static_cast<f32>(ramMinBudget)) * 100;
+    ImGui::Text("RAM Usage (Min specs): %luMB / %luMB (%.2f%%)", ramUsage, ramMinBudget, ramMinPercent);
+
+    size_t ramUsagePeak = Memory::MemoryTracker::GetMemoryUsagePeak() / 1000000;
+    f32 ramPeakPercent = (static_cast<f32>(ramUsagePeak) / static_cast<f32>(ramBudget)) * 100;
+
+    ImGui::Text("RAM Usage (Peak): %luMB / %luMB (%.2f%%)", ramUsagePeak, ramBudget, ramPeakPercent);
+
+    f32 ramMinPeakPercent = (static_cast<f32>(ramUsagePeak) / static_cast<f32>(ramMinBudget)) * 100;
+    ImGui::Text("RAM Usage (Peak, Min specs): %luMB / %luMB (%.2f%%)", ramUsagePeak, ramMinBudget, ramMinPeakPercent);
+
+    // VRAM
+    ImGui::Spacing();
+
+    size_t vramUsage = _clientRenderer->GetVRAMUsage() / 1000000;
+    
+    size_t vramBudget = _clientRenderer->GetVRAMBudget() / 1000000;
+    f32 vramPercent = (static_cast<f32>(vramUsage) / static_cast<f32>(vramBudget)) * 100;
+
+    ImGui::Text("VRAM Usage: %luMB / %luMB (%.2f%%)", vramUsage, vramBudget, vramPercent);
+
+    size_t vramMinBudget = 1500;
+    f32 vramMinPercent = (static_cast<f32>(vramUsage) / static_cast<f32>(vramMinBudget)) * 100;
+
+    ImGui::Text("VRAM Usage (Min specs): %luMB / %luMB (%.2f%%)", vramUsage, vramMinBudget, vramMinPercent);
+
+    ImGui::End();
+}
 
 void EngineLoop::DrawImguiMenuBar()
 {
