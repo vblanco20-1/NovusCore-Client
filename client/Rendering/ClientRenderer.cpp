@@ -17,6 +17,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "imgui/imgui_impl_glfw.h"
+#include "imgui/implot.h"
 
 
 const size_t FRAME_ALLOCATOR_SIZE = 8 * 1024 * 1024; // 8 MB
@@ -362,9 +363,9 @@ void ClientRenderer::Render()
 
 void ClientRenderer::InitImgui()
 {
-	ImGui::CreateContext();
-
-	ImGui_ImplGlfw_InitForVulkan(_window->GetWindow(),true);
+    ImGui::CreateContext();
+    ImPlot::CreateContext();
+    ImGui_ImplGlfw_InitForVulkan(_window->GetWindow(),true);
 
     _renderer->InitImgui();
 }

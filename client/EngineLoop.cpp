@@ -55,6 +55,8 @@
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/misc/cpp/imgui_stdlib.h"
 
+#include "imgui/implot.h"
+
 #include "CVar/CVarSystem.h"
 
 EngineLoop::EngineLoop() : _isRunning(false), _inputQueue(256), _outputQueue(256)
@@ -480,8 +482,15 @@ void EngineLoop::DrawEngineStats(EngineStatsSingleton* stats)
             renderTimes.push_back(stats->frameStats[i].renderFrameTime * 1000);
         }
 
-        ImGui::PlotHistogram("Update Times", updateTimes.data(), (int)updateTimes.size());
-        ImGui::PlotHistogram("Render Times", renderTimes.data(), (int)renderTimes.size());
+        ImPlot::SetNextPlotLimits(0.0, 120.0, 0, 33.0);
+
+        //lock minimum Y to 0 (cant have negative ms)
+        //lock X completely as its fixed 120 frames
+        ImPlot::BeginPlot("Timing","frame","ms",ImVec2(400,300),0,ImPlotAxisFlags_Lock,ImPlotAxisFlags_LockMin);
+
+        ImPlot::PlotLine("Update Time", updateTimes.data(), (int)updateTimes.size());
+        ImPlot::PlotLine("Render Time", renderTimes.data(), (int)renderTimes.size());
+        ImPlot::EndPlot();
     }
 
     ImGui::End();
