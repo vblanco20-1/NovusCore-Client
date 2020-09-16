@@ -1,6 +1,7 @@
 #include "TerrainRenderer.h"
 #include "DebugRenderer.h"
 #include "MapObjectRenderer.h"
+#include "WaterRenderer.h"
 #include <entt.hpp>
 #include "../Utils/ServiceLocator.h"
 #include "../Utils/MapUtils.h"
@@ -64,6 +65,7 @@ TerrainRenderer::TerrainRenderer(Renderer::Renderer* renderer, DebugRenderer* de
     , _debugRenderer(debugRenderer)
 {
     _mapObjectRenderer = new MapObjectRenderer(renderer); // Needs to be created before CreatePermanentResources
+    _waterRenderer = new WaterRenderer(renderer); // Needs to be created before CreatePermanentResources
     CreatePermanentResources();
 
     ServiceLocator::GetInputManager()->RegisterKeybind("ToggleCulling", GLFW_KEY_F2, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [this](Window* window, std::shared_ptr<Keybind> keybind)
@@ -144,7 +146,8 @@ void TerrainRenderer::Update(f32 deltaTime)
     }
 
     // Subrenderers
-    //_mapObjectRenderer->Update(deltaTime);
+    _mapObjectRenderer->Update(deltaTime);
+    //_waterRenderer->Update(deltaTime);
 }
 
 __forceinline bool IsInsideFrustum(const vec4* planes, const Geometry::AABoundingBox& boundingBox)
@@ -419,6 +422,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
 
     // Subrenderers
     _mapObjectRenderer->AddMapObjectPass(renderGraph, globalDescriptorSet, renderTarget, depthTarget, frameIndex);
+    //_waterRenderer->AddWaterPass(renderGraph, globalDescriptorSet, renderTarget, depthTarget, frameIndex);
 }
 
 void TerrainRenderer::CreatePermanentResources()
@@ -700,10 +704,11 @@ bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
     if (!MapLoader::LoadMap(registry, mapInternalNameHash))
         return false;
 
-    // Clear Terrain & WMOs
+    // Clear Terrain, WMOs and Water
     _loadedChunks.clear();
     _cellBoundingBoxes.clear();
     _mapObjectRenderer->Clear();
+    //_waterRenderer->Clear();
 
     // Unload everything but the first texture in our color array
     _renderer->UnloadTexturesInArray(_terrainColorTextureArray, 1);
@@ -715,7 +720,7 @@ bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
     //RegisterChunksToBeLoaded(map, ivec2(40, 32), 8); // Razor Hill
     //RegisterChunksToBeLoaded(map, ivec2(22, 25), 8); // Borean Tundra
 
-    ExecuteLoad();
+    ExecuteLoad(); 
 
     // Upload instance data
     {
@@ -748,6 +753,9 @@ bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
     }
 
     _mapObjectRenderer->ExecuteLoad();
+
+    // Load Water
+    //_waterRenderer->LoadWater(_loadedChunks);
 
     return true;
 }
