@@ -194,7 +194,6 @@ private:
     std::vector<Terrain::MapObjectVertex> _vertices;
     std::vector<InstanceData> _instances;
     std::vector<InstanceLookupData> _instanceLookupData;
-    std::vector<u32> _instanceLookupIDs;
     std::vector<Material> _materials;
     std::vector<MaterialParameters> _materialParameters;
     std::vector<Terrain::CullingData> _cullingData;
@@ -209,7 +208,6 @@ private:
     Renderer::BufferID _indexBuffer = Renderer::BufferID::Invalid();
     Renderer::BufferID _instanceBuffer = Renderer::BufferID::Invalid();
     Renderer::BufferID _instanceLookupBuffer = Renderer::BufferID::Invalid();
-    Renderer::BufferID _instanceLookupIDBuffer = Renderer::BufferID::Invalid();
     Renderer::BufferID _materialBuffer = Renderer::BufferID::Invalid();
     Renderer::BufferID _materialParametersBuffer = Renderer::BufferID::Invalid();
     Renderer::BufferID _cullingDataBuffer = Renderer::BufferID::Invalid();

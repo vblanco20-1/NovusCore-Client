@@ -84,9 +84,16 @@ PSOutput main(PSInput input)
     MaterialParam materialParam = LoadMaterialParam(input.materialParamID);
     Material material = LoadMaterial(materialParam.materialID);
     
-    float4 tex0 = _textures[material.textureIDs[0]].Sample(_sampler, input.uv01.xy);
-    float4 tex1 = _textures[material.textureIDs[1]].Sample(_sampler, input.uv01.zw);
+    // Doing this, I get errors only when GPU validation is enabled
+    //float4 tex0 = _textures[material.textureIDs[0]].Sample(_sampler, input.uv01.xy);
+    //float4 tex1 = _textures[material.textureIDs[1]].Sample(_sampler, input.uv01.zw);
     
+    // If I do this instead, it works
+    uint textureID0 = material.textureIDs[0]; // Prevents invalid patching of shader when running GPU validation layers, maybe remove in future
+    uint textureID1 = material.textureIDs[1]; // Prevents invalid patching of shader when running GPU validation layers, maybe remove in future
+    float4 tex0 = _textures[textureID0].Sample(_sampler, input.uv01.xy);
+    float4 tex1 = _textures[textureID1].Sample(_sampler, input.uv01.zw);
+
     float alphaTestVal = f16tof32(material.alphaTestVal);
     if (tex0.a < alphaTestVal)
     {

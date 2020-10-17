@@ -255,7 +255,6 @@ void MapObjectRenderer::Clear()
     _drawParameters.clear();
     _instances.clear();
     _instanceLookupData.clear();
-    _instanceLookupIDs.clear();
     _materials.clear();
     _materialParameters.clear();
     _cullingData.clear();
@@ -346,10 +345,23 @@ bool MapObjectRenderer::LoadMapObject(MapObjectToBeLoaded& mapObjectToBeLoaded, 
         u32 vertexColorCount = static_cast<u32>(mapObject.vertexColors[i].size());
         if (vertexColorCount > 0)
         {
+            // Calculate padded size
+            u32 width = 1024;
+            u32 height = static_cast<u32>(glm::ceil(static_cast<f32>(vertexColorCount) / static_cast<f32>(width)));
+
+            // Resize the vector
+            u32 newVertexColorCount = width * height;
+            mapObject.vertexColors[i].resize(newVertexColorCount);
+
+            // Set the padded data to black
+            u32 sizeDifference = (newVertexColorCount - vertexColorCount) * sizeof(u32);
+            memset(&mapObject.vertexColors[i].data()[vertexColorCount], 0, sizeDifference);
+
+            // Create texture
             Renderer::DataTextureDesc vertexColorTextureDesc;
             vertexColorTextureDesc.debugName = "VertexColorTexture";
-            vertexColorTextureDesc.width = vertexColorCount;
-            vertexColorTextureDesc.height = 1;
+            vertexColorTextureDesc.width = width;
+            vertexColorTextureDesc.height = height;
             vertexColorTextureDesc.format = Renderer::ImageFormat::IMAGE_FORMAT_B8G8R8A8_UNORM;
             vertexColorTextureDesc.data = reinterpret_cast<u8*>(mapObject.vertexColors[i].data());
 
@@ -739,10 +751,6 @@ void MapObjectRenderer::CreateBuffers()
     }
 
     // Create draw count buffer
-    if (_drawCountBuffer != Renderer::BufferID::Invalid())
-    {
-        _renderer->QueueDestroyBuffer(_drawCountBuffer);
-    }
     if (_drawCountBuffer == Renderer::BufferID::Invalid())
     {
         Renderer::BufferDesc desc;

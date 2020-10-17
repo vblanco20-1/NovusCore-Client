@@ -22,9 +22,6 @@
 
 #include "imgui/imgui_impl_vulkan.h"
 
-#define NOVUSCORE_RENDERER_DEBUG_OVERRIDE 0 // This makes it so we use the debug layers even when we are not in Debug, like when we are in Release
-#define NOVUSCORE_RENDERER_GPU_VALIDATION 1
-
 namespace Renderer
 {
     namespace Backend
@@ -131,7 +128,7 @@ namespace Renderer
 
         void RenderDeviceVK::InitOnce()
         {
-#if _DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE
+#if _DEBUG
             DebugMarkerUtilVK::SetDebugMarkersEnabled(true);
 #endif
             InitVulkan();
@@ -259,7 +256,7 @@ namespace Renderer
 
         void RenderDeviceVK::InitVulkan()
         {
-#if _DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE
+#if _DEBUG
             // Check validation layer support
             CheckValidationLayerSupport();
 #endif
@@ -272,15 +269,6 @@ namespace Renderer
             appInfo.pEngineName = "NovusCore";
             appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
             appInfo.apiVersion = VK_API_VERSION_1_0;
-
-#if (_DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE) && NOVUSCORE_RENDERER_GPU_VALIDATION
-            VkValidationFeatureEnableEXT gpuValidationFeature = VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT;
-
-            VkValidationFeaturesEXT validationFeatures = {};
-            validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-            validationFeatures.enabledValidationFeatureCount = 1;
-            validationFeatures.pEnabledValidationFeatures = &gpuValidationFeature;
-#endif
 
             VkInstanceCreateInfo createInfo = {};
             createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -303,19 +291,15 @@ namespace Renderer
             createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
             createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
-#if _DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE
+#if _DEBUG
             VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
             createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
             createInfo.ppEnabledLayerNames = validationLayers.data();
 
             PopulateDebugMessengerCreateInfo(debugCreateInfo);
 
-#if NOVUSCORE_RENDERER_GPU_VALIDATION
-            createInfo.pNext = &validationFeatures;
-            validationFeatures.pNext = &debugCreateInfo;
-#else
+
             createInfo.pNext = &debugCreateInfo;
-#endif
             
 #else
             createInfo.enabledLayerCount = 0;
@@ -352,7 +336,7 @@ namespace Renderer
 
         void RenderDeviceVK::SetupDebugMessenger()
         {
-#if _DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE
+#if _DEBUG
             VkDebugUtilsMessengerCreateInfoEXT createInfo;
             PopulateDebugMessengerCreateInfo(createInfo);
 
@@ -446,7 +430,7 @@ namespace Renderer
             createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
             createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
-#if _DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE
+#if _DEBUG
             std::vector<const char*> enabledLayers;
             for (const char* layer : validationLayers)
             {
@@ -1158,7 +1142,7 @@ namespace Renderer
 
             std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-#if _DEBUG || NOVUSCORE_RENDERER_DEBUG_OVERRIDE
+#if _DEBUG
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
             extensions.push_back("VK_KHR_get_physical_device_properties2");
@@ -1304,8 +1288,8 @@ namespace Renderer
             imageBarrier.subresourceRange.levelCount = numMipLevels;
             imageBarrier.subresourceRange.layerCount = numLayers;
 
-            VkPipelineStageFlagBits srcFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            VkPipelineStageFlagBits dstFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            VkPipelineStageFlagBits srcFlags = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+            VkPipelineStageFlagBits dstFlags = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
             switch (oldLayout) 
             {
@@ -1318,6 +1302,10 @@ namespace Renderer
                 case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
                     imageBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
                     srcFlags = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+                    break;
+                case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+                    imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                    srcFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
                     break;
                 case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
                     imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;

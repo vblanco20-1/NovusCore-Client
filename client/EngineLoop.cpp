@@ -59,6 +59,9 @@
 
 #include "CVar/CVarSystem.h"
 
+AutoCVar_Int CVAR_FramerateLock("framerate.lock", "enable locking framerate", 1, CVarFlags::EditCheckbox);
+AutoCVar_Int CVAR_FramerateTarget("framerate.target", "target framerate", 60);
+
 EngineLoop::EngineLoop() : _isRunning(false), _inputQueue(256), _outputQueue(256)
 {
     _network.asioService = std::make_shared<asio::io_service>(2);
@@ -205,8 +208,6 @@ void EngineLoop::Run()
     MovementSystem::Init(_updateFramework.gameRegistry);
     SimulateDebugCubeSystem::Init(_updateFramework.gameRegistry);
 
-    f32 targetDelta = 1.0f / 60.f;
-
     Timer timer;
     Timer updateTimer;
     Timer renderTimer;
@@ -242,17 +243,26 @@ void EngineLoop::Run()
         
         statsSingleton.AddTimings(timings.deltaTime, timings.simulationFrameTime, timings.renderFrameTime);
 
-        // Wait for tick rate, this might be an overkill implementation but it has the most even tickrate I've seen - MPursche
-        /*for (deltaTime = timer.GetDeltaTime(); deltaTime < targetDelta - 0.0025f; deltaTime = timer.GetDeltaTime())
+        bool lockFrameRate = CVAR_FramerateLock.Get() == 1;
+        
+        if (lockFrameRate)
         {
-            ZoneScopedNC("WaitForTickRate::Sleep", tracy::Color::AntiqueWhite1)
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }*/
+            f32 targetFramerate = static_cast<f32>(CVAR_FramerateTarget.Get());
+            targetFramerate = Math::Max(targetFramerate, 10.0f);
+            f32 targetDelta = 1.0f / targetFramerate;
 
-        for (deltaTime = timer.GetDeltaTime(); deltaTime < targetDelta; deltaTime = timer.GetDeltaTime())
-        {
-            ZoneScopedNC("WaitForTickRate::Yield", tracy::Color::AntiqueWhite1)
-            std::this_thread::yield();
+            // Wait for tick rate, this might be an overkill implementation but it has the most even tickrate I've seen - MPursche
+            /*for (deltaTime = timer.GetDeltaTime(); deltaTime < targetDelta - 0.0025f; deltaTime = timer.GetDeltaTime())
+            {
+                ZoneScopedNC("WaitForTickRate::Sleep", tracy::Color::AntiqueWhite1)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }*/
+
+            for (deltaTime = timer.GetDeltaTime(); deltaTime < targetDelta; deltaTime = timer.GetDeltaTime())
+            {
+                ZoneScopedNC("WaitForTickRate::Yield", tracy::Color::AntiqueWhite1)
+                    std::this_thread::yield();
+            }
         }
 
         FrameMark;
