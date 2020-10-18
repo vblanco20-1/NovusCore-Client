@@ -1,50 +1,33 @@
 #include "Button.h"
 #include "Label.h"
-#include "Panel.h"
+#include <tracy/Tracy.hpp>
 #include "../../Scripting/ScriptEngine.h"
 #include "../../Utils/ServiceLocator.h"
 
-#include "../ECS/Components/Singletons/UILockSingleton.h"
-#include "../ECS/Components/Visible.h"
-#include "../ECS/Components/Collidable.h"
+#include "../ECS/Components/Transform.h"
+#include "../ECS/Components/Transformevents.h"
+#include "../ECS/Components/Image.h"
+#include "../ECS/Components/Renderable.h"
+#include "../ECS/Components/SortKey.h"
 
 namespace UIScripting
 {
-    Button::Button() : BaseElement(UI::UIElementType::UITYPE_BUTTON) 
+    Button::Button() : BaseElement(UI::ElementType::UITYPE_BUTTON) 
     {
+        ZoneScoped;
         entt::registry* registry = ServiceLocator::GetUIRegistry();
 
-        UISingleton::UILockSingleton& uiLockSingleton = registry->ctx<UISingleton::UILockSingleton>();
-        uiLockSingleton.mutex.lock();
-        {
-            UIComponent::Transform* transform = &registry->emplace<UIComponent::Transform>(_entityId);
-            transform->sortData.entId = _entityId;
-            transform->sortData.type = _elementType;
-            transform->asObject = this;
-
-            registry->emplace<UIComponent::Visible>(_entityId);
-            registry->emplace<UIComponent::Visibility>(_entityId);
-            registry->emplace<UIComponent::Collidable>(_entityId);
-
-            UIComponent::TransformEvents* events = &registry->emplace<UIComponent::TransformEvents>(_entityId);
-            events->asObject = this;
-        }
-        uiLockSingleton.mutex.unlock();
-
-        _panel = Panel::CreatePanel();
-        _panel->SetFillParentSize(true);
-        _panel->SetAnchor(vec2(0.5, 0.5));
-        _panel->SetLocalAnchor(vec2(0.5, 0.5));
-        _panel->SetParent(this);
-        _panel->SetCollisionEnabled(false);
-
+        registry->emplace<UIComponent::TransformEvents>(_entityId);
+        registry->emplace<UIComponent::Image>(_entityId);
+        registry->emplace<UIComponent::Renderable>(_entityId).renderType = UI::RenderType::Image;
+        
         _label = Label::CreateLabel();
-        _label->SetFillParentSize(true);
-        _label->SetAnchor(vec2(0.5, 0.5));
-        _label->SetLocalAnchor(vec2(0.5, 0.5));
-        _label->SetParent(this);
-        _label->SetCollisionEnabled(false);
         _label->SetHorizontalAlignment(UI::TextHorizontalAlignment::CENTER);
+        auto labelTransform = &registry->get<UIComponent::Transform>(_label->GetEntityId());
+        labelTransform->parent = _entityId;
+        labelTransform->SetFlag(UI::TransformFlags::FILL_PARENTSIZE);
+        registry->get<UIComponent::SortKey>(_label->GetEntityId()).data.depth++;
+        registry->get<UIComponent::Transform>(_entityId).children.push_back({ _label->GetEntityId(), _label->GetType() });
     }
     
     void Button::RegisterType()
@@ -67,7 +50,7 @@ namespace UIScripting
         r = ScriptEngine::RegisterScriptClassFunction("Color GetOutlineColor()", asMETHOD(Button, GetTextOutlineColor)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetOutlineWidth(float width)", asMETHOD(Button, SetTextOutlineWidth)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("float GetOutlineWidth()", asMETHOD(Button, GetTextOutlineWidth)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("void SetFont(string fontPath, float fontSize)", asMETHOD(Button, SetTextFont)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void SetFont(string fontPath, float fontSize)", asMETHOD(Button, SetFont)); assert(r >= 0);
 
         //Panel Functions.
         r = ScriptEngine::RegisterScriptClassFunction("string GetTexture()", asMETHOD(Button, GetTexture)); assert(r >= 0);
@@ -86,7 +69,7 @@ namespace UIScripting
     {
         UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
         events->onClickCallback = callback;
-        events->SetFlag(UI::UITransformEventsFlags::UIEVENTS_FLAG_CLICKABLE);
+        events->SetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_CLICKABLE);
     }
 
     void Button::SetText(const std::string& text)
@@ -125,29 +108,33 @@ namespace UIScripting
         return _label->GetOutlineWidth();
     }
 
-    void Button::SetTextFont(std::string fontPath, f32 fontSize)
+    void Button::SetFont(std::string fontPath, f32 fontSize)
     {
         _label->SetFont(fontPath, fontSize);
     }
 
-    void Button::SetTexture(const std::string& texture)
-    {
-        _panel->SetTexture(texture);
-    }
-
     const std::string& Button::GetTexture() const
     {
-        return _panel->GetTexture();
+        const UIComponent::Image* image = &ServiceLocator::GetUIRegistry()->get<UIComponent::Image>(_entityId);
+        return image->style.texture;
     }
-
-    void Button::SetColor(const Color& color)
+    void Button::SetTexture(const std::string& texture)
     {
-        _panel->SetColor(color);
+        entt::registry* registry = ServiceLocator::GetUIRegistry();
+        UIComponent::Image* image = &registry->get<UIComponent::Image>(_entityId);
+        image->style.texture = texture;
     }
 
     const Color Button::GetColor() const
     {
-        return _panel->GetColor();
+        const UIComponent::Image* image = &ServiceLocator::GetUIRegistry()->get<UIComponent::Image>(_entityId);
+        return image->style.color;
+    }
+    void Button::SetColor(const Color& color)
+    {
+        entt::registry* registry = ServiceLocator::GetUIRegistry();
+        UIComponent::Image* image = &registry->get<UIComponent::Image>(_entityId);
+        image->style.color = color;
     }
 
     Button* Button::CreateButton()

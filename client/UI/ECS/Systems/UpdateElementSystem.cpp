@@ -8,12 +8,15 @@
 #include "../Components/Transform.h"
 #include "../Components/Image.h"
 #include "../Components/Text.h"
+#include "../Components/InputField.h"
 #include "../Components/Dirty.h"
 #include "../Components/BoundsDirty.h"
+#include "../Components/Destroy.h"
 #include "../Components/Visible.h"
 #include "../Components/Collidable.h"
 #include "../Components/Singletons/UIDataSingleton.h"
 #include "../../Utils/TransformUtils.h"
+#include "../../Utils/ColllisionUtils.h"
 #include "../../Utils/TextUtils.h"
 #include "../../angelscript/BaseElement.h"
 
@@ -23,6 +26,8 @@ namespace UISystem
     void CalculateVertices(const vec2& pos, const vec2& size, std::vector<UISystem::UIVertex>& vertices)
     {
         const UISingleton::UIDataSingleton& dataSingleton = ServiceLocator::GetUIRegistry()->ctx<UISingleton::UIDataSingleton>();
+        vertices.clear();
+        vertices.reserve(4);
 
         vec2 upperLeftPos = vec2(pos.x, pos.y);
         vec2 upperRightPos = vec2(pos.x + size.x, pos.y);
@@ -35,8 +40,6 @@ namespace UISystem
         upperRightPos /= dataSingleton.UIRESOLUTION;
         lowerLeftPos /= dataSingleton.UIRESOLUTION;
         lowerRightPos /= dataSingleton.UIRESOLUTION;
-
-        vertices.reserve(4);
 
         // UI Vertices
         UISystem::UIVertex& upperLeft = vertices.emplace_back();
@@ -59,64 +62,38 @@ namespace UISystem
     void UpdateElementSystem::Update(entt::registry& registry)
     {
         Renderer::Renderer* renderer = ServiceLocator::GetRenderer();
-
         auto& dataSingleton = registry.ctx<UISingleton::UIDataSingleton>();
+        
         // Destroy elements queued for destruction.
-        {
-            size_t deleteEntityNum = dataSingleton.destructionQueue.size_approx();
-            std::vector<entt::entity> deleteEntities;
-            deleteEntities.reserve(deleteEntityNum);
-
-            dataSingleton.destructionQueue.try_dequeue_bulk(deleteEntities.begin(), deleteEntityNum);
-            for (entt::entity entId : deleteEntities)
-            {
-                delete dataSingleton.entityToAsObject[entId];
-            }
-
-            registry.destroy(deleteEntities.begin(), deleteEntities.end());
-        }
-        // Toggle visibility of elements
-        {
-            entt::entity entId;
-            while (dataSingleton.visibilityToggleQueue.try_dequeue(entId))
-            {
-                if (registry.has<UIComponent::Visible>(entId))
-                    registry.remove<UIComponent::Visible>(entId);
-                else
-                    registry.emplace<UIComponent::Visible>(entId);
-            }
-        }
-        // Toggle collision of elements
-        {
-            entt::entity entId;
-            while (dataSingleton.collisionToggleQueue.try_dequeue(entId))
-            {
-                if (registry.has<UIComponent::Collidable>(entId))
-                    registry.remove<UIComponent::Collidable>(entId);
-                else
-                    registry.emplace<UIComponent::Collidable>(entId);
-            }
-        }
+        auto deleteView = registry.view<UIComponent::Destroy>();
+        deleteView.each([&](entt::entity entityId) {
+                delete dataSingleton.entityToElement[entityId];
+                dataSingleton.entityToElement.erase(entityId);
+            });
+        registry.destroy(deleteView.begin(), deleteView.end());
 
         auto boundsUpdateView = registry.view<UIComponent::Transform, UIComponent::BoundsDirty>();
-        boundsUpdateView.each([&](UIComponent::Transform& transform)
+        boundsUpdateView.each([&](entt::entity entityId, UIComponent::Transform& transform)
             {
-                UIUtils::Transform::UpdateBounds(ServiceLocator::GetUIRegistry(), &transform, true);
+                UIUtils::Collision::UpdateBounds(&registry, entityId, true);
+            });
+
+        auto inputFieldView = registry.view<UIComponent::Transform, UIComponent::InputField, UIComponent::Text, UIComponent::Dirty>();
+        inputFieldView.each([&](const UIComponent::Transform& transform, const UIComponent::InputField& inputField, UIComponent::Text& text)
+            {
+                text.pushback = UIUtils::Text::CalculatePushback(&text, inputField.writeHeadIndex, 0.2f, transform.size.x, transform.size.y);
             });
 
         auto imageView = registry.view<UIComponent::Transform, UIComponent::Image, UIComponent::Dirty>();
         imageView.each([&](UIComponent::Transform& transform, UIComponent::Image& image)
         {
             ZoneScopedNC("UpdateElementSystem::Update::ImageView", tracy::Color::RoyalBlue);
-
-            // Renderable Updates
-            if (image.texture.length() == 0)
+            if (image.style.texture.length() == 0)
                 return;
 
-            // (Re)load texture
             {
                 ZoneScopedNC("(Re)load Texture", tracy::Color::RoyalBlue);
-                image.textureID = renderer->LoadTexture(Renderer::TextureDesc{ image.texture });
+                image.textureID = renderer->LoadTexture(Renderer::TextureDesc{ image.style.texture });
             }
 
             // Create constant buffer if necessary
@@ -126,7 +103,7 @@ namespace UISystem
                 constantBuffer = new Renderer::Buffer<UIComponent::Image::ImageConstantBuffer>(renderer, "UpdateElementSystemConstantBuffer", Renderer::BUFFER_USAGE_UNIFORM_BUFFER, Renderer::BufferCPUAccess::WriteOnly);
                 image.constantBuffer = constantBuffer;
             }
-            constantBuffer->resource.color = image.color;
+            constantBuffer->resource.color = image.style.color;
             constantBuffer->ApplyAll();
 
             // Transform Updates.
@@ -158,17 +135,19 @@ namespace UISystem
         textView.each([&](UIComponent::Transform& transform, UIComponent::Text& text)
         {
             ZoneScopedNC("UpdateElementSystem::Update::TextView", tracy::Color::SkyBlue);
-            if (text.fontPath.length() == 0)
+            if (text.style.fontPath.length() == 0)
                 return;
 
-            text.font = Renderer::Font::GetFont(renderer, text.fontPath, text.fontSize);
-
+            {
+                ZoneScopedNC("(Re)load Font", tracy::Color::RoyalBlue);
+                text.font = Renderer::Font::GetFont(renderer, text.style.fontPath, text.style.fontSize);
+            }
+            
             std::vector<f32> lineWidths;
             std::vector<size_t> lineBreakPoints;
             size_t finalCharacter = UIUtils::Text::CalculateLineWidthsAndBreaks(&text, transform.size.x, transform.size.y, lineWidths, lineBreakPoints);
 
             size_t textLengthWithoutSpaces = std::count_if(text.text.begin() + text.pushback, text.text.end() - (text.text.length() - finalCharacter), [](char c) { return !std::isspace(c); });
-            size_t difference = textLengthWithoutSpaces - text.glyphCount;
 
             // If textLengthWithoutSpaces is bigger than the amount of glyphs we allocated in our buffer we need to reallocate the buffer
             static const u32 perGlyphVertexSize = sizeof(UISystem::UIVertex) * 4; // 4 vertices per glyph
@@ -201,18 +180,16 @@ namespace UISystem
 
                 text.vertexBufferGlyphCount = textLengthWithoutSpaces;
             }
-            
             text.glyphCount = textLengthWithoutSpaces;
-
-            f32 horizontalAlignment = UIUtils::Text::GetHorizontalAlignment(text.horizontalAlignment);
-            f32 verticalAlignment = UIUtils::Text::GetVerticalAlignment(text.verticalAlignment);
-            vec2 currentPosition = UIUtils::Transform::GetAnchorPosition(&transform, vec2(horizontalAlignment, verticalAlignment));
-            f32 startX = currentPosition.x;
-            currentPosition.x -= lineWidths[0] * horizontalAlignment;
-            currentPosition.y += text.fontSize * (1 - verticalAlignment);
 
             if (textLengthWithoutSpaces > 0)
             {
+                vec2 alignment = UIUtils::Text::GetAlignment(&text);
+                vec2 currentPosition = UIUtils::Transform::GetAnchorPosition(&transform, alignment);
+                f32 startX = currentPosition.x;
+                currentPosition.x -= lineWidths[0] * alignment.x;
+                currentPosition.y += text.style.fontSize * (1 - alignment.y);
+
                 std::vector<UISystem::UIVertex> vertices;
 
                 UISystem::UIVertex* baseVertices = reinterpret_cast<UISystem::UIVertex*>(renderer->MapBuffer(text.vertexBufferID));
@@ -226,8 +203,8 @@ namespace UISystem
                     if (currentLine < lineBreakPoints.size() && lineBreakPoints[currentLine] == i)
                     {
                         currentLine++;
-                        currentPosition.y += text.fontSize * text.lineHeight;
-                        currentPosition.x = startX - lineWidths[currentLine] * horizontalAlignment;
+                        currentPosition.y += text.style.fontSize * text.style.lineHeightMultiplier;
+                        currentPosition.x = startX - lineWidths[currentLine] * alignment.x;
                     }
 
                     if (character == '\n')
@@ -236,7 +213,7 @@ namespace UISystem
                     }
                     else if (std::isspace(character))
                     {
-                        currentPosition.x += text.fontSize * 0.15f;
+                        currentPosition.x += text.style.fontSize * 0.15f;
                         continue;
                     }
 
@@ -263,9 +240,9 @@ namespace UISystem
             if (!text.constantBuffer)
                 text.constantBuffer = new Renderer::Buffer<UIComponent::Text::TextConstantBuffer>(renderer, "UpdateElementSystemConstantBuffer", Renderer::BUFFER_USAGE_UNIFORM_BUFFER, Renderer::BufferCPUAccess::WriteOnly);
 
-            text.constantBuffer->resource.textColor = text.color;
-            text.constantBuffer->resource.outlineColor = text.outlineColor;
-            text.constantBuffer->resource.outlineWidth = text.outlineWidth;
+            text.constantBuffer->resource.textColor = text.style.color;
+            text.constantBuffer->resource.outlineColor = text.style.outlineColor;
+            text.constantBuffer->resource.outlineWidth = text.style.outlineWidth;
             text.constantBuffer->Apply(0);
             text.constantBuffer->Apply(1);
         });

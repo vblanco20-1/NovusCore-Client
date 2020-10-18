@@ -1,7 +1,7 @@
 #pragma once
 #include <NovusTypes.h>
 #include <vector>
-#include <entity/entity.hpp>
+#include <entity/fwd.hpp>
 #include "../../../UI/UITypes.h"
 
 namespace UI
@@ -9,21 +9,12 @@ namespace UI
     struct UIChild
     {
         entt::entity entId;
-        UI::UIElementType type;
+        UI::ElementType type;
     };
 
-    enum class DepthLayer : u8
+    enum TransformFlags : u8
     {
-        WORLD,
-        BACKGROUND,
-        LOW,
-        MEDIUM,
-        HIGH,
-        DIALOG,
-        FULLSCREEN,
-        FULLSCREEN_DIALOG,
-        TOOLTIP,
-        MAX
+        FILL_PARENTSIZE = 1 << 0
     };
 }
 
@@ -36,29 +27,18 @@ namespace UIComponent
             children.reserve(8);
         }
 
-        vec2 position = vec2(0, 0);
-        vec2 localPosition = vec2(0, 0);
-        vec2 anchor = vec2(0, 0);
-        vec2 localAnchor = vec2(0, 0);
-        vec2 size = vec2(0, 0);
-        bool fillParentSize = false;
-        union
-        {
-            struct
-            {
-                entt::entity entId;
-                UI::UIElementType type;
-                u16 depth;
-                UI::DepthLayer depthLayer;
-            } sortData{ entt::null, UI::UIElementType::UITYPE_NONE, 0, UI::DepthLayer::MEDIUM };
-            u64 sortKey;
-        };
+        hvec2 position = hvec2(0.f, 0.f);
+        hvec2 localPosition = hvec2(0.f, 0.f);
+        hvec2 anchor = hvec2(0.f, 0.f);
+        hvec2 localAnchor = hvec2(0.f, 0.f);
+        hvec2 size = hvec2(0.f, 0.f);
+        u8 flags = 0;
         entt::entity parent = entt::null;
         std::vector<UI::UIChild> children;
-        void* asObject = nullptr;
 
-        vec2 minBound = vec2(0, 0);
-        vec2 maxBound = vec2(0, 0);
-        bool includeChildBounds = false;
+        inline void ToggleFlag(const UI::TransformFlags inFlags) { flags ^= inFlags; }
+        inline void SetFlag(const UI::TransformFlags inFlags) { flags |= inFlags; }
+        inline void UnsetFlag(const UI::TransformFlags inFlags) { flags &= ~inFlags; }
+        inline bool HasFlag(const UI::TransformFlags inFlags) const { return (flags & inFlags) == inFlags; }
     };
 }

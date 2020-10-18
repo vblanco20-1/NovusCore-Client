@@ -1,9 +1,7 @@
 #pragma once
 
-#include "../ECS/Components/TransformEvents.h"
-#include "../ECS/Components/Image.h"
-#include "../ECS/Components/Checkbox.h"
 #include "BaseElement.h"
+#include "../ECS/Components/TransformEvents.h"
 
 namespace UIScripting
 {
@@ -20,10 +18,9 @@ namespace UIScripting
         const bool IsClickable() const;
         const bool IsDraggable() const;
         const bool IsFocusable() const;
-        void SetEventFlag(const UI::UITransformEventsFlags flags);
-        void UnsetEventFlag(const UI::UITransformEventsFlags flags);
+        void SetEventFlag(const UI::TransformEventsFlags flags);
+        void UnsetEventFlag(const UI::TransformEventsFlags flags);
         void SetOnClickCallback(asIScriptFunction* callback);
-        void SetOnDragCallback(asIScriptFunction* callback);
         void SetOnFocusCallback(asIScriptFunction* callback);
 
         // Background Functions
@@ -50,6 +47,6 @@ namespace UIScripting
         static Checkbox* CreateCheckbox();
 
     private:
-        Panel* checkPanel;
+        Panel* _checkPanel;
     };
 }

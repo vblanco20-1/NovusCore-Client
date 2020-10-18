@@ -18,52 +18,47 @@ namespace UIUtils::Text
 
     size_t CalculateSinglelinePushback(const UIComponent::Text* text, const size_t writeHead, const f32 maxWidth, const f32 bufferDecimal)
     {
+        if (text->text.length() == 0)
+            return 0;
+
+        auto GetAdvance = [&](char c) { return std::isspace(c) ? text->style.fontSize * 0.15f : text->font->GetChar(c).advance; };
+
         size_t oldPushback = Math::Min(text->pushback, text->text.length() - 1);
+        size_t finalCharacter = oldPushback;
 
         f32 lineLength = 0.f;
-        if (oldPushback <= writeHead)
+        bool overflowed = false;
+        for (; finalCharacter < text->text.length(); finalCharacter++)
         {
-            size_t pushBackPoint = oldPushback;
-            bool reachedPercent = false;
-            for (size_t i = oldPushback; i < writeHead; i++)
+            lineLength += GetAdvance(text->text[finalCharacter]);
+
+            if (lineLength >= maxWidth)
             {
-                if (std::isspace(text->text[i]))
-                    lineLength += text->fontSize * 0.15f;
-                else
-                    lineLength += text->font->GetChar(text->text[i]).advance;
-
-                if (!reachedPercent && lineLength > maxWidth * bufferDecimal)
-                {
-                    reachedPercent = true;
-                    pushBackPoint = i;
-                }
-                else if (lineLength > maxWidth)
-                {
-                    reachedPercent = false;
-                    lineLength = 0.f;
-                }
+                overflowed = true;
+                break;
             }
-
-            return pushBackPoint;
         }
 
-        for (size_t i = oldPushback; i > 0; i--)
-        {
-            if (std::isspace(text->text[i]))
-                lineLength += text->fontSize * 0.15f;
-            else
-                lineLength += text->font->GetChar(text->text[i]).advance;
+        if (writeHead >= oldPushback && (!overflowed || writeHead <= finalCharacter))
+            return oldPushback;
 
-            if (lineLength > maxWidth * bufferDecimal)
-                return i;
+        overflowed = writeHead >= finalCharacter;
+        const f32 bufferSpace = maxWidth * (overflowed ? 1.f - bufferDecimal : bufferDecimal);
+        lineLength = 0.f;
+
+        for (size_t i = writeHead - 1; i > 0; --i)
+        {
+            lineLength += GetAdvance(text->text[i]);
+
+            if (lineLength > bufferSpace)
+                return i + 1;
         }
 
         return 0;
     }
-
     size_t CalculateMultilinePushback(const UIComponent::Text* text, const size_t writeHead, const f32 maxWidth, const f32 maxHeight)
     {
-        u32 maxLines = static_cast<u32>(maxHeight / (text->fontSize * text->lineHeight));
+        const u32 maxLines = static_cast<u32>(maxHeight / (text->style.fontSize * text->style.lineHeightMultiplier));
         std::vector<f32> lineWidths;
         std::vector<size_t> lineBreakPoints;
         CalculateAllLineWidthsAndBreaks(text, maxWidth, lineWidths, lineBreakPoints);
@@ -76,8 +71,6 @@ namespace UIUtils::Text
         for (size_t i = lineBreakPoints.size()-1; i > 0; i--)
         {
             if (lineBreakPoints[i] > writeHead)
-                writeHeadLine = i - 1;
-            if (lineBreakPoints[i] > text->pushback)
                 writeHeadLine = i - 1;
         }
 
@@ -98,42 +91,46 @@ namespace UIUtils::Text
         ZoneScoped;
         assert(text->font);
 
+        if (text->text.length() == 0)
+            return 0;
+
         lineWidths.clear();
         lineWidths.push_back(0);
         lineBreakPoints.clear();
 
-        u32 maxLines = static_cast<u32>(text->isMultiline ? 1 : maxHeight / (text->fontSize * text->lineHeight));
-        size_t lastWordStart = 0;
+        const u32 MaxLines = static_cast<u32>(text->isMultiline ? maxHeight / (text->style.fontSize * text->style.lineHeightMultiplier) : 1);
+        size_t wordStart = 0;
         f32 wordWidth = 0.f;
+        f32 advance = 0.f;
 
-        auto BreakLine = [&](f32 newLineWidth, size_t breakPoint)
+        const auto IsLastLine = [&]() { return lineWidths.size() == MaxLines; };
+        const auto BreakWord = [&](size_t i)
         {
-            lineWidths.push_back(newLineWidth);
-            lineBreakPoints.push_back(breakPoint);
+            wordStart = i + 1;
+            wordWidth = 0.f;
+        };
+        const auto BreakLine = [&](size_t i)
+        {
+            lineWidths.push_back(0);
+            lineBreakPoints.push_back(i);
         };
 
         for (size_t i = text->pushback; i < text->text.length(); i++)
         {
-            // Handle line break character.
             if (text->text[i] == '\n')
             {
-                //If we have reached max amount of lines then the final character will be the one before this.
-                if (lineWidths.size() == maxLines)
-                    return i - 1;
+                if (IsLastLine())
+                    return i;
 
-                BreakLine(0.f, i);
-                lastWordStart = i + 1;
-                wordWidth = 0.f;
-
+                BreakWord(i);
+                BreakLine(i);
                 continue;
             }
 
-            f32 advance = 0.f;
             if (std::isspace(text->text[i]))
             {
-                advance = text->fontSize * 0.15f;
-                lastWordStart = i + 1;
-                wordWidth = 0.f;
+                advance = text->style.fontSize * 0.15f;
+                BreakWord(i);
             }
             else
             {
@@ -141,22 +138,17 @@ namespace UIUtils::Text
                 wordWidth += advance;
             }
 
-            // Check if adding this character would break the line
             if (lineWidths.back() + advance > maxWidth)
             {
-                //If we have reached max amount of lines then the final fitting character will be the last one to prevent overflow.
-                if (lineWidths.size() == maxLines)
-                    return i - 1;
+                if (IsLastLine())
+                    return i;
 
-                // If the word takes up less than a line break before it else just break in the middle of it.
-                if (wordWidth < maxWidth)
-                {
-                    lineWidths.back() -= wordWidth;
-                    BreakLine(wordWidth, lastWordStart);
-                }
+                if (wordWidth > maxWidth)
+                    BreakLine(i);
                 else
                 {
-                    BreakLine(0, i);
+                    BreakLine(wordStart);
+                    advance = wordWidth;
                 }
             }
 
@@ -174,34 +166,34 @@ namespace UIUtils::Text
         lineWidths.clear();
         lineWidths.push_back(0);
         lineBreakPoints.clear();
-
-        size_t lastWordStart = 0;
+        size_t wordStart = 0;
         f32 wordWidth = 0.f;
+        f32 advance = 0.f;
 
-        auto BreakLine = [&](f32 newLineWidth, size_t breakPoint)
+        const auto BreakWord = [&](size_t i)
         {
-            lineWidths.push_back(newLineWidth);
-            lineBreakPoints.push_back(breakPoint);
+            wordStart = i + 1;
+            wordWidth = 0.f;
+        };
+        const auto BreakLine = [&](size_t i)
+        {
+            lineWidths.push_back(0);
+            lineBreakPoints.push_back(i);
         };
 
         for (size_t i = 0; i < text->text.length(); i++)
         {
-            // Handle line break character.
             if (text->text[i] == '\n')
             {
-                BreakLine(0.f, i);
-                lastWordStart = i + 1;
-                wordWidth = 0.f;
-
+                BreakWord(i);
+                BreakLine(i);
                 continue;
             }
 
-            f32 advance = 0.f;
             if (std::isspace(text->text[i]))
             {
-                advance = text->fontSize * 0.15f;
-                lastWordStart = i + 1;
-                wordWidth = 0.f;
+                advance = text->style.fontSize * 0.15f;
+                BreakWord(i);
             }
             else
             {
@@ -209,18 +201,15 @@ namespace UIUtils::Text
                 wordWidth += advance;
             }
 
-            // Check if adding this character would break the line
             if (lineWidths.back() + advance > maxWidth)
             {
-                // If the word takes up less than a line break before it else just break in the middle of it.
-                if (wordWidth < maxWidth)
-                {
-                    lineWidths.back() -= wordWidth;
-                    BreakLine(wordWidth, lastWordStart);
-                }
+
+                if (wordWidth > maxWidth)
+                    BreakLine(i);
                 else
                 {
-                    BreakLine(0, i);
+                    BreakLine(wordStart);
+                    advance = wordWidth;
                 }
             }
 

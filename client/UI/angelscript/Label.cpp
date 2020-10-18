@@ -1,33 +1,20 @@
 #include "Label.h"
+#include <tracy/Tracy.hpp>
 #include "../../Scripting/ScriptEngine.h"
 #include "../../Utils/ServiceLocator.h"
 
-#include "../ECS/Components/Singletons/UILockSingleton.h"
-#include "../ECS/Components/Visible.h"
 #include "../ECS/Components/Renderable.h"
 
 namespace UIScripting
 {
-    Label::Label() : BaseElement(UI::UIElementType::UITYPE_LABEL) 
-    { 
+    Label::Label() : BaseElement(UI::ElementType::UITYPE_LABEL, false)
+    {
+        ZoneScoped;
         entt::registry* registry = ServiceLocator::GetUIRegistry();
-
-        UISingleton::UILockSingleton& uiLockSingleton = registry->ctx<UISingleton::UILockSingleton>();
-        uiLockSingleton.mutex.lock();
-        {
-            UIComponent::Transform* transform = &registry->emplace<UIComponent::Transform>(_entityId);
-            transform->sortData.entId = _entityId;
-            transform->sortData.type = _elementType;
-            transform->asObject = this;
-
-            registry->emplace<UIComponent::Visible>(_entityId);
-            registry->emplace<UIComponent::Visibility>(_entityId);
-            registry->emplace<UIComponent::Text>(_entityId);
-            registry->emplace<UIComponent::Renderable>(_entityId);
-        }
-        uiLockSingleton.mutex.unlock();
+        registry->emplace<UIComponent::Text>(_entityId);
+        registry->emplace<UIComponent::Renderable>(_entityId).renderType = UI::RenderType::Text;
     }
-    
+
     void Label::RegisterType()
     {
         i32 r = ScriptEngine::RegisterScriptClass("Label", 0, asOBJ_REF | asOBJ_NOCOUNT);
@@ -45,8 +32,8 @@ namespace UIScripting
         r = ScriptEngine::RegisterScriptClassFunction("void SetOutlineWidth(float width)", asMETHOD(Label, SetOutlineWidth)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("float GetOutlineWidth()", asMETHOD(Label, GetOutlineWidth)); assert(r >= 0);
 
-        r = ScriptEngine::RegisterScriptClassFunction("void SetHorizontalAlignment(uint8 alignement)", asMETHOD(Label, SetOutlineWidth)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("void SetVerticalAlignment(uint8 alignment)", asMETHOD(Label, SetOutlineWidth)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void SetHorizontalAlignment(uint8 alignment)", asMETHOD(Label, SetHorizontalAlignment)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void SetVerticalAlignment(uint8 alignment)", asMETHOD(Label, SetVerticalAlignment)); assert(r >= 0);
     }
 
     const std::string Label::GetText() const
@@ -65,56 +52,54 @@ namespace UIScripting
     {
         entt::registry* registry = ServiceLocator::GetUIRegistry();
         UIComponent::Text* text = &registry->get<UIComponent::Text>(_entityId);
-        text->fontPath = fontPath;
-        text->fontSize = fontSize;
+        text->style.fontPath = fontPath;
+        text->style.fontSize = fontSize;
     }
 
     const Color& Label::GetColor() const
     {
         const UIComponent::Text* text = &ServiceLocator::GetUIRegistry()->get<UIComponent::Text>(_entityId);
-        return text->outlineColor;
+        return text->style.outlineColor;
     }
     void Label::SetColor(const Color& color)
     {
         entt::registry* registry = ServiceLocator::GetUIRegistry();
         UIComponent::Text* text = &registry->get<UIComponent::Text>(_entityId);
-        text->color = color;
+        text->style.color = color;
     }
 
     const Color& Label::GetOutlineColor() const
     {
         const UIComponent::Text* text = &ServiceLocator::GetUIRegistry()->get<UIComponent::Text>(_entityId);
-        return text->outlineColor;
+        return text->style.outlineColor;
     }
     void Label::SetOutlineColor(const Color& outlineColor)
     {
         entt::registry* registry = ServiceLocator::GetUIRegistry();
         UIComponent::Text* text = &registry->get<UIComponent::Text>(_entityId);
-        text->outlineColor = outlineColor;
+        text->style.outlineColor = outlineColor;
     }
 
     const f32 Label::GetOutlineWidth() const
     {
         const UIComponent::Text* text = &ServiceLocator::GetUIRegistry()->get<UIComponent::Text>(_entityId);
-        return text->outlineWidth;
+        return text->style.outlineWidth;
     }
     void Label::SetOutlineWidth(f32 outlineWidth)
     {
         entt::registry* registry = ServiceLocator::GetUIRegistry();
         UIComponent::Text* text = &registry->get<UIComponent::Text>(_entityId);
-        text->outlineWidth = outlineWidth;
+        text->style.outlineWidth = outlineWidth;
     }
 
     void Label::SetHorizontalAlignment(UI::TextHorizontalAlignment alignment)
     {
-        entt::registry* registry = ServiceLocator::GetUIRegistry();
-        UIComponent::Text* text = &registry->get<UIComponent::Text>(_entityId);
+        UIComponent::Text* text = &ServiceLocator::GetUIRegistry()->get<UIComponent::Text>(_entityId);
         text->horizontalAlignment = alignment;
     }
     void Label::SetVerticalAlignment(UI::TextVerticalAlignment alignment)
     {
-        entt::registry* registry = ServiceLocator::GetUIRegistry();
-        UIComponent::Text* text = &registry->get<UIComponent::Text>(_entityId);
+        UIComponent::Text* text = &ServiceLocator::GetUIRegistry()->get<UIComponent::Text>(_entityId);
         text->verticalAlignment = alignment;
     }
 

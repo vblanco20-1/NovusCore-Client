@@ -2,7 +2,6 @@
 #include <NovusTypes.h>
 
 #include "../ECS/Components/TransformEvents.h"
-#include "../ECS/Components/Image.h"
 #include "BaseElement.h"
 
 namespace UIScripting
@@ -10,7 +9,7 @@ namespace UIScripting
     class Panel : public BaseElement
     {
     public:
-        Panel();
+        Panel(bool collisionEnabled = true);
 
         static void RegisterType();
 
@@ -18,10 +17,11 @@ namespace UIScripting
         const bool IsClickable() const;
         const bool IsDraggable() const;
         const bool IsFocusable() const;
-        void SetEventFlag(const UI::UITransformEventsFlags flags);
-        void UnsetEventFlag(const UI::UITransformEventsFlags flags);
+        void SetEventFlag(const UI::TransformEventsFlags flags);
+        void UnsetEventFlag(const UI::TransformEventsFlags flags);
         void SetOnClickCallback(asIScriptFunction* callback);
-        void SetOnDragCallback(asIScriptFunction* callback);
+        void SetOnDragStartedCallback(asIScriptFunction* callback);
+        void SetOnDragEndedCallback(asIScriptFunction* callback);
         void SetOnFocusCallback(asIScriptFunction* callback);
 
         // Renderable Functions
@@ -31,6 +31,6 @@ namespace UIScripting
         const Color GetColor() const;
         void SetColor(const Color& color);
 
-        static Panel* CreatePanel();
+        static Panel* CreatePanel(bool collisionEnabled = true);
     };
 }

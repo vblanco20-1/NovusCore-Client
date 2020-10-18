@@ -11,18 +11,19 @@
 #include "../Utils/ServiceLocator.h"
 
 #include "../UI/ECS/Components/Singletons/UIDataSingleton.h"
-#include "../UI/ECS/Components/Singletons/UILockSingleton.h"
-#include "../UI/ECS/Components/Singletons/UIEntityPoolSingleton.h"
+#include "../UI/ECS/Components/ElementInfo.h"
 #include "../UI/ECS/Components/Transform.h"
 #include "../UI/ECS/Components/TransformEvents.h"
+#include "../UI/ECS/Components/SortKey.h"
 #include "../UI/ECS/Components/Renderable.h"
 #include "../UI/ECS/Components/Image.h"
 #include "../UI/ECS/Components/Text.h"
 #include "../UI/ECS/Components/Visible.h"
 #include "../UI/ECS/Components/Visibility.h"
+#include "../UI/ECS/Components/Collision.h"
+#include "../UI/ECS/Components/Collidable.h"
 #include "../UI/ECS/Components/Dirty.h"
 #include "../UI/ECS/Components/BoundsDirty.h"
-#include "../UI/ECS/Components/Collidable.h"
 #include "../UI/ECS/Components/InputField.h"
 #include "../UI/ECS/Components/Checkbox.h"
 
@@ -35,33 +36,51 @@ UIRenderer::UIRenderer(Renderer::Renderer* renderer) : _renderer(renderer)
     UIInput::RegisterCallbacks();
 
     entt::registry* registry = ServiceLocator::GetUIRegistry();
+    registry->prepare<UIComponent::ElementInfo>();
     registry->prepare<UIComponent::Transform>();
     registry->prepare<UIComponent::TransformEvents>();
+    registry->prepare<UIComponent::SortKey>();
+
     registry->prepare<UIComponent::Renderable>();
     registry->prepare<UIComponent::Image>();
     registry->prepare<UIComponent::Text>();
 
-    registry->prepare<UIComponent::Visible>();
+    registry->prepare<UIComponent::Collision>();
+    registry->prepare<UIComponent::Collidable>();
     registry->prepare<UIComponent::Visibility>();
+    registry->prepare<UIComponent::Visible>();
+
     registry->prepare<UIComponent::Dirty>();
     registry->prepare<UIComponent::BoundsDirty>();
-    registry->prepare<UIComponent::Collidable>();
 
     registry->prepare<UIComponent::InputField>();
     registry->prepare<UIComponent::Checkbox>();
 
     // Register UI singletons.
     registry->set<UISingleton::UIDataSingleton>();
-    registry->set<UISingleton::UILockSingleton>();
-
-    // Register entity pool.
-    auto entityPoolSingleton = &registry->set<UISingleton::UIEntityPoolSingleton>();
-    entityPoolSingleton->AllocatePool();
 
     //Reserve component space
-    registry->reserve<UIComponent::Transform>(entityPoolSingleton->ENTITIES_TO_PREALLOCATE);
-    registry->reserve<UIComponent::Dirty>(entityPoolSingleton->ENTITIES_TO_PREALLOCATE);
-    registry->reserve<UIComponent::BoundsDirty>(entityPoolSingleton->ENTITIES_TO_PREALLOCATE);
+    const int ENTITIES_TO_PREALLOCATE = 10000;
+    registry->reserve(ENTITIES_TO_PREALLOCATE);
+
+    registry->reserve<UIComponent::Transform>(ENTITIES_TO_PREALLOCATE);
+    registry->reserve<UIComponent::TransformEvents>(ENTITIES_TO_PREALLOCATE);
+    registry->reserve<UIComponent::SortKey>(ENTITIES_TO_PREALLOCATE);
+    registry->reserve<UIComponent::Renderable>(ENTITIES_TO_PREALLOCATE);
+    registry->reserve<UIComponent::Text>(ENTITIES_TO_PREALLOCATE);
+    registry->reserve<UIComponent::Image>(ENTITIES_TO_PREALLOCATE);
+
+    registry->reserve<UIComponent::Collision>(ENTITIES_TO_PREALLOCATE);
+    registry->reserve<UIComponent::Collidable>(ENTITIES_TO_PREALLOCATE);
+
+    registry->reserve<UIComponent::Visibility>(ENTITIES_TO_PREALLOCATE);
+    registry->reserve<UIComponent::Visible>(ENTITIES_TO_PREALLOCATE);
+
+    registry->reserve<UIComponent::Dirty>(ENTITIES_TO_PREALLOCATE);
+    registry->reserve<UIComponent::BoundsDirty>(ENTITIES_TO_PREALLOCATE);
+
+    registry->reserve<UIComponent::InputField>(ENTITIES_TO_PREALLOCATE);
+    registry->reserve<UIComponent::Checkbox>(ENTITIES_TO_PREALLOCATE);
 
 }
 
@@ -129,21 +148,17 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
             commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, frameIndex);
 
             entt::registry* registry = ServiceLocator::GetUIRegistry();
-            auto renderGroup = registry->group<UIComponent::Transform>(entt::get<UIComponent::Renderable, UIComponent::Visible>);
-            renderGroup.sort<UIComponent::Transform>([](UIComponent::Transform& first, UIComponent::Transform& second) { return first.sortKey < second.sortKey; });
-            renderGroup.each([this, &commandList, frameIndex, &registry, &activePipeline, &textPipeline, &imagePipeline](const auto entity, UIComponent::Transform& transform)
+            auto renderGroup = registry->group<UIComponent::SortKey>(entt::get<UIComponent::Renderable, UIComponent::Visible>);
+            renderGroup.sort<UIComponent::SortKey>([](UIComponent::SortKey& first, UIComponent::SortKey& second) { return first.key < second.key; });
+            renderGroup.each([this, &commandList, frameIndex, &registry, &activePipeline, &textPipeline, &imagePipeline](const auto entity, UIComponent::SortKey& sortKey, UIComponent::Renderable& renderable)
             {
-                switch (transform.sortData.type)
+                switch (renderable.renderType)
                 {
-                    case UI::UIElementType::UITYPE_LABEL:
-                    case UI::UIElementType::UITYPE_INPUTFIELD:
+                case UI::RenderType::Text:
                     {
                         UIComponent::Text& text = registry->get<UIComponent::Text>(entity);
-                        if (!text.constantBuffer)
-                            return;
-
-                        if (text.vertexBufferID == Renderer::BufferID::Invalid())
-                            return;
+                        if (!text.constantBuffer || text.vertexBufferID == Renderer::BufferID::Invalid())
+                            break;
 
                         if (activePipeline != textPipeline)
                         {
@@ -170,7 +185,7 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                         commandList.PopMarker();
                         break;
                     }
-                    default:
+                case UI::RenderType::Image:
                     {
                         UIComponent::Image& image = registry->get<UIComponent::Image>(entity);
                         if (!image.constantBuffer)
@@ -200,6 +215,8 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                         commandList.PopMarker();
                         break;
                     }
+                default:
+                    NC_LOG_FATAL("Renderable widget tried to render with invalid render type.");
                 }
             });
 

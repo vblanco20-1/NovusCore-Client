@@ -1,45 +1,31 @@
 #include "Inputfield.h"
 #include "../../Scripting/ScriptEngine.h"
 #include "../../Utils/ServiceLocator.h"
-#include "../Utils/TextUtils.h"
 
-#include "../ECS/Components/Singletons/UILockSingleton.h"
-#include "../ECS/Components/Visible.h"
+#include "../ECS/Components/Singletons/UIDataSingleton.h"
+#include "../ECS/Components/ElementInfo.h"
+#include "../ECS/Components/TransformEvents.h"
+#include "../ECS/Components/InputField.h"
+#include "../ECS/Components/Text.h"
 #include "../ECS/Components/Renderable.h"
-#include "../ECS/Components/Collidable.h"
+#include "../Utils/TextUtils.h"
+#include "../Utils/EventUtils.h"
 
 #include <GLFW/glfw3.h>
 
 namespace UIScripting
 {
-    InputField::InputField() : BaseElement(UI::UIElementType::UITYPE_INPUTFIELD)
+    InputField::InputField() : BaseElement(UI::ElementType::UITYPE_INPUTFIELD)
     {
+        ZoneScoped;
         entt::registry* registry = ServiceLocator::GetUIRegistry();
 
-        UISingleton::UILockSingleton& uiLockSingleton = registry->ctx<UISingleton::UILockSingleton>();
-        uiLockSingleton.mutex.lock();
-        {
-            UIComponent::Transform* transform = &registry->emplace<UIComponent::Transform>(_entityId);
-            transform->sortData.entId = _entityId;
-            transform->sortData.type = _elementType;
-            transform->asObject = this;
+        UIComponent::TransformEvents* events = &registry->emplace<UIComponent::TransformEvents>(_entityId);
+        events->SetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
 
-            registry->emplace<UIComponent::Visible>(_entityId);
-            registry->emplace<UIComponent::Visibility>(_entityId);
-            registry->emplace<UIComponent::Text>(_entityId);
-            UIComponent::InputField* inputField = &registry->emplace<UIComponent::InputField>(_entityId);
-            inputField->asObject = this;
-
-            registry->emplace<UIComponent::Renderable>(_entityId);
-            registry->emplace<UIComponent::Collidable>(_entityId);
-
-            UIComponent::TransformEvents* events = &registry->emplace<UIComponent::TransformEvents>(_entityId);
-            events->asObject = this;
-
-            events->SetFlag(UI::UITransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
-        }
-        uiLockSingleton.mutex.unlock();
-
+        registry->emplace<UIComponent::InputField>(_entityId);
+        registry->emplace<UIComponent::Text>(_entityId);
+        registry->emplace<UIComponent::Renderable>(_entityId).renderType = UI::RenderType::Text;
     }
 
     void InputField::RegisterType()
@@ -81,11 +67,11 @@ namespace UIScripting
         case GLFW_KEY_DELETE:
             RemoveNextCharacter();
             break;
-        case GLFW_KEY_LEFT:
-            MovePointerLeft();
-            break;
         case GLFW_KEY_RIGHT:
             MovePointerRight();
+            break;
+        case GLFW_KEY_LEFT:
+            MovePointerLeft();
             break;
         case GLFW_KEY_ENTER:
         {
@@ -97,15 +83,17 @@ namespace UIScripting
                 break;
             }
 
-            registry->get<UIComponent::InputField>(_entityId).OnSubmit();
-            registry->get<UIComponent::TransformEvents>(_entityId).OnUnfocused();
+            auto [elementInfo, inputField, events] = registry->get<UIComponent::ElementInfo, UIComponent::InputField, UIComponent::TransformEvents>(_entityId);
+            UIUtils::ExecuteEvent(elementInfo.scriptingObject, inputField.onSubmitCallback);
+            UIUtils::ExecuteEvent(elementInfo.scriptingObject, events.onUnfocusedCallback);
+
             registry->ctx<UISingleton::UIDataSingleton>().focusedWidget = entt::null;
-            MarkSelfDirty();
             break;
         }
         default:
             break;
         }
+        MarkSelfDirty();
     }
 
     void InputField::HandleCharInput(const char input)
@@ -119,8 +107,8 @@ namespace UIScripting
         else
             text->text.insert(inputField->writeHeadIndex, 1, input);
 
-        MovePointerRight();
-        MarkDirty();
+        // Move pointer one step to the right.
+        inputField->writeHeadIndex++;
     }
 
     void InputField::RemovePreviousCharacter()
@@ -134,7 +122,6 @@ namespace UIScripting
 
         text->text.erase(inputField->writeHeadIndex - 1, 1);
         inputField->writeHeadIndex--;
-        MarkDirty();
     }
     void InputField::RemoveNextCharacter()
     {
@@ -146,7 +133,6 @@ namespace UIScripting
             return;
 
         text->text.erase(inputField->writeHeadIndex, 1);
-        MarkDirty();
     }
 
     void InputField::MovePointerLeft()
@@ -169,7 +155,7 @@ namespace UIScripting
         entt::registry* registry = ServiceLocator::GetUIRegistry();
         UIComponent::InputField* inputField = &registry->get<UIComponent::InputField>(_entityId);
         const UIComponent::Text* text = &registry->get<UIComponent::Text>(_entityId);
-        
+
         inputField->writeHeadIndex = Math::Min(position, text->text.length());
     }
 
@@ -189,22 +175,22 @@ namespace UIScripting
         UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
 
         if (focusable)
-            events->SetFlag(UI::UITransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
+            events->SetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
         else
-            events->UnsetFlag(UI::UITransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
+            events->UnsetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
     }
 
     void InputField::SetOnFocusCallback(asIScriptFunction* callback)
     {
         UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
         events->onFocusedCallback = callback;
-        events->SetFlag(UI::UITransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
+        events->SetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
     }
     void InputField::SetOnUnFocusCallback(asIScriptFunction* callback)
     {
         UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
         events->onUnfocusedCallback = callback;
-        events->SetFlag(UI::UITransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
+        events->SetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
     }
 
     const std::string InputField::GetText() const
@@ -228,45 +214,42 @@ namespace UIScripting
     const Color& InputField::GetTextColor() const
     {
         const UIComponent::Text* text = &ServiceLocator::GetUIRegistry()->get<UIComponent::Text>(_entityId);
-        return text->color;
+        return text->style.color;
     }
     void InputField::SetTextColor(const Color& color)
     {
-        entt::registry* registry = ServiceLocator::GetUIRegistry();
-        UIComponent::Text* text = &registry->get<UIComponent::Text>(_entityId);
-        text->color = color;
+        UIComponent::Text* text = &ServiceLocator::GetUIRegistry()->get<UIComponent::Text>(_entityId);
+        text->style.color = color;
     }
 
     const Color& InputField::GetTextOutlineColor() const
     {
         const UIComponent::Text* text = &ServiceLocator::GetUIRegistry()->get<UIComponent::Text>(_entityId);
-        return text->outlineColor;
+        return text->style.outlineColor;
     }
     void InputField::SetTextOutlineColor(const Color& outlineColor)
     {
-        entt::registry* registry = ServiceLocator::GetUIRegistry();
-        UIComponent::Text* text = &registry->get<UIComponent::Text>(_entityId);
-        text->outlineColor = outlineColor;
+        UIComponent::Text* text = &ServiceLocator::GetUIRegistry()->get<UIComponent::Text>(_entityId);
+        text->style.outlineColor = outlineColor;
     }
 
     const f32 InputField::GetTextOutlineWidth() const
     {
         const UIComponent::Text* text = &ServiceLocator::GetUIRegistry()->get<UIComponent::Text>(_entityId);
-        return text->outlineWidth;
+        return text->style.outlineWidth;
     }
     void InputField::SetTextOutlineWidth(f32 outlineWidth)
     {
         entt::registry* registry = ServiceLocator::GetUIRegistry();
         UIComponent::Text* text = &registry->get<UIComponent::Text>(_entityId);
-        text->outlineWidth = outlineWidth;
+        text->style.outlineWidth = outlineWidth;
     }
 
     void InputField::SetTextFont(const std::string& fontPath, f32 fontSize)
     {
-        entt::registry* registry = ServiceLocator::GetUIRegistry();
-        UIComponent::Text* text = &registry->get<UIComponent::Text>(_entityId);
-        text->fontPath = fontPath;
-        text->fontSize = fontSize;
+        UIComponent::Text* text = &ServiceLocator::GetUIRegistry()->get<UIComponent::Text>(_entityId);
+        text->style.fontPath = fontPath;
+        text->style.fontSize = fontSize;
     }
 
     InputField* InputField::CreateInputField()

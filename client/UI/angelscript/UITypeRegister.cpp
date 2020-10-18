@@ -6,17 +6,19 @@
 #include "Button.h"
 #include "Inputfield.h"
 #include "Checkbox.h"
+#include "Slider.h"
 
 namespace UI
 {
     void RegisterTypes()
     {
-        UIUtils::Registry::RegisterNamespace();
         UIScripting::BaseElement::RegisterType();
         UIScripting::Panel::RegisterType();
         UIScripting::Label::RegisterType();
         UIScripting::Button::RegisterType();
         UIScripting::InputField::RegisterType();
         UIScripting::Checkbox::RegisterType();
+        UIScripting::Slider::RegisterType();
+        UIUtils::Registry::RegisterNamespace();
     }
 }

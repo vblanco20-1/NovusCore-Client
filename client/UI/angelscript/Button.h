@@ -3,13 +3,9 @@
 
 #include "BaseElement.h"
 
-#include "../ECS/Components/Transform.h"
-#include "../ECS/Components/TransformEvents.h"
-
 namespace UIScripting
 {
     class Label;
-    class Panel;
 
     class Button : public BaseElement
     {
@@ -35,7 +31,7 @@ namespace UIScripting
         const f32 GetTextOutlineWidth() const;
         void SetTextOutlineWidth(f32 outlineWidth);
 
-        void SetTextFont(std::string fontPath, f32 fontSize);
+        void SetFont(std::string fontPath, f32 fontSize);
 
         //Panel Functions        
         const std::string& GetTexture() const;
@@ -48,6 +44,5 @@ namespace UIScripting
 
     private:
         Label* _label;
-        Panel* _panel;
     };
 }

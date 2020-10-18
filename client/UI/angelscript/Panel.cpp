@@ -2,42 +2,25 @@
 #include "../../Scripting/ScriptEngine.h"
 #include "../../Utils/ServiceLocator.h"
 
-#include "../ECS/Components/Singletons/UILockSingleton.h"
-#include "../ECS/Components/Visible.h"
+#include "../ECS/Components/Image.h"
 #include "../ECS/Components/Renderable.h"
-#include "../ECS/Components/Collidable.h"
 
 namespace UIScripting
 {
-    Panel::Panel() : BaseElement(UI::UIElementType::UITYPE_PANEL)
-    { 
+    Panel::Panel(bool collisionEnabled) : BaseElement(UI::ElementType::UITYPE_PANEL, collisionEnabled)
+    {
+        ZoneScoped;
         entt::registry* registry = ServiceLocator::GetUIRegistry();
-
-        UISingleton::UILockSingleton& uiLockSingleton = registry->ctx<UISingleton::UILockSingleton>();
-        uiLockSingleton.mutex.lock();
-        {
-            UIComponent::Transform* transform = &registry->emplace<UIComponent::Transform>(_entityId);
-            transform->sortData.entId = _entityId;
-            transform->sortData.type = _elementType;
-            transform->asObject = this;
-
-            registry->emplace<UIComponent::Visible>(_entityId);
-            registry->emplace<UIComponent::Visibility>(_entityId);
-            registry->emplace<UIComponent::Image>(_entityId);
-            registry->emplace<UIComponent::Renderable>(_entityId);
-            registry->emplace<UIComponent::Collidable>(_entityId);
-
-            UIComponent::TransformEvents* events = &registry->emplace<UIComponent::TransformEvents>(_entityId);
-            events->asObject = this;
-        }
-        uiLockSingleton.mutex.unlock();
+        registry->emplace<UIComponent::TransformEvents>(_entityId);
+        registry->emplace<UIComponent::Image>(_entityId);
+        registry->emplace<UIComponent::Renderable>(_entityId).renderType = UI::RenderType::Image;
     }
 
     void Panel::RegisterType()
     {
         i32 r = ScriptEngine::RegisterScriptClass("Panel", 0, asOBJ_REF | asOBJ_NOCOUNT);
         r = ScriptEngine::RegisterScriptInheritance<BaseElement, Panel>("BaseElement");
-        r = ScriptEngine::RegisterScriptFunction("Panel@ CreatePanel()", asFUNCTION(Panel::CreatePanel)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptFunction("Panel@ CreatePanel(bool collisionEnabled = true)", asFUNCTION(Panel::CreatePanel)); assert(r >= 0);
 
         // TransformEvents Functions
         r = ScriptEngine::RegisterScriptClassFunction("void SetEventFlag(int8 flags)", asMETHOD(Panel, SetEventFlag)); assert(r >= 0);
@@ -47,7 +30,8 @@ namespace UIScripting
         r = ScriptEngine::RegisterScriptClassFunction("bool IsFocusable()", asMETHOD(Panel, IsFocusable)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptFunctionDef("void PanelEventCallback(Panel@ panel)"); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void OnClick(PanelEventCallback@ cb)", asMETHOD(Panel, SetOnClickCallback)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("void OnDragged(PanelEventCallback@ cb)", asMETHOD(Panel, SetOnDragCallback)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void OnDragStarted(PanelEventCallback@ cb)", asMETHOD(Panel, SetOnDragStartedCallback)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void OnDragEnded(PanelEventCallback@ cb)", asMETHOD(Panel, SetOnDragEndedCallback)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void OnFocused(PanelEventCallback@ cb)", asMETHOD(Panel, SetOnFocusCallback)); assert(r >= 0);
 
         // Renderable Functions
@@ -73,12 +57,12 @@ namespace UIScripting
         return events->IsFocusable();
     }
 
-    void Panel::SetEventFlag(const UI::UITransformEventsFlags flags)
+    void Panel::SetEventFlag(const UI::TransformEventsFlags flags)
     {
         UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
         events->SetFlag(flags);
     }
-    void Panel::UnsetEventFlag(const UI::UITransformEventsFlags flags)
+    void Panel::UnsetEventFlag(const UI::TransformEventsFlags flags)
     {
         UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
         events->UnsetFlag(flags);
@@ -88,50 +72,56 @@ namespace UIScripting
     {
         UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
         events->onClickCallback = callback;
-        events->SetFlag(UI::UITransformEventsFlags::UIEVENTS_FLAG_CLICKABLE);
+        events->SetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_CLICKABLE);
     }
-    void Panel::SetOnDragCallback(asIScriptFunction* callback)
+
+    void Panel::SetOnDragStartedCallback(asIScriptFunction* callback)
     {
         UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
-        events->onDraggedCallback = callback;
-        events->SetFlag(UI::UITransformEventsFlags::UIEVENTS_FLAG_DRAGGABLE);
+        events->onDragStartedCallback = callback;
+        events->SetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_DRAGGABLE);
     }
+    void Panel::SetOnDragEndedCallback(asIScriptFunction* callback)
+    {
+        UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
+        events->onDragEndedCallback = callback;
+        events->SetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_DRAGGABLE);
+    }
+
     void Panel::SetOnFocusCallback(asIScriptFunction* callback)
     {
         UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
         events->onFocusedCallback = callback;
-        events->SetFlag(UI::UITransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
+        events->SetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
     }
 
     const std::string& Panel::GetTexture() const
     {
         const UIComponent::Image* image = &ServiceLocator::GetUIRegistry()->get<UIComponent::Image>(_entityId);
-        return image->texture;
+        return image->style.texture;
     }
     void Panel::SetTexture(const std::string& texture)
     {
-        entt::registry* registry = ServiceLocator::GetUIRegistry();
-        UIComponent::Image* image = &registry->get<UIComponent::Image>(_entityId);
-        image->texture = texture;
+        UIComponent::Image* image = &ServiceLocator::GetUIRegistry()->get<UIComponent::Image>(_entityId);
+        image->style.texture = texture;
     }
 
     const Color Panel::GetColor() const
     {
         const UIComponent::Image* image = &ServiceLocator::GetUIRegistry()->get<UIComponent::Image>(_entityId);
-        return image->color;
+        return image->style.color;
 
     }
     void Panel::SetColor(const Color& color)
     {
-        entt::registry* registry = ServiceLocator::GetUIRegistry();
-        UIComponent::Image* image = &registry->get<UIComponent::Image>(_entityId);
-        image->color = color;
+        UIComponent::Image* image = &ServiceLocator::GetUIRegistry()->get<UIComponent::Image>(_entityId);
+        image->style.color = color;
     }
 
-    Panel* Panel::CreatePanel()
+    Panel* Panel::CreatePanel(bool collisionEnabled)
     {
-        Panel* panel = new Panel();
-        
+        Panel* panel = new Panel(collisionEnabled);
+
         return panel;
     }
 }

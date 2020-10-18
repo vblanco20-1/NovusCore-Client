@@ -1,22 +1,15 @@
 #pragma once
 #include <NovusTypes.h>
 #include <entity/entity.hpp>
-#include <shared_mutex>
-
 #include "../../Scripting/ScriptEngine.h"
-#include "../ECS/Components/Transform.h"
-#include "../ECS/Components/Visibility.h"
-#include "../ECS/Components/Singletons/UIDataSingleton.h"
-#include "LockToken.h"
+#include "../UITypes.h"
 
 namespace UIScripting
 {
     class BaseElement
     {
-        friend struct ::UISingleton::UIDataSingleton;
-
     public:
-        BaseElement(UI::UIElementType elementType);
+        BaseElement(UI::ElementType elementType, bool collisionEnabled = true);
 
         virtual ~BaseElement() { }
 
@@ -39,8 +32,11 @@ namespace UIScripting
             r = ScriptEngine::RegisterScriptClassFunction("vec2 GetParentPosition()", asMETHOD(T, GetParentPosition)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void SetPosition(vec2 position)", asMETHOD(T, SetPosition)); assert(r >= 0);
 
+            r = ScriptEngine::RegisterScriptClassFunction("vec2 GetAnchor()", asMETHOD(T, GetAnchor)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void SetAnchor(vec2 anchor)", asMETHOD(T, SetAnchor)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("vec2 GetLocalAnchor()", asMETHOD(T, GetLocalAnchor)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void SetLocalAnchor(vec2 anchor)", asMETHOD(T, SetLocalAnchor)); assert(r >= 0);
+
             r = ScriptEngine::RegisterScriptClassFunction("vec2 GetSize()", asMETHOD(T, GetSize)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void SetSize(vec2 size)", asMETHOD(T, SetSize)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("bool GetFillParentSize()", asMETHOD(T, GetFillParentSize)); assert(r >= 0);
@@ -51,9 +47,10 @@ namespace UIScripting
             r = ScriptEngine::RegisterScriptClassFunction("uint16 GetDepth()", asMETHOD(T, GetDepth)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void SetDepth(uint16 depth)", asMETHOD(T, SetDepth)); assert(r >= 0);
 
+            r = ScriptEngine::RegisterScriptClassFunction("BaseElement@ GetParent()", asMETHOD(T, GetParent)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void SetParent(BaseElement@ parent)", asMETHOD(T, SetParent)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void UnsetParent()", asMETHOD(T, UnsetParent)); assert(r >= 0);
-            r = ScriptEngine::RegisterScriptClassFunction("void Destroy()", asMETHOD(T, Destroy)); assert(r >= 0);
+            r = ScriptEngine::RegisterScriptClassFunction("void Destroy(bool destroyChildren = true)", asMETHOD(T, Destroy)); assert(r >= 0);
 
             r = ScriptEngine::RegisterScriptClassFunction("void SetExpandBoundsToChildren(bool enabled)", asMETHOD(T, SetExpandBoundsToChildren)); assert(r >= 0);
 
@@ -61,7 +58,6 @@ namespace UIScripting
             r = ScriptEngine::RegisterScriptClassFunction("bool IsLocallyVisible()", asMETHOD(T, IsLocallyVisible)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("bool IsParentVisible()", asMETHOD(T, IsParentVisible)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void SetVisible(bool visible)", asMETHOD(T, SetVisible)); assert(r >= 0);
-            r = ScriptEngine::RegisterScriptClassFunction("LockToken@ GetLock(uint8 lockState)", asMETHOD(T, GetLock)); assert(r >= 0);
 
             r = ScriptEngine::RegisterScriptClassFunction("void MarkDirty()", asMETHOD(T, MarkDirty)); assert(r >= 0);
             r = ScriptEngine::RegisterScriptClassFunction("void MarkSelfDirty()", asMETHOD(T, MarkSelfDirty)); assert(r >= 0);
@@ -69,7 +65,7 @@ namespace UIScripting
         }
 
         const entt::entity GetEntityId() const { return _entityId; }
-        const UI::UIElementType GetType() const { return _elementType; }
+        const UI::ElementType GetType() const { return _elementType; }
 
         // Transform Functions
         vec2 GetScreenPosition() const;
@@ -97,6 +93,7 @@ namespace UIScripting
         u16 GetDepth() const;
         void SetDepth(const u16 depth);
 
+        BaseElement* GetParent() const;
         void SetParent(BaseElement* parent);
         void UnsetParent();
 
@@ -110,20 +107,14 @@ namespace UIScripting
     
         void SetCollisionEnabled(bool enabled);
 
-        void Destroy();
+        void Destroy(bool destroyChildren = true);
 
         void MarkDirty();
         void MarkSelfDirty();
         void MarkBoundsDirty();
 
-        inline LockToken* GetLock(LockState state)
-        {
-            return new LockToken(_mutex, state);
-        }
     protected:
         entt::entity _entityId;
-        UI::UIElementType _elementType;
-
-        std::shared_mutex _mutex;
+        UI::ElementType _elementType;
     };
 }
