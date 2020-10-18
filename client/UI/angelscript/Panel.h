@@ -31,6 +31,8 @@ namespace UIScripting
         const Color GetColor() const;
         void SetColor(const Color& color);
 
+        void SetSlicing(const u32 topOffset, const u32 rightOffset, const u32 bottomOffset, const u32 leftOffset);
+
         static Panel* CreatePanel(bool collisionEnabled = true);
     };
 }

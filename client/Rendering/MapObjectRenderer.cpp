@@ -605,17 +605,6 @@ void MapObjectRenderer::LoadRenderBatches(Bytebuffer& buffer, Mesh& mesh, Loaded
     mapObject.cullingData.resize(cullingDataSize + numRenderBatches);
 
     buffer.GetBytes(reinterpret_cast<u8*>(&mapObject.cullingData.data()[cullingDataSize]), numRenderBatches * sizeof(Terrain::CullingData));
-
-    static f32 smallestRadius = 100000.0f;
-    for (u32 i = cullingDataSize; i < cullingDataSize + numRenderBatches; i++)
-    {
-        Terrain::CullingData& cullingData = mapObject.cullingData[i];
-        if (cullingData.boundingSphereRadius < smallestRadius)
-        {
-            smallestRadius = cullingData.boundingSphereRadius;
-            NC_LOG_MESSAGE("Smallest radius: %f", smallestRadius);
-        }
-    }
 }
 
 void MapObjectRenderer::AddInstance(LoadedMapObject& mapObject, const Terrain::MapObjectPlacement* placement)

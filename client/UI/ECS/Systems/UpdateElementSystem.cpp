@@ -104,6 +104,8 @@ namespace UISystem
                 image.constantBuffer = constantBuffer;
             }
             constantBuffer->resource.color = image.style.color;
+            constantBuffer->resource.slicingOffset = image.style.slicingOffset;
+            constantBuffer->resource.size = transform.size;
             constantBuffer->ApplyAll();
 
             // Transform Updates.

@@ -39,6 +39,7 @@ namespace UIScripting
         r = ScriptEngine::RegisterScriptClassFunction("void SetTexture(string Texture)", asMETHOD(Panel, SetTexture)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("Color GetColor()", asMETHOD(Panel, GetColor)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetColor(Color color)", asMETHOD(Panel, SetColor)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void SetSlicing(uint topOffset, uint rightOffset, uint bottomOffset, uint leftOffset)", asMETHOD(Panel, SetSlicing)); assert(r >= 0);
     }
 
     const bool Panel::IsClickable() const
@@ -116,6 +117,15 @@ namespace UIScripting
     {
         UIComponent::Image* image = &ServiceLocator::GetUIRegistry()->get<UIComponent::Image>(_entityId);
         image->style.color = color;
+    }
+
+    void Panel::SetSlicing(const u32 topOffset, const u32 rightOffset, const u32 bottomOffset, const u32 leftOffset)
+    {
+        UIComponent::Image* image = &ServiceLocator::GetUIRegistry()->get<UIComponent::Image>(_entityId);
+        image->style.slicingOffset.top = topOffset;
+        image->style.slicingOffset.right = rightOffset;
+        image->style.slicingOffset.bottom = bottomOffset;
+        image->style.slicingOffset.left = leftOffset;
     }
 
     Panel* Panel::CreatePanel(bool collisionEnabled)
