@@ -10,8 +10,11 @@
 #include <Utils/FileReader.h>
 #include "../Utils/ServiceLocator.h"
 #include "../Utils/MapUtils.h"
+#include <CVar/CVarSystem.h>
 
 namespace fs = std::filesystem;
+
+AutoCVar_Float CVAR_CameraSpeed("camera.speed", "Camera Freelook Speed", 7.1111f);
 
 void CameraFreeLook::Init()
 {
@@ -86,7 +89,8 @@ void CameraFreeLook::Init()
         if (!IsActive())
             return false;
 
-        _movementSpeed += 10.0f;
+        f32 newSpeed = CVAR_CameraSpeed.GetFloat() + 10.0f;
+        CVAR_CameraSpeed.Set(newSpeed);
         return true;
     });
     inputManager->RegisterKeybind("DecreaseCameraSpeed", GLFW_KEY_PAGE_DOWN, KEYBIND_ACTION_PRESS, KEYBIND_MOD_ANY, [this](Window* window, std::shared_ptr<Keybind> keybind)
@@ -94,7 +98,9 @@ void CameraFreeLook::Init()
         if (!IsActive())
             return false;
 
-        _movementSpeed = glm::max(_movementSpeed - 10.0f, 7.1111f);
+        f32 newSpeed = CVAR_CameraSpeed.GetFloat() - 10.0f;
+        newSpeed = glm::max(newSpeed, 7.1111f);
+        CVAR_CameraSpeed.Set(newSpeed);
         return true;
     });
     
@@ -135,31 +141,32 @@ void CameraFreeLook::Update(f32 deltaTime, float fovInDegrees, float aspectRatio
         return;
 
     InputManager* inputManager = ServiceLocator::GetInputManager();
+    f32 speed = CVAR_CameraSpeed.GetFloat();
 
     // Movement
     if (inputManager->IsKeyPressed("CameraFreeLook Forward"_h))
     {
-        _position += _front * _movementSpeed * deltaTime;
+        _position += _front * speed * deltaTime;
     }
     if (inputManager->IsKeyPressed("CameraFreeLook Backward"_h))
     {
-        _position -= _front * _movementSpeed * deltaTime;
+        _position -= _front * speed * deltaTime;
     }
     if (inputManager->IsKeyPressed("CameraFreeLook Left"_h))
     {
-        _position += _left * _movementSpeed * deltaTime;
+        _position += _left * speed * deltaTime;
     }
     if (inputManager->IsKeyPressed("CameraFreeLook Right"_h))
     {
-        _position -= _left * _movementSpeed * deltaTime;
+        _position -= _left * speed * deltaTime;
     }
     if (inputManager->IsKeyPressed("CameraFreeLook Up"_h))
     {
-        _position += worldUp * _movementSpeed * deltaTime;
+        _position += worldUp * speed * deltaTime;
     }
     if (inputManager->IsKeyPressed("CameraFreeLook Down"_h))
     {
-        _position -= worldUp * _movementSpeed * deltaTime;
+        _position -= worldUp * speed * deltaTime;
     }
 
     // Compute matrices

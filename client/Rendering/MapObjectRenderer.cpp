@@ -203,6 +203,14 @@ void MapObjectRenderer::AddMapObjectPass(Renderer::RenderGraph* renderGraph, Ren
     }
 }
 
+void MapObjectRenderer::RegisterMapObjectToBeLoaded(const std::string& mapObjectName, const Terrain::MapObjectPlacement& mapObjectPlacement)
+{
+    MapObjectToBeLoaded& mapObjectToBeLoaded = _mapObjectsToBeLoaded.emplace_back();
+    mapObjectToBeLoaded.placement = &mapObjectPlacement;
+    mapObjectToBeLoaded.nmorName = &mapObjectName;
+    mapObjectToBeLoaded.nmorNameHash = StringUtils::fnv1a_32(mapObjectName.c_str(), mapObjectName.length());
+}
+
 void MapObjectRenderer::RegisterMapObjectsToBeLoaded(const Terrain::Chunk& chunk, StringTable& stringTable)
 {
     for (const Terrain::MapObjectPlacement& mapObjectPlacement : chunk.mapObjectPlacements)

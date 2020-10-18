@@ -38,9 +38,27 @@ namespace Terrain
     constexpr f32 MAP_SIZE = MAP_CHUNK_SIZE * MAP_CHUNKS_PER_MAP_STRIDE; // yards
     constexpr f32 MAP_HALF_SIZE = MAP_SIZE / 2.0f; // yards
 
+    struct MapDetailFlag
+    {
+        u32 UseMapObjectInsteadOfTerrain : 1;
+    };
+
+    struct MapHeader
+    {
+        u32 token = 1313685840; // UTF8 -> Binary -> Decimal for "nmap"
+        u32 version = 1;
+
+        MapDetailFlag flags;
+
+        std::string mapObjectName = "";
+        MapObjectPlacement mapObjectPlacement;
+    };
+
     struct Map
     {
         Map() {}
+
+        MapHeader header;
 
         u16 id = std::numeric_limits<u16>().max(); // Default Map to Invalid ID
         std::string_view name;
@@ -55,6 +73,13 @@ namespace Terrain
         void Clear()
         {
             id = std::numeric_limits<u16>().max();
+
+            memset(&header.flags, 0, sizeof(header.flags));
+            header.mapObjectName = "";
+            header.mapObjectPlacement.nameID = std::numeric_limits<u32>().max();
+            header.mapObjectPlacement.position = vec3(0, 0, 0);
+            header.mapObjectPlacement.rotation = vec3(0, 0, 0);
+            header.mapObjectPlacement.scale = 0;
 
             chunks.clear();
 

@@ -120,7 +120,7 @@ void MovementSystem::Update(entt::registry& registry)
         bool isLeftClickDown = inputManager->IsKeyPressed("CameraOrbital Left Mouseclick"_h);
         if (moveForwardIsPressed || (isLeftClickDown && isRightClickDown) || localplayerSingleton.autoRun)
         {
-            if (localplayerSingleton.autoRun && (moveForwardIsPressed || isLeftClickDown))
+            if (localplayerSingleton.autoRun && (moveForwardIsPressed || (isRightClickDown && isLeftClickDown)))
             {
                 localplayerSingleton.autoRun = false;
             }

@@ -281,6 +281,12 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
         },
             [=](TerrainPassData& data, Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList) // Execute
         {
+            entt::registry* registry = ServiceLocator::GetGameRegistry();
+            MapSingleton& mapSingleton = registry->ctx<MapSingleton>();
+
+            if (mapSingleton.currentMap.header.flags.UseMapObjectInsteadOfTerrain)
+                return;
+
             GPU_SCOPED_PROFILER_ZONE(commandList, TerrainPass);
 
             // Upload culled instances
@@ -715,41 +721,49 @@ bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
     // Unload everything in our alpha array
     _renderer->UnloadTexturesInArray(_terrainAlphaTextureArray, 0);
 
-    RegisterChunksToBeLoaded(mapSingleton.currentMap, ivec2(32, 32), 32); // Load everything
-    //RegisterChunksToBeLoaded(mapSingleton.currentMap, ivec2(32, 52), 2); // Goldshire
-    //RegisterChunksToBeLoaded(map, ivec2(40, 32), 8); // Razor Hill
-    //RegisterChunksToBeLoaded(map, ivec2(22, 25), 8); // Borean Tundra
-
-    ExecuteLoad(); 
-
-    // Upload instance data
+    if (mapSingleton.currentMap.header.flags.UseMapObjectInsteadOfTerrain)
     {
-        const size_t cellCount = Terrain::MAP_CELLS_PER_CHUNK * _loadedChunks.size();
+        // Register Map Object to be loaded
+        _mapObjectRenderer->RegisterMapObjectToBeLoaded(mapSingleton.currentMap.header.mapObjectName, mapSingleton.currentMap.header.mapObjectPlacement);
+    }
+    else
+    {
+        RegisterChunksToBeLoaded(mapSingleton.currentMap, ivec2(32, 32), 32); // Load everything
+        //RegisterChunksToBeLoaded(mapSingleton.currentMap, ivec2(32, 52), 2); // Goldshire
+        //RegisterChunksToBeLoaded(map, ivec2(40, 32), 8); // Razor Hill
+        //RegisterChunksToBeLoaded(map, ivec2(22, 25), 8); // Borean Tundra
 
-        Renderer::BufferDesc uploadBufferDesc;
-        uploadBufferDesc.name = "TerrainInstanceUploadBuffer";
-        uploadBufferDesc.cpuAccess = Renderer::BufferCPUAccess::WriteOnly;
-        uploadBufferDesc.size = sizeof(CellInstance) * cellCount;
-        uploadBufferDesc.usage = Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
-
-        Renderer::BufferID instanceUploadBuffer = _renderer->CreateBuffer(uploadBufferDesc);
-        _renderer->QueueDestroyBuffer(instanceUploadBuffer);
-
-        void* instanceBufferMemory = _renderer->MapBuffer(instanceUploadBuffer);
-        CellInstance* instanceData = static_cast<CellInstance*>(instanceBufferMemory);
-        u32 instanceDataIndex = 0;
-
-        for (const u16 chunkID : _loadedChunks)
+        ExecuteLoad();
+    
+        // Upload instance data
         {
-            for (u32 cellID = 0; cellID < Terrain::MAP_CELLS_PER_CHUNK; ++cellID)
+            const size_t cellCount = Terrain::MAP_CELLS_PER_CHUNK * _loadedChunks.size();
+
+            Renderer::BufferDesc uploadBufferDesc;
+            uploadBufferDesc.name = "TerrainInstanceUploadBuffer";
+            uploadBufferDesc.cpuAccess = Renderer::BufferCPUAccess::WriteOnly;
+            uploadBufferDesc.size = sizeof(CellInstance) * cellCount;
+            uploadBufferDesc.usage = Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
+
+            Renderer::BufferID instanceUploadBuffer = _renderer->CreateBuffer(uploadBufferDesc);
+            _renderer->QueueDestroyBuffer(instanceUploadBuffer);
+
+            void* instanceBufferMemory = _renderer->MapBuffer(instanceUploadBuffer);
+            CellInstance* instanceData = static_cast<CellInstance*>(instanceBufferMemory);
+            u32 instanceDataIndex = 0;
+
+            for (const u16 chunkID : _loadedChunks)
             {
-                instanceData[instanceDataIndex].packedChunkCellID = (chunkID << 16) | (cellID & 0xffff);
-                instanceData[instanceDataIndex++].instanceID = instanceDataIndex;
+                for (u32 cellID = 0; cellID < Terrain::MAP_CELLS_PER_CHUNK; ++cellID)
+                {
+                    instanceData[instanceDataIndex].packedChunkCellID = (chunkID << 16) | (cellID & 0xffff);
+                    instanceData[instanceDataIndex++].instanceID = instanceDataIndex;
+                }
             }
+            assert(instanceDataIndex == cellCount);
+            _renderer->UnmapBuffer(instanceUploadBuffer);
+            _renderer->CopyBuffer(_instanceBuffer, 0, instanceUploadBuffer, 0, uploadBufferDesc.size);
         }
-        assert(instanceDataIndex == cellCount);
-        _renderer->UnmapBuffer(instanceUploadBuffer);
-        _renderer->CopyBuffer(_instanceBuffer, 0, instanceUploadBuffer, 0, uploadBufferDesc.size);
     }
 
     _mapObjectRenderer->ExecuteLoad();

@@ -31,6 +31,7 @@ class StringTable;
 namespace Terrain
 {
     struct Chunk;
+    struct MapHeader;
 }
 
 namespace DBC
@@ -49,5 +50,6 @@ public:
 
 private:
     static bool ExtractMapDBC(DBC::File& file, std::vector<DBC::Map>& maps);
+    static bool ExtractHeaderData(FileReader& reader, Terrain::MapHeader& header);
     static bool ExtractChunkData(FileReader& reader, Terrain::Chunk& chunk, StringTable& stringTable);
 };

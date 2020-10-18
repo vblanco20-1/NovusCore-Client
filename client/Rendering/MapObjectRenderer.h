@@ -117,6 +117,7 @@ public:
 
     void AddMapObjectPass(Renderer::RenderGraph* renderGraph, Renderer::DescriptorSet* globalDescriptorSet, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex);
 
+    void RegisterMapObjectToBeLoaded(const std::string& mapObjectName, const Terrain::MapObjectPlacement& mapObjectPlacement);
     void RegisterMapObjectsToBeLoaded(const Terrain::Chunk& chunk, StringTable& stringTable);
     void ExecuteLoad();
 

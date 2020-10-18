@@ -78,7 +78,7 @@ bool MapLoader::LoadMap(entt::registry* registry, u32 mapInternalNameHash)
     fs::path absolutePath = std::filesystem::absolute("Data/extracted/maps/" + mapInternalName);
     if (!fs::is_directory(absolutePath))
     {
-        NC_LOG_ERROR("Failed to find map folder for %s", mapInternalName);
+        NC_LOG_ERROR("Failed to find map folder for %s", mapInternalName.c_str());
         return false;
     }
 
@@ -88,61 +88,100 @@ bool MapLoader::LoadMap(entt::registry* registry, u32 mapInternalNameHash)
     mapSingleton.currentMap.id = map->Id;
     mapSingleton.currentMap.name = mapInternalName;
 
-    size_t loadedChunks = 0;
+    bool nmapFound = false;
     for (const auto& entry : std::filesystem::recursive_directory_iterator(absolutePath))
     {
         auto file = std::filesystem::path(entry.path());
+             
         if (file.extension() != ".nmap")
             continue;
 
-        FileReader chunkFile(entry.path().string(), file.filename().string());
-        if (!chunkFile.Open())
-        {
-            NC_LOG_ERROR("Failed to load all maps");
-            return false;
-        }
-
-        Terrain::Chunk chunk;
-        StringTable chunkStringTable;
-        if (!ExtractChunkData(chunkFile, chunk, chunkStringTable))
-        {
-            NC_LOG_ERROR("Failed to load all maps");
-            return false;
-        }
-
-        std::vector<std::string> splitName = StringUtils::SplitString(file.filename().string(), '_');
-        size_t numberOfSplits = splitName.size();
-
-        std::string mapInternalName = splitName[0];
-        for (size_t i = 1; i < numberOfSplits - 2; i++)
-        {
-            mapInternalName += "_" + splitName[i];
-        }
-
-        auto itr = mapSingleton.mapInternalNameToDBC.find(mapInternalNameHash);
-        if (itr == mapSingleton.mapInternalNameToDBC.end())
-        {
-            NC_LOG_ERROR("Tried to Load Map with no entry in Maps.ndbc (%s, %s)", splitName[0].c_str(), splitName[1].c_str());
+        std::string fileName = file.filename().replace_extension("").string();
+        if (fileName != mapInternalName)
             continue;
+
+        FileReader mapHeaderFile(entry.path().string(), file.filename().string());
+        if (!mapHeaderFile.Open())
+        {
+            NC_LOG_ERROR("Failed to map (%s)", mapInternalName.c_str());
+            return false;
         }
 
-        u16 x = std::stoi(splitName[numberOfSplits - 2]);
-        u16 y = std::stoi(splitName[numberOfSplits - 1]);
-        u32 chunkId = x + (y * Terrain::MAP_CHUNKS_PER_MAP_STRIDE);
+        if (!ExtractHeaderData(mapHeaderFile, mapSingleton.currentMap.header))
+        {
+            NC_LOG_ERROR("Failed to load map header for (%s)", mapInternalName.c_str());
+            return false;
+        }
 
-        mapSingleton.currentMap.chunks[chunkId] = chunk;
-        mapSingleton.currentMap.stringTables[chunkId].CopyFrom(chunkStringTable);
-
-        loadedChunks++;
+        nmapFound = true;
+        break;
     }
 
-    if (loadedChunks == 0)
+    if (!nmapFound)
     {
-        NC_LOG_ERROR("0 maps found in (%s)", absolutePath.string().c_str());
+        NC_LOG_ERROR("Failed to find nmap file for map (%s)", mapInternalName.c_str());
         return false;
     }
 
-    NC_LOG_SUCCESS("Loaded %u chunks", loadedChunks);
+    // Load Chunks if map does not use WMO as base
+    if (!mapSingleton.currentMap.header.flags.UseMapObjectInsteadOfTerrain)
+    {
+        size_t loadedChunks = 0;
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(absolutePath))
+        {
+            auto file = std::filesystem::path(entry.path());
+            if (file.extension() != ".nchunk")
+                continue;
+
+            // Make sure filename is the same, multiple maps can have chunks in the same folder
+            std::string fileName = file.filename().string();
+            if (strncmp(fileName.c_str(), mapInternalName.c_str(), mapInternalName.length()) != 0)
+                continue;
+
+            FileReader chunkFile(entry.path().string(), file.filename().string());
+            if (!chunkFile.Open())
+            {
+                NC_LOG_ERROR("Failed to load map chunk (%s)", file.filename().string().c_str());
+                return false;
+            }
+
+            Terrain::Chunk chunk;
+            StringTable chunkStringTable;
+            if (!ExtractChunkData(chunkFile, chunk, chunkStringTable))
+            {
+                NC_LOG_ERROR("Failed to load map chunk for (%s)", file.filename().string().c_str());
+                return false;
+            }
+
+            std::vector<std::string> splitName = StringUtils::SplitString(file.filename().string(), '_');
+            size_t numberOfSplits = splitName.size();
+
+            std::string mapInternalName = splitName[0];
+            for (size_t i = 1; i < numberOfSplits - 2; i++)
+            {
+                mapInternalName += "_" + splitName[i];
+            }
+
+            u16 x = std::stoi(splitName[numberOfSplits - 2]);
+            u16 y = std::stoi(splitName[numberOfSplits - 1]);
+            u32 chunkId = x + (y * Terrain::MAP_CHUNKS_PER_MAP_STRIDE);
+
+            mapSingleton.currentMap.chunks[chunkId] = chunk;
+            mapSingleton.currentMap.stringTables[chunkId].CopyFrom(chunkStringTable);
+
+            loadedChunks++;
+        }
+
+        if (loadedChunks == 0)
+        {
+            NC_LOG_ERROR("0 map chunks found in (%s)", absolutePath.string().c_str());
+            return false;
+        }
+
+        NC_LOG_SUCCESS("Loaded %u chunks", loadedChunks);
+    }
+    
+    NC_LOG_SUCCESS("Loaded Map (%s)", mapInternalName.c_str());
     return true;
 }
 
@@ -157,6 +196,34 @@ bool MapLoader::ExtractMapDBC(DBC::File& file, std::vector<DBC::Map>& maps)
     // Resize our vector and fill it with map data
     maps.resize(numMaps);
     file.buffer->GetBytes(reinterpret_cast<u8*>(&maps[0]), sizeof(DBC::Map) * numMaps);
+    return true;
+}
+
+bool MapLoader::ExtractHeaderData(FileReader& reader, Terrain::MapHeader& header)
+{
+    Bytebuffer buffer(nullptr, reader.Length());
+    reader.Read(&buffer, buffer.size);
+
+    if (!buffer.GetU32(header.token))
+        return false;
+
+    if (!buffer.GetU32(header.version))
+        return false;
+
+    if (!buffer.Get(header.flags))
+        return false;
+
+    if (header.flags.UseMapObjectInsteadOfTerrain)
+    {
+        buffer.GetString(header.mapObjectName);
+
+        if (header.mapObjectName.length() == 0)
+            return false;
+
+        if (!buffer.Get(header.mapObjectPlacement))
+            return false;
+    }
+
     return true;
 }
 
