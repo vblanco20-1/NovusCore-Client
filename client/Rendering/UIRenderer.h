@@ -26,6 +26,8 @@ private:
 private:
     Renderer::Renderer* _renderer;
 
+    Renderer::TextureID _emptyBorder;
+
     Renderer::SamplerID _linearSampler;
     Renderer::BufferID _indexBuffer;
 
