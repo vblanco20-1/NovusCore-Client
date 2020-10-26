@@ -288,7 +288,7 @@ void ClientRenderer::Render()
 
             // Rasterizer state
             pipelineDesc.states.rasterizerState.cullMode = Renderer::CullMode::CULL_MODE_BACK;
-            pipelineDesc.states.rasterizerState.frontFaceMode = Renderer::FrontFaceState::FRONT_FACE_STATE_CLOCKWISE;
+            pipelineDesc.states.rasterizerState.frontFaceMode = Renderer::FrontFaceState::FRONT_FACE_STATE_COUNTERCLOCKWISE;
 
             // Render targets
             pipelineDesc.renderTargets[0] = data.mainColor;
