@@ -1,5 +1,5 @@
 #include "UIRenderer.h"
-
+#include "DebugRenderer.h"
 #include <Renderer/Renderer.h>
 #include <Renderer/Descriptors/FontDesc.h>
 #include <Renderer/Descriptors/TextureDesc.h>
@@ -7,6 +7,7 @@
 #include <Renderer/Buffer.h>
 #include <tracy/Tracy.hpp>
 #include <tracy/TracyVulkan.hpp>
+#include "CVar/CVarSystem.h"
 
 #include "../Utils/ServiceLocator.h"
 
@@ -29,7 +30,9 @@
 
 #include "../UI/UIInputHandler.h"
 
-UIRenderer::UIRenderer(Renderer::Renderer* renderer) : _renderer(renderer)
+AutoCVar_Int CVAR_UICollisionBoundsEnabled("ui.drawCollisionBounds", "draw collision bounds for ui elements", 0, CVarFlags::EditCheckbox);
+
+UIRenderer::UIRenderer(Renderer::Renderer* renderer, DebugRenderer* debugRenderer) : _renderer(renderer), _debugRenderer(debugRenderer)
 {
     CreatePermanentResources();
 
@@ -82,6 +85,31 @@ UIRenderer::UIRenderer(Renderer::Renderer* renderer) : _renderer(renderer)
     registry->reserve<UIComponent::InputField>(ENTITIES_TO_PREALLOCATE);
     registry->reserve<UIComponent::Checkbox>(ENTITIES_TO_PREALLOCATE);
 
+}
+
+void UIRenderer::Update(f32 deltaTime)
+{
+    bool drawCollisionBoxes = CVAR_UICollisionBoundsEnabled.Get() == 1;
+    if (drawCollisionBoxes)
+    {
+        const UISingleton::UIDataSingleton* dataSingleton = &ServiceLocator::GetUIRegistry()->ctx<UISingleton::UIDataSingleton>();
+
+        auto collisionView = ServiceLocator::GetUIRegistry()->view<UIComponent::Collision, UIComponent::Collidable, UIComponent::Visible>();
+        collisionView.each([&](UIComponent::Collision& collision) 
+            {
+                hvec2 min = collision.minBound / dataSingleton->UIRESOLUTION;
+                hvec2 max = collision.maxBound / dataSingleton->UIRESOLUTION;
+
+                min.y = 1.f - min.y;
+                max.y = 1.f - max.y;
+
+                uint32_t color = 0xffd9dcdf;
+                _debugRenderer->DrawLine2D(min, vec2(max.x, min.y), color);
+                _debugRenderer->DrawLine2D(min, vec2(min.x, max.y), color);
+                _debugRenderer->DrawLine2D(vec2(min.x, max.y), max, color);
+                _debugRenderer->DrawLine2D(vec2(max.x, min.y), max, color);
+            });
+    }
 }
 
 void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID renderTarget, u8 frameIndex)
@@ -206,6 +234,17 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                         _drawImageDescriptorSet.Bind("_panelData"_h, image.constantBuffer->GetBuffer(frameIndex));
                         _drawImageDescriptorSet.Bind("_texture"_h, image.textureID);
 
+                        if (image.borderID != Renderer::TextureID::Invalid())
+                        {
+                            _drawImageDescriptorSet.Bind("_border"_h, image.borderID);
+                        }
+                        else
+                        {
+                            _drawImageDescriptorSet.Bind("_border"_h, _emptyBorder);
+                        }
+
+                        
+
                         commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_DRAW, &_drawImageDescriptorSet, frameIndex);
 
                         commandList.SetIndexBuffer(_indexBuffer, Renderer::IndexFormat::UInt16);
@@ -220,6 +259,58 @@ void UIRenderer::AddUIPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID
                 }
             });
 
+            commandList.EndPipeline(activePipeline);
+        });
+}
+
+void UIRenderer::AddImguiPass(Renderer::RenderGraph* renderGraph, Renderer::ImageID renderTarget, u8 frameIndex)
+{
+    // UI Pass
+    struct UIPassData
+    {
+        Renderer::RenderPassMutableResource renderTarget;
+    };
+
+    renderGraph->AddPass<UIPassData>("ImguiPass",
+        [=](UIPassData& data, Renderer::RenderGraphBuilder& builder) // Setup
+        {
+            data.renderTarget = builder.Write(renderTarget, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_LOAD);
+
+            return true; // Return true from setup to enable this pass, return false to disable it
+        },
+        [=](UIPassData& data, Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList) // Execute
+        {
+            GPU_SCOPED_PROFILER_ZONE(commandList, ImguiPass);
+
+            Renderer::GraphicsPipelineDesc pipelineDesc;
+            resources.InitializePipelineDesc(pipelineDesc);
+
+            // Rasterizer state
+            pipelineDesc.states.rasterizerState.cullMode = Renderer::CullMode::CULL_MODE_BACK;
+            //pipelineDesc.states.rasterizerState.frontFaceMode = Renderer::FrontFaceState::FRONT_FACE_STATE_COUNTERCLOCKWISE;
+
+            // Render targets
+            pipelineDesc.renderTargets[0] = data.renderTarget;
+
+            // Blending
+            pipelineDesc.states.blendState.renderTargets[0].blendEnable = true;
+            pipelineDesc.states.blendState.renderTargets[0].srcBlend = Renderer::BlendMode::BLEND_MODE_SRC_ALPHA;
+            pipelineDesc.states.blendState.renderTargets[0].destBlend = Renderer::BlendMode::BLEND_MODE_INV_SRC_ALPHA;
+            pipelineDesc.states.blendState.renderTargets[0].srcBlendAlpha = Renderer::BlendMode::BLEND_MODE_ZERO;
+            pipelineDesc.states.blendState.renderTargets[0].destBlendAlpha = Renderer::BlendMode::BLEND_MODE_ONE;
+
+            // Panel Shaders
+            Renderer::VertexShaderDesc vertexShaderDesc;
+            vertexShaderDesc.path = "Data/shaders/panel.vs.hlsl.spv";
+            pipelineDesc.states.vertexShader = _renderer->LoadShader(vertexShaderDesc);
+
+            Renderer::PixelShaderDesc pixelShaderDesc;
+            pixelShaderDesc.path = "Data/shaders/panel.ps.hlsl.spv";
+            pipelineDesc.states.pixelShader = _renderer->LoadShader(pixelShaderDesc);
+
+            Renderer::GraphicsPipelineID activePipeline = _renderer->CreatePipeline(pipelineDesc);
+
+            commandList.BeginPipeline(activePipeline);
             commandList.DrawImgui();
             commandList.EndPipeline(activePipeline);
         });
@@ -268,6 +359,16 @@ void UIRenderer::CreatePermanentResources()
 
     _renderer->QueueDestroyBuffer(stagingBuffer);
     _renderer->CopyBuffer(_indexBuffer, 0, stagingBuffer, 0, indexBufferSize);
+
+    // Create empty border texture
+    Renderer::DataTextureDesc emptyBorderDesc;
+    emptyBorderDesc.debugName = "EmptyBorder";
+    emptyBorderDesc.width = 1;
+    emptyBorderDesc.height = 1;
+    emptyBorderDesc.format = Renderer::ImageFormat::IMAGE_FORMAT_R8G8B8A8_UNORM;
+    emptyBorderDesc.data = new u8[4]{ 0, 0, 0, 0 };
+    
+    _emptyBorder = _renderer->CreateDataTexture(emptyBorderDesc);
 
     // Create descriptor sets
     _passDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
