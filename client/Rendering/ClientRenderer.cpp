@@ -1,7 +1,7 @@
 #include "ClientRenderer.h"
 #include "UIRenderer.h"
 #include "TerrainRenderer.h"
-#include "NM2Renderer.h"
+#include "CModelRenderer.h"
 #include "DebugRenderer.h"
 #include "CameraFreelook.h"
 #include "../Utils/ServiceLocator.h"
@@ -91,7 +91,7 @@ ClientRenderer::ClientRenderer()
     _debugRenderer = new DebugRenderer(_renderer);
     _uiRenderer = new UIRenderer(_renderer);
     _terrainRenderer = new TerrainRenderer(_renderer, _debugRenderer);
-    _nm2Renderer = new NM2Renderer(_renderer, _debugRenderer);
+    _cModelRenderer = new CModelRenderer(_renderer, _debugRenderer);
 
     ServiceLocator::SetClientRenderer(this);
 }
@@ -107,7 +107,7 @@ void ClientRenderer::Update(f32 deltaTime)
     _frameAllocator->Reset();
 
     _terrainRenderer->Update(deltaTime);
-    _nm2Renderer->Update(deltaTime);
+    _cModelRenderer->Update(deltaTime);
 
     _debugRenderer->DrawLine3D(vec3(0.0f, 0.0f, 0.0f), vec3(100.0f, 0.0f, 0.0f), 0xff0000ff);
     _debugRenderer->DrawLine3D(vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 100.0f, 0.0f), 0xff00ff00);
@@ -329,7 +329,7 @@ void ClientRenderer::Render()
 
     _terrainRenderer->AddTerrainPass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
 
-    _nm2Renderer->AddNM2Pass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
+    _cModelRenderer->AddCModelPass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
     
     _debugRenderer->Add3DPass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
 
