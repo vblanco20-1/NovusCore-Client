@@ -189,7 +189,7 @@ void ClientRenderer::Render()
             // Depth state
             pipelineDesc.states.depthStencilState.depthEnable = true;
             pipelineDesc.states.depthStencilState.depthWriteEnable = true;
-            pipelineDesc.states.depthStencilState.depthFunc = Renderer::ComparisonFunc::COMPARISON_FUNC_LESS;
+            pipelineDesc.states.depthStencilState.depthFunc = Renderer::ComparisonFunc::COMPARISON_FUNC_GREATER;
 
             // Rasterizer state
             pipelineDesc.states.rasterizerState.cullMode = Renderer::CullMode::CULL_MODE_BACK;
@@ -199,7 +199,7 @@ void ClientRenderer::Render()
             pipelineDesc.depthStencil = data.mainDepth;
 
             // Clear mainColor TODO: This should be handled by the parameter in Setup, and it should definitely not act on ImageID and DepthImageID
-            commandList.Clear(_mainDepth, 1.0f);
+            commandList.Clear(_mainDepth, 0.0f);
 
             // Set pipeline
             Renderer::GraphicsPipelineID pipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
