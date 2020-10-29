@@ -262,7 +262,16 @@ bool MapLoader::ExtractChunkData(FileReader& reader, Terrain::Chunk& chunk, Stri
     if (numMapObjectPlacements > 0)
     {
         chunk.mapObjectPlacements.resize(numMapObjectPlacements);
-        buffer.GetBytes(reinterpret_cast<u8*>(&chunk.mapObjectPlacements[0]), sizeof(Terrain::MapObjectPlacement) * numMapObjectPlacements);
+        buffer.GetBytes(reinterpret_cast<u8*>(&chunk.mapObjectPlacements[0]), sizeof(Terrain::Placement) * numMapObjectPlacements);
+    }
+
+    u32 numComplexModelPlacements;
+    buffer.Get<u32>(numComplexModelPlacements);
+
+    if (numComplexModelPlacements > 0)
+    {
+        chunk.complexModelPlacements.resize(numComplexModelPlacements);
+        buffer.GetBytes(reinterpret_cast<u8*>(&chunk.complexModelPlacements[0]), sizeof(Terrain::Placement) * numComplexModelPlacements);
     }
 
     // Read Liquid Headers

@@ -36,6 +36,7 @@ namespace Renderer
 class Camera;
 class DebugRenderer;
 class MapObjectRenderer;
+class CModelRenderer;
 class WaterRenderer;
 
 class TerrainRenderer
@@ -70,7 +71,7 @@ class TerrainRenderer
 #pragma pack(pop)
 
 public:
-    TerrainRenderer(Renderer::Renderer* renderer, DebugRenderer* debugRenderer);
+    TerrainRenderer(Renderer::Renderer* renderer, DebugRenderer* debugRenderer, CModelRenderer* complexModelRenderer);
     ~TerrainRenderer();
 
     void Update(f32 deltaTime);
@@ -127,6 +128,7 @@ private:
     
     // Subrenderers
     MapObjectRenderer* _mapObjectRenderer = nullptr;
+    CModelRenderer* _complexModelRenderer = nullptr;
     WaterRenderer* _waterRenderer = nullptr;
     DebugRenderer* _debugRenderer = nullptr;
 };

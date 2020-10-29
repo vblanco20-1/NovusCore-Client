@@ -1,6 +1,7 @@
 #include "TerrainRenderer.h"
 #include "DebugRenderer.h"
 #include "MapObjectRenderer.h"
+#include "CModelRenderer.h"
 #include "WaterRenderer.h"
 #include <entt.hpp>
 #include "../Utils/ServiceLocator.h"
@@ -60,9 +61,10 @@ struct TerrainCellHeightRange
 #endif
 };
 
-TerrainRenderer::TerrainRenderer(Renderer::Renderer* renderer, DebugRenderer* debugRenderer)
+TerrainRenderer::TerrainRenderer(Renderer::Renderer* renderer, DebugRenderer* debugRenderer, CModelRenderer* complexModelRenderer)
     : _renderer(renderer)
     , _debugRenderer(debugRenderer)
+    , _complexModelRenderer(complexModelRenderer)
 {
     _mapObjectRenderer = new MapObjectRenderer(renderer, debugRenderer); // Needs to be created before CreatePermanentResources
     _waterRenderer = new WaterRenderer(renderer); // Needs to be created before CreatePermanentResources
@@ -721,15 +723,16 @@ bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
     // Unload everything in our alpha array
     _renderer->UnloadTexturesInArray(_terrainAlphaTextureArray, 0);
 
+    
+    // Register Map Object to be loaded
     if (mapSingleton.currentMap.header.flags.UseMapObjectInsteadOfTerrain)
     {
-        // Register Map Object to be loaded
         _mapObjectRenderer->RegisterMapObjectToBeLoaded(mapSingleton.currentMap.header.mapObjectName, mapSingleton.currentMap.header.mapObjectPlacement);
     }
     else
     {
         RegisterChunksToBeLoaded(mapSingleton.currentMap, ivec2(32, 32), 32); // Load everything
-        //RegisterChunksToBeLoaded(mapSingleton.currentMap, ivec2(32, 52), 2); // Goldshire
+        //RegisterChunksToBeLoaded(mapSingleton.currentMap, ivec2(31, 50), 1); // Goldshire
         //RegisterChunksToBeLoaded(map, ivec2(40, 32), 8); // Razor Hill
         //RegisterChunksToBeLoaded(map, ivec2(22, 25), 8); // Borean Tundra
 
@@ -985,5 +988,7 @@ void TerrainRenderer::LoadChunk(const ChunkToBeLoaded& chunkToBeLoaded)
     }
 
     _mapObjectRenderer->RegisterMapObjectsToBeLoaded(chunk, stringTable);
+    //_complexModelRenderer->LoadFromChunk(chunk, stringTable);
+
     _loadedChunks.push_back(chunkID);
 }
