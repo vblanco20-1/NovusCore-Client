@@ -79,6 +79,9 @@ public:
     void AddTerrainPass(Renderer::RenderGraph* renderGraph, Renderer::DescriptorSet* globalDescriptorSet, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex);
 
     bool LoadMap(u32 mapInternalNameHash);
+
+    const std::vector<Geometry::AABoundingBox>& GetBoundingBoxes() { return _cellBoundingBoxes; }
+    MapObjectRenderer* GetMapObjectRenderer() { return _mapObjectRenderer; }
 private:
     void CreatePermanentResources();
 

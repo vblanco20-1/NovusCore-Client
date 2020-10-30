@@ -123,6 +123,8 @@ public:
 
     void Clear();
 
+    const std::vector<Terrain::CullingData>& GetCullingData() { return _cullingData; }
+
 private:
     void CreatePermanentResources();
     bool LoadMapObject(MapObjectToBeLoaded& mapObjectToBeLoaded, LoadedMapObject& mapObject);
