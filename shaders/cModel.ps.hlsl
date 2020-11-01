@@ -1,9 +1,9 @@
 #include "globalData.inc.hlsl"
+#include "cModel.inc.hlsl"
 
-[[vk::binding(0, PER_PASS)]] SamplerState _sampler;
-[[vk::binding(1, PER_PASS)]] Texture2D<float4> _textures[4096];
-
-[[vk::binding(5, PER_DRAW)]] ByteAddressBuffer _textureUnits;
+[[vk::binding(3, PER_PASS)]] ByteAddressBuffer _textureUnits;
+[[vk::binding(4, PER_PASS)]] SamplerState _sampler;
+[[vk::binding(5, PER_PASS)]] Texture2D<float4> _textures[4096];
 
 struct TextureUnitIndices
 {
@@ -21,9 +21,9 @@ struct TextureUnit
 
 struct PSInput
 {
-    float3 normal : TEXCOORD0;
-    float2 uv0 : TEXCOORD1;
-    float2 uv1 : TEXCOORD2;
+    uint drawCallID : TEXCOORD0;
+    float3 normal : TEXCOORD1;
+    float4 uv01 : TEXCOORD2;
 };
 
 struct PSOutput
@@ -34,7 +34,7 @@ struct PSOutput
 TextureUnit LoadTextureUnit(uint textureUnitIndex)
 {
     TextureUnit textureUnit;
-    textureUnit = _textureUnits.Load<TextureUnit>(textureUnitIndex * 16); // 12 = sizeof(TextureUnit)
+    textureUnit = _textureUnits.Load<TextureUnit>(textureUnitIndex * 16); // 16 = sizeof(TextureUnit)
 
     return textureUnit;
 }
@@ -286,28 +286,12 @@ float4 Blend(uint16_t blendingMode, float4 previousColor, float4 color)
 
 PSOutput main(PSInput input)
 {
-    PSOutput output;
-
-    //output.color = float4(input.normal, 1.0f);
-    //return output;
-
-    uint16_t textureIndices[8];
-    uint offset = 0;
-
-    for (uint i = 0; i < 4; i++)
-    {
-        textureIndices[offset++] = textureUnitIndices.packedIndices[i] & 0xFF;
-        textureIndices[offset++] = textureUnitIndices.packedIndices[i] >> 8;
-    }
+    DrawCallData drawCallData = LoadDrawCallData(input.drawCallID);
 
     float4 color = float4(0, 0, 0, 0);
 
-    for (uint j = 0; j < 8; j++)
+    for (uint textureUnitIndex = drawCallData.textureUnitOffset; textureUnitIndex < drawCallData.textureUnitOffset + drawCallData.numTextureUnits; textureUnitIndex++)
     {
-        uint16_t textureUnitIndex = textureIndices[j];
-        if (textureUnitIndex == 255)
-            break;
-
         TextureUnit textureUnit = LoadTextureUnit(textureUnitIndex);
 
         uint16_t isProjectedTexture = uint16_t(textureUnit.data1 & 0x1);
@@ -321,13 +305,13 @@ PSOutput main(PSInput input)
         if (materialType == 0x8000)
             continue;
 
-        float4 texture1 = _textures[textureUnit.textureIDs[0]].Sample(_sampler, input.uv0);
+        float4 texture1 = _textures[textureUnit.textureIDs[0]].Sample(_sampler, input.uv01.xy);
         float4 texture2 = float4(0, 0, 0, 0);
 
         if (vertexShaderId > 2)
         {
             // ENV uses generated UVCoords based on camera pos + geometry normal in frame space
-            texture2 = _textures[textureUnit.textureIDs[1]].Sample(_sampler, input.uv1);
+            texture2 = _textures[textureUnit.textureIDs[1]].Sample(_sampler, input.uv01.zw);
         }
 
         float4 shadedColor = Shade(pixelShaderId, texture1, texture2, input.normal, (materialFlags & 0x1) == 0);
@@ -336,6 +320,7 @@ PSOutput main(PSInput input)
         color = Blend(blendingMode, color, shadedColor);
     }
 
+    PSOutput output;
     output.color = saturate(color);
     return output;
 }

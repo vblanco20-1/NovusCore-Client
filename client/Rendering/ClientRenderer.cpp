@@ -296,7 +296,7 @@ void ClientRenderer::Render()
             pipelineDesc.depthStencil = data.mainDepth;
 
             // Clear mainColor TODO: This should be handled by the parameter in Setup, and it should definitely not act on ImageID and DepthImageID
-            commandList.Clear(_mainColor, Color(0, 0, 0, 1));
+            commandList.Clear(_mainColor, Color(135.0f/255.0f, 206.0f/255.0f, 250.0f/255.0f, 1));
 
             // Set pipeline
             Renderer::GraphicsPipelineID pipeline = _renderer->CreatePipeline(pipelineDesc); // This will compile the pipeline and return the ID, or just return ID of cached pipeline
@@ -330,7 +330,7 @@ void ClientRenderer::Render()
 
     _terrainRenderer->AddTerrainPass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
 
-    _cModelRenderer->AddCModelPass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
+    _cModelRenderer->AddComplexModelPass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
     
     _debugRenderer->Add3DPass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
 

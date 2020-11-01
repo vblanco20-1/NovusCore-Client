@@ -719,6 +719,7 @@ bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
     _loadedChunks.clear();
     _cellBoundingBoxes.clear();
     _mapObjectRenderer->Clear();
+    _complexModelRenderer->Clear();
     //_waterRenderer->Clear();
 
     // Unload everything but the first texture in our color array
@@ -773,6 +774,7 @@ bool TerrainRenderer::LoadMap(u32 mapInternalNameHash)
     }
 
     _mapObjectRenderer->ExecuteLoad();
+    _complexModelRenderer->ExecuteLoad();
 
     // Load Water
     //_waterRenderer->LoadWater(_loadedChunks);
@@ -991,7 +993,7 @@ void TerrainRenderer::LoadChunk(const ChunkToBeLoaded& chunkToBeLoaded)
     }
 
     _mapObjectRenderer->RegisterMapObjectsToBeLoaded(chunk, stringTable);
-    //_complexModelRenderer->LoadFromChunk(chunk, stringTable);
+    _complexModelRenderer->RegisterLoadFromChunk(chunk, stringTable);
 
     _loadedChunks.push_back(chunkID);
 }
