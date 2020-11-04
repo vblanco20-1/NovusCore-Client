@@ -5,6 +5,7 @@
 #include "DebugRenderer.h"
 #include "CameraFreelook.h"
 #include "../Utils/ServiceLocator.h"
+#include "../ECS/Components/Singletons/MapSingleton.h"
 
 #include <Renderer/Renderer.h>
 #include <Renderer/Renderers/Vulkan/RendererVK.h>
@@ -136,9 +137,12 @@ void ClientRenderer::Render()
     _viewConstantBuffer->resource.viewProjectionMatrix = camera->GetViewProjectionMatrix();
     _viewConstantBuffer->Apply(_frameIndex);
 
-    _lightConstantBuffer->resource.ambientColor = vec4(0.407f, 0.498f, 0.596f, 1.0f);
-    _lightConstantBuffer->resource.lightColor = vec4(1.0f, 0.525f, 0.0f, 1.0f);
-    _lightConstantBuffer->resource.lightDir = vec4(0.0f, -1.0f, -1.0f, 1.0f);
+    entt::registry* registry = ServiceLocator::GetGameRegistry();
+    MapSingleton& mapSingleton = registry->ctx<MapSingleton>();
+
+    _lightConstantBuffer->resource.ambientColor = vec4(mapSingleton.ambientLight, 1.0f);
+    _lightConstantBuffer->resource.lightColor = vec4(mapSingleton.diffuseLight, 1.0f);
+    _lightConstantBuffer->resource.lightDir = vec4(mapSingleton.lightDirection, 1.0f);
     _lightConstantBuffer->Apply(_frameIndex);
 
     _globalDescriptorSet.Bind("_viewData"_h, _viewConstantBuffer->GetBuffer(_frameIndex));

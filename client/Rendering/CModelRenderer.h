@@ -23,7 +23,7 @@ namespace Renderer
     class DescriptorSet;
 }
 
-namespace DBC
+namespace NDBC
 {
     struct CreatureDisplayInfo;
     struct CreatureModelData;
