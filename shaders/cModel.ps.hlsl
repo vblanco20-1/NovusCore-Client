@@ -39,32 +39,6 @@ TextureUnit LoadTextureUnit(uint textureUnitIndex)
     return textureUnit;
 }
 
-float3 Lighting(float3 color, float3 normal, bool isLit)
-{
-    float3 currColor;
-    float3 lDiffuse = float3(0, 0, 0);
-
-    if (isLit)
-    {
-        float nDotL = dot(normal, -normalize(_lightData.lightDir.xyz));
-
-        float3 ambientColor = _lightData.ambientColor.rgb;
-
-        float3 skyColor = (ambientColor * 1.10000002);
-        float3 groundColor = (ambientColor * 0.699999988);
-
-        currColor = lerp(groundColor, skyColor, 0.5 + (0.5 * nDotL));
-        lDiffuse = _lightData.lightColor.rgb * saturate(nDotL);
-    }
-    else
-    {
-        currColor = float3(1.0, 1.0, 1.0);
-    }
-
-    float3 gammaDiffTerm = color * (currColor + lDiffuse);
-    return gammaDiffTerm;
-}
-
 enum PixelShaderID
 {
     Opaque,
@@ -93,11 +67,11 @@ enum PixelShaderID
     Decal
 };
 
-float4 Shade(uint16_t pixelId, float4 texture1, float4 texture2, float3 normal, bool isLit)
+float4 Shade(uint16_t pixelId, float4 texture1, float4 texture2, out float3 specular)
 {
     float4 result = float4(0, 0, 0, 0);
     float4 diffuseColor = float4(1, 1, 1, 1);
-    float3 specular = float3(0, 0, 0);
+    specular = float3(0, 0, 0);
 
     if (pixelId == PixelShaderID::Opaque)
     {
@@ -226,7 +200,7 @@ float4 Shade(uint16_t pixelId, float4 texture1, float4 texture2, float3 normal, 
         result.a = diffuseColor.a;
     }
 
-    result.rgb = Lighting(result.rgb, normal, isLit) + specular;
+    result.rgb = result.rgb;
     return result;
 }
 
@@ -289,6 +263,8 @@ PSOutput main(PSInput input)
     DrawCallData drawCallData = LoadDrawCallData(input.drawCallID);
 
     float4 color = float4(0, 0, 0, 0);
+    float3 specular = float3(0, 0, 0);
+    bool isLit = false;
 
     for (uint textureUnitIndex = drawCallData.textureUnitOffset; textureUnitIndex < drawCallData.textureUnitOffset + drawCallData.numTextureUnits; textureUnitIndex++)
     {
@@ -314,11 +290,13 @@ PSOutput main(PSInput input)
             texture2 = _textures[textureUnit.textureIDs[1]].Sample(_sampler, input.uv01.zw);
         }
 
-        float4 shadedColor = Shade(pixelShaderId, texture1, texture2, input.normal, (materialFlags & 0x1) == 0);
-        
-        //float4 shadedColor = float4(pixelShaderId, materialFlags, j, 1);
+        isLit |= (materialFlags & 0x1);
+
+        float4 shadedColor = Shade(pixelShaderId, texture1, texture2, specular);
         color = Blend(blendingMode, color, shadedColor);
     }
+
+    color.rgb = Lighting(color.rgb, input.normal, !isLit) + specular;
 
     PSOutput output;
     output.color = saturate(color);

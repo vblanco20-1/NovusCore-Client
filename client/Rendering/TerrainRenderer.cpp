@@ -333,6 +333,12 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
                     memcpy(_cullingConstantBuffer->resource.frustumPlanes, camera->GetFrustumPlanes(), sizeof(vec4[6]));
                     _cullingConstantBuffer->Apply(frameIndex);
                 }
+                
+                // Reset the counter
+                commandList.FillBuffer(_argumentBuffer, 0, 4, Terrain::NUM_INDICES_PER_CELL);
+                commandList.FillBuffer(_argumentBuffer, 4, 12, 0);
+                commandList.FillBuffer(_argumentBuffer, 16, 4, 0);
+                commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToComputeShaderRW, _argumentBuffer);
 
                 _cullingPassDescriptorSet.Bind("_instances", _instanceBuffer);
                 _cullingPassDescriptorSet.Bind("_heightRanges", _cellHeightRangeBuffer);
@@ -511,7 +517,7 @@ void TerrainRenderer::CreatePermanentResources()
         Renderer::BufferDesc desc;
         desc.name = "TerrainArgumentBuffer";
         desc.size = sizeof(VkDrawIndexedIndirectCommand);
-        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER;
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
         _argumentBuffer = _renderer->CreateBuffer(desc);
     }
 
