@@ -22,6 +22,7 @@
 #include "Camera.h"
 #include "../Gameplay/Map/Map.h"
 #include "CVar/CVarSystem.h"
+#include <tracy/TracyVulkan.hpp>
 
 namespace fs = std::filesystem;
 
