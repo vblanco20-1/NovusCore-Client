@@ -23,7 +23,7 @@
 
 namespace UISystem
 {
-    void CalculateVertices(const vec2& pos, const vec2& size, std::vector<UISystem::UIVertex>& vertices)
+    void CalculateVertices(const vec2& pos, const vec2& size, const UI::FBox& texCoords, std::vector<UISystem::UIVertex>& vertices)
     {
         const UISingleton::UIDataSingleton& dataSingleton = ServiceLocator::GetUIRegistry()->ctx<UISingleton::UIDataSingleton>();
         vertices.clear();
@@ -44,19 +44,19 @@ namespace UISystem
         // UI Vertices
         UISystem::UIVertex& upperLeft = vertices.emplace_back();
         upperLeft.pos = vec2(upperLeftPos.x, 1.0f - upperLeftPos.y);
-        upperLeft.uv = vec2(0, 0);
+        upperLeft.uv = vec2(texCoords.left, texCoords.top);
 
         UISystem::UIVertex& upperRight = vertices.emplace_back();
         upperRight.pos = vec2(upperRightPos.x, 1.0f - upperRightPos.y);
-        upperRight.uv = vec2(1, 0);
+        upperRight.uv = vec2(texCoords.right, texCoords.top);
 
         UISystem::UIVertex& lowerLeft = vertices.emplace_back();
         lowerLeft.pos = vec2(lowerLeftPos.x, 1.0f - lowerLeftPos.y);
-        lowerLeft.uv = vec2(0, 1);
+        lowerLeft.uv = vec2(texCoords.left, texCoords.bottom);
 
         UISystem::UIVertex& lowerRight = vertices.emplace_back();
         lowerRight.pos = vec2(lowerRightPos.x, 1.0f - lowerRightPos.y);
-        lowerRight.uv = vec2(1, 1);
+        lowerRight.uv = vec2(texCoords.right, texCoords.bottom);
     }
 
     void UpdateElementSystem::Update(entt::registry& registry)
@@ -119,9 +119,10 @@ namespace UISystem
             // Transform Updates.
             const vec2& pos = UIUtils::Transform::GetMinBounds(&transform);
             const vec2& size = transform.size;
+            const UI::FBox& texCoords = image.style.texCoord;
 
             std::vector<UISystem::UIVertex> vertices;
-            CalculateVertices(pos, size, vertices);
+            CalculateVertices(pos, size, texCoords, vertices);
 
             static const u32 bufferSize = sizeof(UISystem::UIVertex) * 4; // 4 vertices per image
 
@@ -230,9 +231,10 @@ namespace UISystem
                     const Renderer::FontChar& fontChar = text.font->GetChar(character);
                     const vec2& pos = currentPosition + vec2(fontChar.xOffset, fontChar.yOffset);
                     const vec2& size = vec2(fontChar.width, fontChar.height);
+                    UI::FBox texCoords;
 
                     vertices.clear();
-                    CalculateVertices(pos, size, vertices);
+                    CalculateVertices(pos, size, texCoords, vertices);
 
                     UISystem::UIVertex* dst = &baseVertices[glyph * 4]; // 4 vertices per glyph
                     memcpy(dst, vertices.data(), perGlyphVertexSize);

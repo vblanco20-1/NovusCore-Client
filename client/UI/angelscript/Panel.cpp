@@ -37,6 +37,7 @@ namespace UIScripting
         // Renderable Functions
         r = ScriptEngine::RegisterScriptClassFunction("string GetTexture()", asMETHOD(Panel, GetTexture)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetTexture(string Texture)", asMETHOD(Panel, SetTexture)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void SetTexCoord(vec4 texCoords)", asMETHOD(Panel, SetTexCoord)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("Color GetColor()", asMETHOD(Panel, GetColor)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetColor(Color color)", asMETHOD(Panel, SetColor)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("string GetBorder()", asMETHOD(Panel, GetBorder)); assert(r >= 0);
@@ -109,6 +110,15 @@ namespace UIScripting
     {
         UIComponent::Image* image = &ServiceLocator::GetUIRegistry()->get<UIComponent::Image>(_entityId);
         image->style.texture = texture;
+    }
+
+    void Panel::SetTexCoord(const vec4& texCoords)
+    {
+        UIComponent::Image* image = &ServiceLocator::GetUIRegistry()->get<UIComponent::Image>(_entityId);
+        image->style.texCoord.top = texCoords.x;
+        image->style.texCoord.right = texCoords.y;
+        image->style.texCoord.bottom = texCoords.z;
+        image->style.texCoord.left = texCoords.w;
     }
 
     const Color Panel::GetColor() const

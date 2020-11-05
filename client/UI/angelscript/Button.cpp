@@ -55,6 +55,7 @@ namespace UIScripting
         //Panel Functions.
         r = ScriptEngine::RegisterScriptClassFunction("string GetTexture()", asMETHOD(Button, GetTexture)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetTexture(string Texture)", asMETHOD(Button, SetTexture)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void SetTexCoord(vec4 texCoords)", asMETHOD(Button, SetTexCoord)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("Color GetColor()", asMETHOD(Button, GetColor)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetColor(Color color)", asMETHOD(Button, SetColor)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("string GetBorder()", asMETHOD(Button, GetBorder)); assert(r >= 0);
@@ -128,6 +129,15 @@ namespace UIScripting
         entt::registry* registry = ServiceLocator::GetUIRegistry();
         UIComponent::Image* image = &registry->get<UIComponent::Image>(_entityId);
         image->style.texture = texture;
+    }
+
+    void Button::SetTexCoord(const vec4& texCoord)
+    {
+        UIComponent::Image* image = &ServiceLocator::GetUIRegistry()->get<UIComponent::Image>(_entityId);
+        image->style.texCoord.top = texCoord.x;
+        image->style.texCoord.right = texCoord.y;
+        image->style.texCoord.bottom = texCoord.z;
+        image->style.texCoord.left = texCoord.w;
     }
 
     const Color Button::GetColor() const

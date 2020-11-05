@@ -27,6 +27,9 @@ namespace UIScripting
         // Renderable Functions
         const std::string& GetTexture() const;
         void SetTexture(const std::string& texture);
+
+        void SetTexCoord(const vec4& texCoords);
+
         const Color GetColor() const;
         void SetColor(const Color& color);
 

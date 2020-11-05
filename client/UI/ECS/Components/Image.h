@@ -13,6 +13,13 @@ namespace UI
         u32 bottom = 0;
         u32 left = 0;
     };
+    struct FBox
+    {
+        f32 top = 0.0f;
+        f32 right = 1.0f;
+        f32 bottom = 1.0f;
+        f32 left = 0.0f;
+    };
 #pragma pack(pop)
 
 
@@ -21,6 +28,7 @@ namespace UI
         std::string texture = "";
         Color color = Color(1, 1, 1, 1);
         
+        FBox texCoord;
         std::string border = "";
         Box borderSize;
         Box borderInset;
