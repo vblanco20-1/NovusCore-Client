@@ -543,7 +543,7 @@ bool CModelRenderer::LoadComplexModel(ComplexModelToBeLoaded& toBeLoaded, Loaded
                     CModel::ComplexTexture& complexTexture = cModel.textures[complexTextureUnit.textureIndices[t]];
 
                     Renderer::TextureDesc textureDesc;
-                    textureDesc.path = "Data/extracted/Textures/" + textureSingleton.textureStringTable.GetString(complexTexture.textureNameIndex);
+                    textureDesc.path = textureSingleton.textureHashToPath[complexTexture.textureNameIndex];
                     _renderer->LoadTextureIntoArray(textureDesc, _cModelTextures, textureUnit.textureIds[t]);
                 }
             }

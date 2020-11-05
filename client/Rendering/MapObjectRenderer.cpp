@@ -481,7 +481,7 @@ bool MapObjectRenderer::LoadRoot(const std::filesystem::path nmorPath, MeshRoot&
             if (mapObjectMaterial.textureNameID[j] < std::numeric_limits<u32>().max())
             {
                 Renderer::TextureDesc textureDesc;
-                textureDesc.path = "Data/extracted/Textures/" + textureSingleton.textureStringTable.GetString(mapObjectMaterial.textureNameID[j]);
+                textureDesc.path = textureSingleton.textureHashToPath[mapObjectMaterial.textureNameID[j]];
 
                 u32 textureID;
                 _renderer->LoadTextureIntoArray(textureDesc, _mapObjectTextures, textureID);

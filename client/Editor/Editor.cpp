@@ -134,7 +134,7 @@ namespace Editor
             Terrain::LayerData& layerData = cell.layers[i];
             if (layerData.textureId != layerData.TextureIdInvalid)
             {
-                const std::string& texture = textureSingleton.textureStringTable.GetString(layerData.textureId);
+                const std::string& texture = textureSingleton.textureHashToPath[layerData.textureId];
                 ImGui::BulletText("Texture %u: %s", i, texture.c_str());
             }
             else

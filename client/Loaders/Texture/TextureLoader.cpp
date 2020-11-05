@@ -9,35 +9,37 @@ namespace fs = std::filesystem;
 
 bool TextureLoader::Load(entt::registry* registry)
 {
-    fs::path absolutePath = std::filesystem::absolute("Data/extracted/Textures");
+    TextureSingleton& textureSingleton = registry->set<TextureSingleton>();
+
+    fs::path relativeParentPath = "Data/extracted/Textures";
+    fs::path absolutePath = std::filesystem::absolute(relativeParentPath);
     if (!fs::is_directory(absolutePath))
     {
         NC_LOG_ERROR("Failed to find Textures folder");
         return false;
     }
 
-    fs::path filePath = absolutePath.append("TextureStringTable.nst");
-    if (!fs::exists(filePath) || filePath.extension() != ".nst")
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(absolutePath))
     {
-        NC_LOG_ERROR("Failed to find TextureStringTable.nst");
-        return false;
+        auto path = std::filesystem::path(entry.path());
+
+        if (fs::is_directory(path) || path.extension() != ".dds")
+            continue;
+
+        fs::path relativePath = fs::relative(path, relativeParentPath);
+        std::string texturePath = relativePath.string();
+
+        u32 pathHash = StringUtils::fnv1a_32(texturePath.c_str(), texturePath.length());
+
+        auto itr = textureSingleton.textureHashToPath.find(pathHash);
+        if (itr != textureSingleton.textureHashToPath.end())
+        {
+            NC_LOG_ERROR("Found duplicate texture hash (%u) Existing Texture Path: (%s), New Texture Path: (%s)", pathHash, itr->second.c_str(), texturePath.c_str());
+        }
+
+        textureSingleton.textureHashToPath[pathHash] = (relativeParentPath / relativePath).string();
     }
 
-    FileReader stringTableFile(filePath.string(), filePath.filename().string());
-    if (!stringTableFile.Open())
-    {
-        NC_LOG_ERROR("Failed to open TextureStringTable.nst");
-        return false;
-    }
-
-    TextureSingleton& textureSingleton = registry->set<TextureSingleton>();
-
-    std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<8388608>();
-    stringTableFile.Read(buffer.get(), buffer->size);
-
-    textureSingleton.textureStringTable.Deserialize(buffer.get());
-    assert(textureSingleton.textureStringTable.GetNumStrings() > 0); // We always expect to have at least 1 string in our texture stringtable
-
-    NC_LOG_SUCCESS("Loaded Texture StringTable with %u entries", textureSingleton.textureStringTable.GetNumStrings());
+    NC_LOG_SUCCESS("Loaded Texture %u entries", textureSingleton.textureHashToPath.size());
     return true;
 }

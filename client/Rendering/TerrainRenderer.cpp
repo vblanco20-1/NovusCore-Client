@@ -836,10 +836,10 @@ void TerrainRenderer::LoadChunk(const ChunkToBeLoaded& chunkToBeLoaded)
                     break;
                 }
                     
-                const std::string& texturePath = textureSingleton.textureStringTable.GetString(layer.textureId);
+                const std::string& texturePath = textureSingleton.textureHashToPath[layer.textureId];
 
                 Renderer::TextureDesc textureDesc;
-                textureDesc.path = "Data/extracted/Textures/" + texturePath;
+                textureDesc.path = texturePath;
 
                 u32 diffuseID = 0;
                 _renderer->LoadTextureIntoArray(textureDesc, _terrainColorTextureArray, diffuseID);

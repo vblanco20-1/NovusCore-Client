@@ -29,5 +29,5 @@ struct TextureSingleton
 {
 	TextureSingleton() {}
 
-	StringTable textureStringTable;
+	std::unordered_map<u32, std::string> textureHashToPath;
 };
