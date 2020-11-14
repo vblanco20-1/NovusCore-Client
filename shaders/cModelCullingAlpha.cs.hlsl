@@ -42,12 +42,11 @@ struct InstanceData
     float4x4 instanceMatrix;
 };
 
-[[vk::binding(1, PER_PASS)]] ByteAddressBuffer _drawCalls;
-[[vk::binding(2, PER_PASS)]] RWByteAddressBuffer _culledDrawCalls;
-[[vk::binding(3, PER_PASS)]] RWByteAddressBuffer _drawCount;
-[[vk::binding(4, PER_PASS)]] ByteAddressBuffer _instances;
-[[vk::binding(5, PER_PASS)]] ByteAddressBuffer _cullingDatas;
-[[vk::binding(6, PER_PASS)]] ConstantBuffer<Constants> _constants;
+[[vk::binding(1, PER_PASS)]] RWByteAddressBuffer _drawCalls;
+[[vk::binding(2, PER_PASS)]] RWByteAddressBuffer _drawCount;
+[[vk::binding(3, PER_PASS)]] ByteAddressBuffer _instances;
+[[vk::binding(4, PER_PASS)]] ByteAddressBuffer _cullingDatas;
+[[vk::binding(5, PER_PASS)]] ConstantBuffer<Constants> _constants;
 
 CullingData LoadCullingData(uint instanceIndex)
 {
@@ -160,14 +159,16 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     aabb.max = transformedCenter + transformedExtents;
     
     // Cull the AABB
-    if (!IsAABBInsideFrustum(_constants.frustumPlanes, aabb))
+    if (IsAABBInsideFrustum(_constants.frustumPlanes, aabb))
     {
+        // Increment drawcount
+        uint unnecessary;
+	    _drawCount.InterlockedAdd(0, 1, unnecessary);
+        
         return;
     }
     
-    // Store DrawCall
-    uint outIndex;
-	_drawCount.InterlockedAdd(0, 1, outIndex);
-    
-	_culledDrawCalls.Store<DrawCall>(outIndex * 20, drawCall); // 20 = sizeof(DrawCall)
+    // Disable DrawCall by settings its instanceCount to 0, the sorting will make sure it doesn't run by putting it at the end of the list of drawcalls
+    uint offset = (drawCallIndex * 20) + 4; // + 4 because that's the offset into the DrawCall for instanceCount
+    _drawCalls.Store(offset, 0);
 }
