@@ -45,6 +45,8 @@ struct InstanceLookupData
     uint16_t vertexColorTextureID1;
     uint16_t padding1;
     uint vertexOffset;
+    uint vertexColor1Offset;
+    uint vertexColor2Offset;
 };
 
 struct InstanceData
@@ -150,7 +152,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     DrawCommand command = _argumentBuffer.Load<DrawCommand>(drawCommandIndex * 20); // 20 = sizeof(DrawCommand)
     uint instanceID = command.firstInstance;
     
-    const InstanceLookupData lookupData = _instanceLookup.Load<InstanceLookupData>(instanceID * 16); // 16 = sizeof(InstanceLookupData)
+    const InstanceLookupData lookupData = _instanceLookup.Load<InstanceLookupData>(instanceID * 24); // 24 = sizeof(InstanceLookupData)
     
     const CullingData cullingData = LoadCullingData(lookupData.cullingDataID);
     const InstanceData instanceData = LoadInstanceData(lookupData.instanceID);
