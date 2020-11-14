@@ -24,11 +24,11 @@ bool ConfigLoader::Init(entt::registry* registry)
 
         // Default CVar Config
         {
-            defaultConfig["integer"] = json::array();
-            defaultConfig["double"] = json::array();
-            defaultConfig["string"] = json::array();
-            defaultConfig["vector4"] = json::array();
-            defaultConfig["ivector4"] = json::array();
+            defaultConfig["integer"] = json::object();
+            defaultConfig["double"] = json::object();
+            defaultConfig["string"] = json::object();
+            defaultConfig["vector4"] = json::object();
+            defaultConfig["ivector4"] = json::object();
         }
 
         bool didLoadOrCreate = cvarConfig.LoadOrCreate(cvarConfigPath, defaultConfig);
