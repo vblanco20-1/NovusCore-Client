@@ -27,7 +27,7 @@
 namespace fs = std::filesystem;
 
 AutoCVar_Int CVAR_ComplexModelCullingEnabled("complexModels.cullEnable", "enable culling of complex models", 1, CVarFlags::EditCheckbox);
-AutoCVar_Int CVAR_ComplexModelSortingEnabled("complexModels.sortEnable", "enable sorting of transparent complex models", 1, CVarFlags::EditCheckbox);
+//AutoCVar_Int CVAR_ComplexModelSortingEnabled("complexModels.sortEnable", "enable sorting of transparent complex models", 1, CVarFlags::EditCheckbox);
 AutoCVar_Int CVAR_ComplexModelLockCullingFrustum("complexModels.lockCullingFrustum", "lock frustrum for complex model culling", 0, CVarFlags::EditCheckbox);
 AutoCVar_Int CVAR_ComplexModelDrawBoundingBoxes("complexModels.drawBoundingBoxes", "draw bounding boxes for complex models", 0, CVarFlags::EditCheckbox);
 
@@ -117,7 +117,7 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
     };
 
     const bool cullingEnabled = CVAR_ComplexModelCullingEnabled.Get();
-    const bool alphaSortEnabled = CVAR_ComplexModelSortingEnabled.Get();
+    const bool alphaSortEnabled = false; // CVAR_ComplexModelSortingEnabled.Get(); // TODO: Replace this crappy sort with one that doesn't kill the graphics driver when loading another map
     const bool lockFrustum = CVAR_ComplexModelLockCullingFrustum.Get();
 
     renderGraph->AddPass<CModelPassData>("CModel Pass", 
@@ -258,7 +258,7 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
 
                     // Do culling
                     Renderer::ComputeShaderDesc shaderDesc;
-                    shaderDesc.path = "Data/shaders/cModelCullingAlpha.cs.hlsl.spv";
+                    shaderDesc.path = "Data/shaders/cModelCulling.cs.hlsl.spv"; // "Data/shaders/cModelCullingAlpha.cs.hlsl.spv"; // TODO: Replace this crappy sort with one that doesn't kill the graphics driver when loading another map
                     cullingPipelineDesc.computeShader = _renderer->LoadShader(shaderDesc);
 
                     Renderer::ComputePipelineID pipeline = _renderer->CreatePipeline(cullingPipelineDesc);
