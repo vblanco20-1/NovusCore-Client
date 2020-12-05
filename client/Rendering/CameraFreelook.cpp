@@ -75,6 +75,12 @@ void CameraFreeLook::Init()
                 vec2 deltaPosition = _prevMousePosition - mousePosition;
 
                 _yaw -= deltaPosition.x * _mouseSensitivity;
+
+                if (_yaw > 360)
+                    _yaw -= 360;
+                else if (_yaw < 0)
+                    _yaw += 360;
+
                 _pitch = Math::Clamp(_pitch - (deltaPosition.y * _mouseSensitivity), -89.0f, 89.0f);
             }
             else
@@ -89,7 +95,7 @@ void CameraFreeLook::Init()
         if (!IsActive())
             return false;
 
-        f32 newSpeed = CVAR_CameraSpeed.GetFloat() + 10.0f;
+        f32 newSpeed = CVAR_CameraSpeed.GetFloat() + 7.1111f;
         CVAR_CameraSpeed.Set(newSpeed);
         return true;
     });
@@ -98,7 +104,7 @@ void CameraFreeLook::Init()
         if (!IsActive())
             return false;
 
-        f32 newSpeed = CVAR_CameraSpeed.GetFloat() - 10.0f;
+        f32 newSpeed = CVAR_CameraSpeed.GetFloat() - 7.1111f;
         newSpeed = glm::max(newSpeed, 7.1111f);
         CVAR_CameraSpeed.Set(newSpeed);
         return true;

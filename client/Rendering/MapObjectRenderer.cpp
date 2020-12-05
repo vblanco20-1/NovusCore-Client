@@ -421,7 +421,7 @@ bool MapObjectRenderer::LoadRoot(const std::filesystem::path nmorPath, MeshRoot&
     FileReader nmorFile(nmorPath.string(), nmorPath.filename().string());
     if (!nmorFile.Open())
     {
-        NC_LOG_FATAL("Failed to load Map Object Root file: %s", nmorPath.string());
+        NC_LOG_FATAL("Failed to load Map Object Root file: %s", nmorPath.string().c_str());
         return false;
     }
 
@@ -437,7 +437,7 @@ bool MapObjectRenderer::LoadRoot(const std::filesystem::path nmorPath, MeshRoot&
 
     if (header.token != Terrain::MAP_OBJECT_ROOT_TOKEN)
     {
-        NC_LOG_FATAL("Found MapObjectRoot file (%s) with invalid token %u instead of expected token %u", nmorPath.string(), header.token, Terrain::MAP_OBJECT_ROOT_TOKEN);
+        NC_LOG_FATAL("Found MapObjectRoot file (%s) with invalid token %u instead of expected token %u", nmorPath.string().c_str(), header.token, Terrain::MAP_OBJECT_ROOT_TOKEN);
         return false;
     }
 
@@ -508,7 +508,7 @@ bool MapObjectRenderer::LoadMesh(const std::filesystem::path nmoPath, Mesh& mesh
     FileReader nmoFile(nmoPath.string(), nmoPath.filename().string());
     if (!nmoFile.Open())
     {
-        NC_LOG_FATAL("Failed to load Map Object file: %s", nmoPath.string());
+        NC_LOG_FATAL("Failed to load Map Object file: %s", nmoPath.string().c_str());
         return false;
     }
 

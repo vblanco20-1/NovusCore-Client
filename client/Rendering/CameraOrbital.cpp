@@ -37,7 +37,13 @@ void CameraOrbital::Init()
                 vec2 deltaPosition = _prevMousePosition - mousePosition;
 
                 _yaw -= deltaPosition.x * _mouseSensitivity;
-                _pitch = Math::Clamp(_pitch + (deltaPosition.y * _mouseSensitivity), -89.0f, 89.0f);;
+
+                if (_yaw > 360)
+                    _yaw -= 360;
+                else if (_yaw < 0)
+                    _yaw += 360;
+
+                _pitch = Math::Clamp(_pitch + (deltaPosition.y * _mouseSensitivity), -89.0f, 89.0f);
 
                 /* TODO: Add proper collision for the camera so we don't go through the ground
                          the below code will do a quick test for the pitch but not the yaw.
