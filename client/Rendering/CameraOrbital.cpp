@@ -36,7 +36,7 @@ void CameraOrbital::Init()
             {
                 vec2 deltaPosition = _prevMousePosition - mousePosition;
 
-                _yaw -= deltaPosition.x * _mouseSensitivity;
+                _yaw += deltaPosition.x * _mouseSensitivity;
 
                 if (_yaw > 360)
                     _yaw -= 360;
@@ -137,8 +137,6 @@ void CameraOrbital::Init()
 
         return true;
     });
-
-    UpdateCameraVectors();
 }
 
 void CameraOrbital::Enabled()
@@ -155,7 +153,10 @@ void CameraOrbital::Disabled()
 void CameraOrbital::Update(f32 deltaTime, float fovInDegrees, float aspectRatioWH)
 {
     // Compute matrices
-    _rotationMatrix = glm::yawPitchRoll(glm::radians(_yaw), glm::radians(_pitch), 0.0f);
+    mat4x4 offsetPitchMatrix = glm::yawPitchRoll(0.0f, glm::radians(90.0f), 0.0f);
+    mat4x4 offsetYawMatrix = glm::yawPitchRoll(glm::radians(-90.0f), 0.0f, 0.0f);
+
+    _rotationMatrix = offsetPitchMatrix * offsetYawMatrix * glm::yawPitchRoll(glm::radians(_yaw), glm::radians(_pitch), 0.0f);
 
     vec3 t = vec3(_rotationMatrix * vec4(vec3(0, 0, _distance), 0.0f));
     vec3 position = _position + t;

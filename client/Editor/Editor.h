@@ -6,6 +6,18 @@
 class Window;
 class Keybind;
 class DebugRenderer;
+
+namespace Terrain
+{
+    struct Chunk;
+    struct Cell;
+}
+
+namespace NDBC
+{
+    struct AreaTable;
+}
+
 namespace Editor
 {
     enum class SelectedBoundingBoxType
@@ -33,6 +45,7 @@ namespace Editor
     private:
         void HandleTerrainBoundingBox(DebugRenderer* debugRenderer);
 
+        bool IsRayIntersectingComplexModel(const vec3& rayOrigin, const vec3& oneOverRayDir, const Geometry::AABoundingBox* terrainAABB, f32& t);
         bool IsRayIntersectingMapObject(const vec3& rayOrigin, const vec3& oneOverRayDir, const Geometry::AABoundingBox* terrainAABB, f32& t);
         bool IsRayIntersectingTerrain(const vec3& rayOrigin, const vec3& oneOverRayDir);
         bool IsRayIntersectingAABB(const vec3& rayOrigin, const vec3& oneOverRayDir, const Geometry::AABoundingBox& boundingBox, f32& t);
@@ -40,5 +53,33 @@ namespace Editor
 
         SelectedBoundingBox _selectedBoundingBox;
         NDBCEditorHandler _ndbcEditorHandler;
+
+
+    private:
+        bool _selectedObjectDataInitialized = false;
+
+        struct SelectedTerrainData
+        {
+            vec3 center;
+
+            vec2 adtCoords;
+            vec2 chunkCoords;
+            vec2 chunkWorldPos;
+            vec2 cellCoords;
+
+            u32 chunkId;
+            u32 cellId;
+
+            Terrain::Chunk* chunk;
+            Terrain::Cell* cell;
+
+            NDBC::AreaTable* zone;
+            NDBC::AreaTable* area;
+        } _selectedTerrainData;
+
+        struct SelectedMapObjectData
+        {
+            u32 placementDetailsIndex;
+        } _selectedMapObjectData;
     };
 }

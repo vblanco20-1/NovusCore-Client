@@ -62,13 +62,16 @@ struct Transform
 
     void UpdateRotationMatrix()
     {
-        rotationMatrix = glm::yawPitchRoll(glm::radians(yaw), glm::radians(pitch), 0.0f);
+        mat4x4 offsetPitchMatrix = glm::yawPitchRoll(0.0f, glm::radians(90.0f), 0.0f);
+        mat4x4 offsetYawMatrix = glm::yawPitchRoll(glm::radians(-90.0f), 0.0f, 0.0f);
+
+        rotationMatrix = offsetPitchMatrix * offsetYawMatrix * glm::yawPitchRoll(glm::radians(yaw), glm::radians(pitch), 0.0f);
         UpdateVectors();
     }
 
     void UpdateVectors()
     {
-        left = rotationMatrix[0];
+        left = -rotationMatrix[0];
         up = rotationMatrix[1];
         front = -rotationMatrix[2];
     }

@@ -71,12 +71,10 @@ void MovementSystem::Init(entt::registry& registry)
         return true;
     });
 
-
     LocalplayerSingleton& localplayerSingleton = registry.ctx<LocalplayerSingleton>();
     if (localplayerSingleton.entity != entt::null)
     {
         Transform& transform = registry.get<Transform>(localplayerSingleton.entity);
-        transform.UpdateRotationMatrix();
 
         localplayerSingleton.movementProperties.canJump = true;
         localplayerSingleton.movementProperties.canChangeDirection = true;
@@ -106,7 +104,7 @@ void MovementSystem::Update(entt::registry& registry)
     f32 terrainHeight = 0.f;
     Terrain::MapUtils::GetTriangleFromWorldPosition(transform.position, triangle, terrainHeight);
 
-    bool isGrounded = transform.position.y <= terrainHeight;
+    bool isGrounded = transform.position.z <= terrainHeight;
     bool isRightClickDown = inputManager->IsKeyPressed("CameraOrbital Right Mouseclick"_h);
     if (isRightClickDown)
     {
@@ -114,9 +112,9 @@ void MovementSystem::Update(entt::registry& registry)
         
         // Only set Pitch if we are flying
         //transform.pitch = camera->GetPitch();
-
-        transform.UpdateRotationMatrix();
     }
+
+    transform.UpdateRotationMatrix();
 
     bool isJumping = false;
 
@@ -181,7 +179,7 @@ void MovementSystem::Update(entt::registry& registry)
 
             // Clip to Terrain
             {
-                transform.position.y = terrainHeight;
+                transform.position.z = terrainHeight;
                 movementFlags.GROUNDED = !isJumping;
             }
 
@@ -218,7 +216,7 @@ void MovementSystem::Update(entt::registry& registry)
 
                 vec3 newVelocity = moveDirection * moveSpeed;
                 transform.velocity.x = newVelocity.x;
-                transform.velocity.z = newVelocity.z;
+                transform.velocity.y = newVelocity.y;
             }
             else
             {
@@ -240,14 +238,14 @@ void MovementSystem::Update(entt::registry& registry)
         vec3 newPosition = transform.position + (transform.velocity * timeSingleton.deltaTime);
         Terrain::MapUtils::GetTriangleFromWorldPosition(newPosition, triangle, terrainHeight);
 
-        f32 diff = newPosition.y - terrainHeight;
+        f32 diff = newPosition.z - terrainHeight;
         if (!isJumping && originalFlags.GROUNDED && diff < 0.25f)
         {
-            newPosition.y = terrainHeight;
+            newPosition.z = terrainHeight;
         }
         else
         {
-            newPosition.y = glm::max(newPosition.y, terrainHeight);
+            newPosition.z = glm::max(newPosition.z, terrainHeight);
         }
 
         if (isGrounded)
@@ -255,7 +253,7 @@ void MovementSystem::Update(entt::registry& registry)
             f32 angle = triangle.GetSteepnessAngle();
 
             // TODO: Properly Push the player down the slope
-            if (angle <= 50 || newPosition.y <= transform.position.y)
+            if (angle <= 50 || newPosition.z <= transform.position.z)
             {
                 transform.position = newPosition;
             }

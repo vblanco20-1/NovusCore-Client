@@ -213,10 +213,14 @@ void MapObjectRenderer::RegisterMapObjectToBeLoaded(const std::string& mapObject
     mapObjectToBeLoaded.nmorNameHash = StringUtils::fnv1a_32(mapObjectName.c_str(), mapObjectName.length());
 }
 
-void MapObjectRenderer::RegisterMapObjectsToBeLoaded(const Terrain::Chunk& chunk, StringTable& stringTable)
+void MapObjectRenderer::RegisterMapObjectsToBeLoaded(u16 chunkID, const Terrain::Chunk& chunk, StringTable& stringTable)
 {
-    for (const Terrain::Placement& mapObjectPlacement : chunk.mapObjectPlacements)
+    _mapChunkToPlacementOffset[chunkID] = static_cast<u16>(_mapObjectsToBeLoaded.size());
+
+    for (u32 i = 0; i < chunk.mapObjectPlacements.size(); i++)
     {
+        const Terrain::Placement& mapObjectPlacement = chunk.mapObjectPlacements[i];
+
         MapObjectToBeLoaded& mapObjectToBeLoaded = _mapObjectsToBeLoaded.emplace_back();
         mapObjectToBeLoaded.placement = &mapObjectPlacement;
         mapObjectToBeLoaded.nmorName = &stringTable.GetString(mapObjectPlacement.nameID);
@@ -255,6 +259,11 @@ void MapObjectRenderer::ExecuteLoad()
             mapObjectID = it->second;
         }
         
+        // Add Placement Details (This is used to go from a placement to LoadedMapObject or InstanceData
+        Terrain::PlacementDetails& placementDetails = _mapObjectPlacementDetails.emplace_back();
+        placementDetails.loadedIndex = mapObjectID;
+        placementDetails.instanceIndex = static_cast<u32>(_instances.size());
+
         // Add placement as an instance here
         AddInstance(_loadedMapObjects[mapObjectID], mapObjectToBeLoaded.placement);
     }
@@ -265,6 +274,8 @@ void MapObjectRenderer::ExecuteLoad()
 
 void MapObjectRenderer::Clear()
 {
+    _mapChunkToPlacementOffset.clear();
+    _mapObjectPlacementDetails.clear();
     _loadedMapObjects.clear();
     _nameHashToIndexMap.clear();
     _indices.clear();
@@ -302,18 +313,15 @@ void MapObjectRenderer::CreatePermanentResources()
 
     Renderer::SamplerDesc samplerDesc;
     samplerDesc.enabled = true;
-    samplerDesc.filter = Renderer::SamplerFilter::SAMPLER_FILTER_MIN_MAG_MIP_LINEAR;//Renderer::SamplerFilter::SAMPLER_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+    samplerDesc.filter = Renderer::SamplerFilter::SAMPLER_FILTER_MIN_MAG_MIP_LINEAR; //Renderer::SamplerFilter::SAMPLER_FILTER_MIN_MAG_LINEAR_MIP_POINT;
     samplerDesc.addressU = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_WRAP;
     samplerDesc.addressV = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_WRAP;
     samplerDesc.addressW = Renderer::TextureAddressMode::TEXTURE_ADDRESS_MODE_CLAMP;
     samplerDesc.shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_PIXEL;
 
     _sampler = _renderer->CreateSampler(samplerDesc);
-
-    _passDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
     _passDescriptorSet.Bind("_sampler", _sampler);
 
-    _cullingDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
     _cullingConstantBuffer = new Renderer::Buffer<CullingConstants>(_renderer, "CullingConstantBuffer", Renderer::BUFFER_USAGE_UNIFORM_BUFFER, Renderer::BufferCPUAccess::WriteOnly);
 }
 
@@ -325,6 +333,9 @@ bool MapObjectRenderer::LoadMapObject(MapObjectToBeLoaded& mapObjectToBeLoaded, 
         NC_LOG_FATAL("For some reason, a Chunk had a MapObjectPlacement with a reference to a file that didn't end with .nmor");
         return false;
     }
+
+    const std::string& modelPath = *mapObjectToBeLoaded.nmorName;
+    mapObject.debugName = modelPath;
 
     fs::path nmorPath = "Data/extracted/MapObjects/" + *mapObjectToBeLoaded.nmorName;
     nmorPath.make_preferred();
@@ -676,13 +687,10 @@ void MapObjectRenderer::AddInstance(LoadedMapObject& mapObject, const Terrain::P
     mapObject.instanceIDs.push_back(instanceID);
     
     InstanceData& instance = _instances.emplace_back();
-
+    
     vec3 pos = placement->position;
-    pos = vec3(Terrain::MAP_HALF_SIZE - pos.x, pos.y, Terrain::MAP_HALF_SIZE - pos.z); // Go from [0 .. MAP_SIZE] to [-MAP_HALF_SIZE .. MAP_HALF_SIZE]
-    pos = vec3(pos.z, pos.y, pos.x); // Swizzle and invert x and z
-
-    vec3 rot = placement->rotation;
-    mat4x4 rotationMatrix = glm::eulerAngleXYZ(glm::radians(rot.z), glm::radians(-rot.y), glm::radians(rot.x));
+    vec3 rot = glm::radians(placement->rotation);
+    mat4x4 rotationMatrix = glm::eulerAngleZYX(rot.z, -rot.y, -rot.x);
 
     instance.instanceMatrix = glm::translate(mat4x4(1.0f), pos) * rotationMatrix;
 
