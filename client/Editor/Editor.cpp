@@ -219,7 +219,7 @@ namespace Editor
         }
     }
 
-    bool Editor::IsRayIntersectingComplexModel(const vec3& rayOrigin, const vec3& oneOverRayDir, const Geometry::AABoundingBox* terrainAABB, f32& t)
+    bool Editor::IsRayIntersectingComplexModel(const vec3& rayOrigin, const vec3& oneOverRayDir, f32& outTime)
     {
         entt::registry* registry = ServiceLocator::GetGameRegistry();
         MapSingleton& mapSingleton = registry->ctx<MapSingleton>();
@@ -238,199 +238,94 @@ namespace Editor
         u32 chunkMapPlacementDetailsOffset = cmodelRenderer->GetChunkPlacementDetailsOffset(chunkId);
         const std::vector<Terrain::PlacementDetails>& complexModelPlacementDetails = cmodelRenderer->GetPlacementDetails();
 
-        std::vector<Geometry::AABoundingBox> intersectedBoundingBoxes;
-        std::vector<f32> timeToIntersection;
-        std::vector<u32> placementDetailIndices;
-
-        intersectedBoundingBoxes.reserve(16);
-        timeToIntersection.reserve(16);
-        placementDetailIndices.reserve(16);
-
-        Geometry::AABoundingBox* selectedBoundingBox = nullptr;
-
-        f32 timeToIntersect = 0;
-
-        const std::vector<CModelRenderer::LoadedComplexModel>& loadedComplexModels = cmodelRenderer->GetLoadedComplexModels();
+        const std::vector<Terrain::PlacementDetails>& complexPlacementDetails = cmodelRenderer->GetPlacementDetails();
         const std::vector<CModelRenderer::Instance>& complexModelInstances = cmodelRenderer->GetInstances();
+        const std::vector<CModelRenderer::LoadedComplexModel>& loadedComplexModels = cmodelRenderer->GetLoadedComplexModels();
         const std::vector<CModel::CullingData>& complexModelCullingDatas = cmodelRenderer->GetCullingData();
 
-        for (u32 i = chunkMapPlacementDetailsOffset; i < numPlacementsOnChunk + chunkMapPlacementDetailsOffset; i++)
+        bool didIntersectAtleastOnce = false;
+
+        for (u32 i = 0; i < complexPlacementDetails.size(); i++)
         {
-            const Terrain::PlacementDetails& placementDetails = complexModelPlacementDetails[i];
+            const Terrain::PlacementDetails& placementDetails = complexPlacementDetails[i];
 
+            const CModelRenderer::Instance& instance = complexModelInstances[placementDetails.instanceIndex];
             const CModelRenderer::LoadedComplexModel& loadedComplexModel = loadedComplexModels[placementDetails.loadedIndex];
-            const CModelRenderer::Instance& instanceData = complexModelInstances[placementDetails.instanceIndex];
 
-            const mat4x4& m = instanceData.instanceMatrix;
+            // Particle Emitters have no culling data
+            if (loadedComplexModel.cullingDataID == std::numeric_limits<u32>().max())
+                continue;
+
+            const CModel::CullingData& cullingData = complexModelCullingDatas[loadedComplexModel.cullingDataID];
+
+            vec3 minBoundingBox = cullingData.minBoundingBox;
+            vec3 maxBoundingBox = cullingData.maxBoundingBox;
+
+            vec3 center = (minBoundingBox + maxBoundingBox) * 0.5f;
+            vec3 extents = maxBoundingBox - center;
+
+            // transform center
+            const mat4x4& m = instance.instanceMatrix;
+            vec3 transformedCenter = vec3(m * vec4(center, 1.0f));
 
             // Transform extents (take maximum)
             glm::mat3x3 absMatrix = glm::mat3x3(glm::abs(vec3(m[0])), glm::abs(vec3(m[1])), glm::abs(vec3(m[2])));
+            vec3 transformedExtents = absMatrix * extents;
 
-            Geometry::AABoundingBox complexModelAABB;
-            complexModelAABB.min = vec3(Terrain::MAP_SIZE, Terrain::MAP_SIZE, Terrain::MAP_SIZE);
-            complexModelAABB.max = vec3(-Terrain::MAP_SIZE, -Terrain::MAP_SIZE, -Terrain::MAP_SIZE);
-            f32 smallestT = 10000.0f;
-            bool didPush = false;
+            // Transform to min/max box representation
+            Geometry::AABoundingBox aabb;
+            aabb.min = transformedCenter - transformedExtents;
+            aabb.max = transformedCenter + transformedExtents;
 
-            for (const CModelRenderer::DrawCallData& opaqueDrawCallData : loadedComplexModel.opaqueDrawCallDataTemplates)
+            f32 t = 0;
+            if (IsRayIntersectingAABB(rayOrigin, oneOverRayDir, aabb, t))
             {
-                const CModel::CullingData& cullingData = complexModelCullingDatas[opaqueDrawCallData.cullingDataID];
-
-                vec3 center = (cullingData.minBoundingBox + cullingData.maxBoundingBox) * f16(0.5f);
-                vec3 extents = vec3(cullingData.maxBoundingBox) - center;
-
-                // transform center
-                vec3 transformedCenter = vec3(m * vec4(center, 1.0f));
-                vec3 transformedExtents = absMatrix * extents;
-
-                // Transform to min/max box representation
-                Geometry::AABoundingBox aabb;
-                aabb.min = transformedCenter - transformedExtents;
-                aabb.max = transformedCenter + transformedExtents;
-
-                for (u32 j = 0; j < 3; j++)
+                if (t >= 0.0f && t < outTime)
                 {
-                    if (aabb.min[j] < complexModelAABB.min[j])
-                        complexModelAABB.min[j] = aabb.min[j];
+                    outTime = t;
+                    _boundingBoxComplexModel = aabb;
+                    _selectedComplexModelData.placementDetailsIndex = i;
 
-                    if (aabb.max[j] > complexModelAABB.max[j])
-                        complexModelAABB.max[j] = aabb.max[j];
+                    didIntersectAtleastOnce = true;
                 }
-
-                if (IsRayIntersectingAABB(rayOrigin, oneOverRayDir, aabb, t))
-                {
-                    if (!didPush)
-                    {
-                        didPush = true;
-
-                        if (t < smallestT)
-                            smallestT = t;
-                    }
-                }
-            }
-
-            for (const CModelRenderer::DrawCallData& transparentDrawCallData : loadedComplexModel.transparentDrawCallDataTemplates)
-            {
-                const CModel::CullingData& cullingData = complexModelCullingDatas[transparentDrawCallData.cullingDataID];
-
-                vec3 center = (cullingData.minBoundingBox + cullingData.maxBoundingBox) * f16(0.5f);
-                vec3 extents = vec3(cullingData.maxBoundingBox) - center;
-
-                // transform center
-                vec3 transformedCenter = vec3(m * vec4(center, 1.0f));
-                vec3 transformedExtents = absMatrix * extents;
-
-                // Transform to min/max box representation
-                Geometry::AABoundingBox aabb;
-                aabb.min = transformedCenter - transformedExtents;
-                aabb.max = transformedCenter + transformedExtents;
-
-                for (u32 j = 0; j < 3; j++)
-                {
-                    if (aabb.min[j] < complexModelAABB.min[j])
-                        complexModelAABB.min[j] = aabb.min[j];
-
-                    if (aabb.max[j] > complexModelAABB.max[j])
-                        complexModelAABB.max[j] = aabb.max[j];
-                }
-
-                if (IsRayIntersectingAABB(rayOrigin, oneOverRayDir, aabb, t))
-                {
-                    if (!didPush)
-                    {
-                        didPush = true;
-
-                        if (t < smallestT)
-                            smallestT = t;
-                    }
-                }
-            }
-
-            if (didPush)
-            {
-                intersectedBoundingBoxes.push_back(complexModelAABB);
-                timeToIntersection.push_back(smallestT);
-                placementDetailIndices.push_back(i);
             }
         }
 
-        f32 smallestT = std::numeric_limits<f32>().max();
-        for (u32 i = 0; i < intersectedBoundingBoxes.size(); i++)
-        {
-            f32& currentT = timeToIntersection[i];
-            if (currentT < smallestT)
-            {
-                smallestT = currentT;
-                selectedBoundingBox = &intersectedBoundingBoxes[i];
-            }
-        }
-
-        if (selectedBoundingBox)
-        {
-            _selectedBoundingBox.type = SelectedBoundingBoxType::COMPLEX_MODEL;
-            _selectedBoundingBox.aabb.min = selectedBoundingBox->min;
-            _selectedBoundingBox.aabb.max = selectedBoundingBox->max;
-        }
-
-        return selectedBoundingBox != nullptr;
+        return didIntersectAtleastOnce;
     }
-    bool Editor::IsRayIntersectingMapObject(const vec3& rayOrigin, const vec3& oneOverRayDir, const Geometry::AABoundingBox* terrainAABB, f32& t)
+    bool Editor::IsRayIntersectingMapObject(const vec3& rayOrigin, const vec3& oneOverRayDir, f32& outTime)
     {
-        entt::registry* registry = ServiceLocator::GetGameRegistry();
-        MapSingleton& mapSingleton = registry->ctx<MapSingleton>();
-
         ClientRenderer* clientRenderer = ServiceLocator::GetClientRenderer();
         TerrainRenderer* terrainRenderer = clientRenderer->GetTerrainRenderer();
         MapObjectRenderer* mapObjectRenderer = terrainRenderer->GetMapObjectRenderer();
 
-        vec3 aabbCenter = (_selectedBoundingBox.aabb.min + _selectedBoundingBox.aabb.max) / vec3(2.0f, 2.0f, 2.0f);
-        vec2 adtCoords = Terrain::MapUtils::WorldPositionToADTCoordinates(aabbCenter);
-        vec2 chunkCoords = Terrain::MapUtils::GetChunkFromAdtPosition(adtCoords);
-        u32 chunkId = Terrain::MapUtils::GetChunkIdFromChunkPos(chunkCoords);
-
-        const Terrain::Chunk& chunk = mapSingleton.currentMap.chunks[chunkId];
-        u32 numPlacementsOnChunk = static_cast<u32>(chunk.mapObjectPlacements.size());
-        u32 chunkMapPlacementDetailsOffset = mapObjectRenderer->GetChunkPlacementDetailsOffset(chunkId);
         const std::vector<Terrain::PlacementDetails>& mapObjectPlacementDetails = mapObjectRenderer->GetPlacementDetails();
-
-        std::vector<Geometry::AABoundingBox> intersectedBoundingBoxes;
-        std::vector<f32> timeToIntersection;
-        std::vector<u32> placementDetailIndices;
-
-        intersectedBoundingBoxes.reserve(16);
-        timeToIntersection.reserve(16);
-        placementDetailIndices.reserve(16);
-
-        Geometry::AABoundingBox* selectedBoundingBox = nullptr;
-
-        f32 timeToIntersect = 0;
-
-        const std::vector<MapObjectRenderer::LoadedMapObject>& loadedMapObjects = mapObjectRenderer->GetLoadedMapObjects();
         const std::vector<MapObjectRenderer::InstanceData>& mapObjectInstanceDatas = mapObjectRenderer->GetInstances();
+        const std::vector<MapObjectRenderer::LoadedMapObject>& loadedMapObjects = mapObjectRenderer->GetLoadedMapObjects();
 
-        for (u32 i = chunkMapPlacementDetailsOffset; i < numPlacementsOnChunk + chunkMapPlacementDetailsOffset; i++)
+        bool didIntersectAtleastOnce = false;
+
+        for (u32 i = 0; i < mapObjectPlacementDetails.size(); i++)
         {
             const Terrain::PlacementDetails& placementDetails = mapObjectPlacementDetails[i];
 
-            const MapObjectRenderer::LoadedMapObject& loadedMapObject = loadedMapObjects[placementDetails.loadedIndex];
-            const std::vector<Terrain::CullingData>& mapObjectCullingData = loadedMapObject.cullingData;
             const MapObjectRenderer::InstanceData& instanceData = mapObjectInstanceDatas[placementDetails.instanceIndex];
+            const MapObjectRenderer::LoadedMapObject& loadedMapObject = loadedMapObjects[placementDetails.loadedIndex];
 
             const mat4x4& m = instanceData.instanceMatrix;
-
-            // Transform extents (take maximum)
             glm::mat3x3 absMatrix = glm::mat3x3(glm::abs(vec3(m[0])), glm::abs(vec3(m[1])), glm::abs(vec3(m[2])));
 
             Geometry::AABoundingBox mapObjectAABB;
             mapObjectAABB.min = vec3(Terrain::MAP_SIZE, Terrain::MAP_SIZE, Terrain::MAP_SIZE);
             mapObjectAABB.max = vec3(-Terrain::MAP_SIZE, -Terrain::MAP_SIZE, -Terrain::MAP_SIZE);
-            f32 smallestT = 10000.0f;
-            bool didPush = false;
 
-            for (const Terrain::CullingData& cullingData : mapObjectCullingData)
+            for (const Terrain::CullingData& cullingData : loadedMapObject.cullingData)
             {
-                vec3 center = (cullingData.minBoundingBox + cullingData.maxBoundingBox) * f16(0.5f);
-                vec3 extents = vec3(cullingData.maxBoundingBox) - center;
+                vec3 minBoundingBox = cullingData.minBoundingBox;
+                vec3 maxBoundingBox = cullingData.maxBoundingBox;
+
+                vec3 center = (minBoundingBox + maxBoundingBox) * 0.5f;
+                vec3 extents = maxBoundingBox - center;
 
                 // transform center
                 vec3 transformedCenter = vec3(m * vec4(center, 1.0f));
@@ -449,102 +344,49 @@ namespace Editor
                     if (aabb.max[j] > mapObjectAABB.max[j])
                         mapObjectAABB.max[j] = aabb.max[j];
                 }
+            }
 
-                if (IsRayIntersectingAABB(rayOrigin, oneOverRayDir, aabb, t))
+            f32 t = 0;
+            if (IsRayIntersectingAABB(rayOrigin, oneOverRayDir, mapObjectAABB, t))
+            {
+                if (t >= 0.0f && t < outTime)
                 {
-                    if (!didPush)
-                    {
-                        didPush = true;
+                    outTime = t;
+                    _boundingBoxMapObject = mapObjectAABB;
+                    _selectedMapObjectData.placementDetailsIndex = i;
 
-                        if (t < smallestT)
-                            smallestT = t;
-                    }
+                    didIntersectAtleastOnce = true;
                 }
             }
-
-            if (didPush)
-            {
-                intersectedBoundingBoxes.push_back(mapObjectAABB);
-                timeToIntersection.push_back(smallestT);
-                placementDetailIndices.push_back(i);
-            }
         }
 
-        f32 smallestT = std::numeric_limits<f32>().max();
-        u32 detailsIndex = std::numeric_limits<u32>().max();
-        for (u32 i = 0; i < intersectedBoundingBoxes.size(); i++)
-        {
-            f32& currentT = timeToIntersection[i];
-            if (currentT < smallestT)
-            {
-                smallestT = currentT;
-                selectedBoundingBox = &intersectedBoundingBoxes[i];
-                detailsIndex = placementDetailIndices[i];
-            }
-        }
-
-        if (selectedBoundingBox)
-        {
-            _selectedBoundingBox.type = SelectedBoundingBoxType::MAP_OBJECT;
-            _selectedBoundingBox.aabb.min = selectedBoundingBox->min;
-            _selectedBoundingBox.aabb.max = selectedBoundingBox->max;
-
-            _selectedMapObjectData.placementDetailsIndex = detailsIndex;
-        }
-
-        return selectedBoundingBox != nullptr;
+        return didIntersectAtleastOnce;
     }
-    bool Editor::IsRayIntersectingTerrain(const vec3& rayOrigin, const vec3& oneOverRayDir)
+    bool Editor::IsRayIntersectingTerrain(const vec3& rayOrigin, const vec3& oneOverRayDir, f32& outTime)
     {
         ClientRenderer* clientRenderer = ServiceLocator::GetClientRenderer();
         TerrainRenderer* terrainRenderer = clientRenderer->GetTerrainRenderer();
 
         std::vector<Geometry::AABoundingBox> terrainBoundingBoxes = terrainRenderer->GetBoundingBoxes();
-        std::vector<Geometry::AABoundingBox*> intersectedBoundingBoxes;
-        std::vector<f32> timeToIntersection;
 
-        intersectedBoundingBoxes.reserve(16);
-        timeToIntersection.reserve(16);
-
-        Geometry::AABoundingBox* selectedBoundingBox = nullptr;
+        bool didIntersectAtleastOne = false;
 
         f32 t = 0;
         for (Geometry::AABoundingBox& boundingBox : terrainBoundingBoxes)
         {
             if (IsRayIntersectingAABB(rayOrigin, oneOverRayDir, boundingBox, t))
             {
-                intersectedBoundingBoxes.push_back(&boundingBox);
-                timeToIntersection.push_back(t);
+                if (t >= 0.0f && t < outTime)
+                {
+                    outTime = t;
+                    _boundingBoxTerrain = boundingBox;
+
+                    didIntersectAtleastOne = true;
+                }
             }
         }
 
-        f32 smallestT = std::numeric_limits<f32>().max();
-        for (u32 i = 0; i < intersectedBoundingBoxes.size(); i++)
-        {
-            f32& currentT = timeToIntersection[i];
-            if (currentT < smallestT)
-            {
-                smallestT = currentT;
-                selectedBoundingBox = intersectedBoundingBoxes[i];
-            }
-        }
-
-        if (selectedBoundingBox)
-        {
-            _selectedBoundingBox.type = SelectedBoundingBoxType::TERRAIN;
-            _selectedBoundingBox.aabb.min = selectedBoundingBox->min;
-            _selectedBoundingBox.aabb.max = selectedBoundingBox->max;
-
-            /* Check if we have hit any WMO before the terrain */
-            f32 timeForRayIntersection = std::numeric_limits<f32>().max();
-            if (IsRayIntersectingComplexModel(rayOrigin, oneOverRayDir, selectedBoundingBox, timeForRayIntersection))
-                return true;
-
-            if (IsRayIntersectingMapObject(rayOrigin, oneOverRayDir, selectedBoundingBox, timeForRayIntersection))
-                return true;
-        }
-
-        return selectedBoundingBox != nullptr;
+        return didIntersectAtleastOne;
     }
     bool Editor::IsRayIntersectingAABB(const vec3& rayOrigin, const vec3& oneOverRayDir, const Geometry::AABoundingBox& aabb, f32& t)
     {
@@ -616,12 +458,68 @@ namespace Editor
             CVAR_EditorRayEndPosition.Set(vec4(end, 0));
         }
 
-        if (IsRayIntersectingTerrain(start, dirFrac))
+        std::vector<f32> rayIntersectionTimes = { 100000.0f, 100000.0f, 100000.0f };
+
+        bool didRayIntersectTerrain = IsRayIntersectingTerrain(start, dirFrac, rayIntersectionTimes[0]);
+        bool didRayIntersectMapObject = IsRayIntersectingMapObject(start, dirFrac, rayIntersectionTimes[1]);
+        bool didRayIntersectComplexModel = IsRayIntersectingComplexModel(start, dirFrac, rayIntersectionTimes[2]);
+
+        bool didRayIntersect = didRayIntersectTerrain || didRayIntersectMapObject || didRayIntersectComplexModel;
+
+        if (didRayIntersect)
         {
+            // Figure out which one to select
+            {
+                // Rules to help make selecting Map Objects & Complex Models easier (Later we will use the GPU for Pixel Perfect Accuracy, so this is just temporary)
+                if (didRayIntersectTerrain && (didRayIntersectMapObject || didRayIntersectComplexModel))
+                    rayIntersectionTimes[0] = 100000.0f;
+
+                f32 minimumTimeToIntersect = 100000.0f;
+                u32 index = std::numeric_limits<u32>().max();
+
+                for (u32 i = 0; i < rayIntersectionTimes.size(); i++)
+                {
+                    f32 rayIntersectionTime = rayIntersectionTimes[i];
+                    if (rayIntersectionTime < minimumTimeToIntersect)
+                    {
+                        minimumTimeToIntersect = rayIntersectionTime;
+                        index = i;
+                    }
+                }
+
+                switch (index)
+                {
+                    case 0: // Terrain
+                    {
+                        _selectedBoundingBox.type = SelectedBoundingBoxType::TERRAIN;
+                        _selectedBoundingBox.aabb = _boundingBoxTerrain;
+                        break;
+                    }
+
+                    case 1: // Map Object
+                    {
+                        _selectedBoundingBox.type = SelectedBoundingBoxType::MAP_OBJECT;
+                        _selectedBoundingBox.aabb = _boundingBoxMapObject;
+                        break;
+                    }
+
+                    case 2: // Complex Model
+                    {
+                        _selectedBoundingBox.type = SelectedBoundingBoxType::COMPLEX_MODEL;
+                        _selectedBoundingBox.aabb = _boundingBoxComplexModel;
+                        break;
+                    }
+
+                    default:
+                    {
+                        break;
+                    }
+                }
+            }
+
             _selectedObjectDataInitialized = false;
-            return true;
         }
 
-        return false;
+        return didRayIntersect;
     }
 }

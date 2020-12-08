@@ -45,13 +45,16 @@ namespace Editor
     private:
         void HandleTerrainBoundingBox(DebugRenderer* debugRenderer);
 
-        bool IsRayIntersectingComplexModel(const vec3& rayOrigin, const vec3& oneOverRayDir, const Geometry::AABoundingBox* terrainAABB, f32& t);
-        bool IsRayIntersectingMapObject(const vec3& rayOrigin, const vec3& oneOverRayDir, const Geometry::AABoundingBox* terrainAABB, f32& t);
-        bool IsRayIntersectingTerrain(const vec3& rayOrigin, const vec3& oneOverRayDir);
+        bool IsRayIntersectingComplexModel(const vec3& rayOrigin, const vec3& oneOverRayDir, f32& outTime);
+        bool IsRayIntersectingMapObject(const vec3& rayOrigin, const vec3& oneOverRayDir, f32& outTime);
+        bool IsRayIntersectingTerrain(const vec3& rayOrigin, const vec3& oneOverRayDir, f32& outTime);
         bool IsRayIntersectingAABB(const vec3& rayOrigin, const vec3& oneOverRayDir, const Geometry::AABoundingBox& boundingBox, f32& t);
         bool OnMouseClickLeft(Window* window, std::shared_ptr<Keybind> keybind);
 
         SelectedBoundingBox _selectedBoundingBox;
+        Geometry::AABoundingBox _boundingBoxTerrain;
+        Geometry::AABoundingBox _boundingBoxMapObject;
+        Geometry::AABoundingBox _boundingBoxComplexModel;
         NDBCEditorHandler _ndbcEditorHandler;
 
 
@@ -81,5 +84,10 @@ namespace Editor
         {
             u32 placementDetailsIndex;
         } _selectedMapObjectData;
+
+        struct SelectedComplexModelData
+        {
+            u32 placementDetailsIndex;
+        } _selectedComplexModelData;
     };
 }
