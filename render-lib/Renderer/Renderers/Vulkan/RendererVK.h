@@ -102,6 +102,7 @@ namespace Renderer
         void AddWaitSemaphore(CommandListID commandListID, GPUSemaphoreID semaphoreID) override;
         void CopyBuffer(CommandListID commandListID, BufferID dstBuffer, u64 dstOffset, BufferID srcBuffer, u64 srcOffset, u64 range) override;
         void PipelineBarrier(CommandListID commandListID, PipelineBarrierType type, BufferID buffer) override;
+        void ImageBarrier(CommandListID commandListID, ImageID image) override;
         void PushConstant(CommandListID commandListID, void* data, u32 offset, u32 size) override;
         void FillBuffer(CommandListID commandListID, BufferID dstBuffer, u64 dstOffset, u64 size, u32 data) override;
 

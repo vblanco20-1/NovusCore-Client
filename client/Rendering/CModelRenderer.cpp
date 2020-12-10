@@ -22,7 +22,6 @@
 #include "Camera.h"
 #include "../Gameplay/Map/Map.h"
 #include "CVar/CVarSystem.h"
-#include <tracy/TracyVulkan.hpp>
 
 namespace fs = std::filesystem;
 
@@ -86,11 +85,12 @@ void CModelRenderer::Update(f32 deltaTime)
     }
 }
 
-void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Renderer::DescriptorSet* globalDescriptorSet, Renderer::ImageID renderTarget, Renderer::DepthImageID depthTarget, u8 frameIndex)
+void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Renderer::DescriptorSet* globalDescriptorSet, Renderer::ImageID colorTarget, Renderer::ImageID objectTarget, Renderer::DepthImageID depthTarget, u8 frameIndex)
 {
     struct CModelPassData
     {
         Renderer::RenderPassMutableResource mainColor;
+        Renderer::RenderPassMutableResource mainObject;
         Renderer::RenderPassMutableResource mainDepth;
     };
 
@@ -101,7 +101,8 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
     renderGraph->AddPass<CModelPassData>("CModel Pass", 
         [=](CModelPassData& data, Renderer::RenderGraphBuilder& builder)
         {
-            data.mainColor = builder.Write(renderTarget, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
+            data.mainColor = builder.Write(colorTarget, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
+            data.mainObject = builder.Write(objectTarget, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
             data.mainDepth = builder.Write(depthTarget, Renderer::RenderGraphBuilder::WriteMode::WRITE_MODE_RENDERTARGET, Renderer::RenderGraphBuilder::LoadMode::LOAD_MODE_CLEAR);
 
             return true; // Return true from setup to enable this pass, return false to disable it
@@ -135,11 +136,18 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
             pipelineDesc.states.depthStencilState.depthFunc = Renderer::ComparisonFunc::COMPARISON_FUNC_GREATER;
 
             // Rasterizer state
-            pipelineDesc.states.rasterizerState.cullMode = Renderer::CullMode::CULL_MODE_BACK; //Renderer::CullMode::CULL_MODE_BACK;
+            pipelineDesc.states.rasterizerState.cullMode = Renderer::CullMode::CULL_MODE_BACK;
             pipelineDesc.states.rasterizerState.frontFaceMode = Renderer::FrontFaceState::FRONT_FACE_STATE_COUNTERCLOCKWISE;
+
             // Render targets
             pipelineDesc.renderTargets[0] = data.mainColor;
+            pipelineDesc.renderTargets[1] = data.mainObject;
             pipelineDesc.depthStencil = data.mainDepth;
+
+            struct Constants
+            {
+                u32 isTransparent;
+            };
 
             // Set Opaque Pipeline
             u32 numOpaqueDrawCalls = static_cast<u32>(_opaqueDrawCalls.size());
@@ -174,7 +182,7 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                     _cullingDescriptorSet.Bind("_instances", _instanceBuffer);
                     _cullingDescriptorSet.Bind("_cullingDatas", _cullingDataBuffer);
                     _cullingDescriptorSet.Bind("_constants", _opaqueCullConstantBuffer->GetBuffer(frameIndex));
-                    
+
                     commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_cullingDescriptorSet, frameIndex);
                     commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, globalDescriptorSet, frameIndex);
 
@@ -204,6 +212,10 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                 _passDescriptorSet.Bind("_textureUnits", _textureUnitBuffer);
                 _passDescriptorSet.Bind("_instances", _instanceBuffer);
                 commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, frameIndex);
+
+                Constants* constants = resources.FrameNew<Constants>();
+                constants->isTransparent = false;
+                commandList.PushConstant(constants, 0, sizeof(Constants));
 
                 commandList.SetIndexBuffer(_indexBuffer, Renderer::IndexFormat::UInt16);
 
@@ -251,7 +263,8 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                     }
 
                     _cullingDescriptorSet.Bind("_drawCallDatas", _transparentDrawCallDataBuffer);
-                    _cullingDescriptorSet.Bind("_drawCalls", _transparentCulledDrawCallBuffer);
+                    _cullingDescriptorSet.Bind("_drawCalls", _transparentDrawCallBuffer);
+                    _cullingDescriptorSet.Bind("_culledDrawCalls", _transparentCulledDrawCallBuffer);
                     _cullingDescriptorSet.Bind("_drawCount", _transparentDrawCountBuffer);
                     _cullingDescriptorSet.Bind("_instances", _instanceBuffer);
                     _cullingDescriptorSet.Bind("_cullingDatas", _cullingDataBuffer);
@@ -368,11 +381,11 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                     commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToIndirectArguments, _transparentDrawCountBuffer);
                 }
 
-                pipelineDesc.states.depthStencilState.depthWriteEnable = false;
+                pipelineDesc.states.depthStencilState.depthWriteEnable = false; 
+
+                // ColorTarget
                 pipelineDesc.states.blendState.renderTargets[0].blendEnable = true;
                 pipelineDesc.states.blendState.renderTargets[0].blendOp = Renderer::BlendOp::BLEND_OP_ADD;
-                //pipelineDesc.states.blendState.renderTargets[0].srcBlend = Renderer::BlendMode::BLEND_MODE_SRC_ALPHA;
-                //pipelineDesc.states.blendState.renderTargets[0].destBlend = Renderer::BlendMode::BLEND_MODE_INV_SRC_ALPHA;
                 pipelineDesc.states.blendState.renderTargets[0].srcBlend = Renderer::BlendMode::BLEND_MODE_SRC_ALPHA;
                 pipelineDesc.states.blendState.renderTargets[0].destBlend = Renderer::BlendMode::BLEND_MODE_ONE;
 
@@ -387,6 +400,10 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                 _passDescriptorSet.Bind("_textureUnits", _textureUnitBuffer);
                 _passDescriptorSet.Bind("_instances", _instanceBuffer);
                 commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, frameIndex);
+
+                Constants* constants = resources.FrameNew<Constants>();
+                constants->isTransparent = true;
+                commandList.PushConstant(constants, 0, sizeof(Constants));
 
                 commandList.SetIndexBuffer(_indexBuffer, Renderer::IndexFormat::UInt16);
 
@@ -404,10 +421,14 @@ void CModelRenderer::RegisterLoadFromChunk(u16 chunkID, const Terrain::Chunk& ch
 
     for (const Terrain::Placement& placement : chunk.complexModelPlacements)
     {
-        ComplexModelToBeLoaded& modelToBeLoaded = _complexModelsToBeLoaded.emplace_back();
-        modelToBeLoaded.placement = &placement;
-        modelToBeLoaded.name = &stringTable.GetString(placement.nameID);
-        modelToBeLoaded.nameHash = stringTable.GetStringHash(placement.nameID);
+        u32 uniqueID = placement.uniqueID;
+        if (_uniqueIdCounter[uniqueID]++ == 0)
+        {
+            ComplexModelToBeLoaded& modelToBeLoaded = _complexModelsToBeLoaded.emplace_back();
+            modelToBeLoaded.placement = &placement;
+            modelToBeLoaded.name = &stringTable.GetString(placement.nameID);
+            modelToBeLoaded.nameHash = stringTable.GetStringHash(placement.nameID);
+        }
     }
 }
 
@@ -429,6 +450,7 @@ void CModelRenderer::ExecuteLoad()
         {
             modelID = static_cast<u32>(_loadedComplexModels.size());
             LoadedComplexModel& complexModel = _loadedComplexModels.emplace_back();
+            complexModel.objectID = modelID;
             LoadComplexModel(modelToBeLoaded, complexModel);
 
             _nameHashToIndexMap[modelToBeLoaded.nameHash] = modelID;
@@ -454,10 +476,13 @@ void CModelRenderer::ExecuteLoad()
 
 void CModelRenderer::Clear()
 {
+    _uniqueIdCounter.clear();
     _mapChunkToPlacementOffset.clear();
     _complexModelPlacementDetails.clear();
     _loadedComplexModels.clear();
     _nameHashToIndexMap.clear();
+    _opaqueDrawCallDataIndexToLoadedModelIndex.clear();
+    _transparentDrawCallDataIndexToLoadedModelIndex.clear();
 
     _vertices.clear();
     _indices.clear();
@@ -644,6 +669,7 @@ bool CModelRenderer::LoadComplexModel(ComplexModelToBeLoaded& toBeLoaded, Loaded
         // For each renderbatch we want to create a template DrawCall and DrawCallData inside of the LoadedComplexModel
         DrawCall& drawCallTemplate = drawCallTemplates.emplace_back();
         DrawCallData& drawCallDataTemplate = drawCallDataTemplates.emplace_back();
+        drawCallDataTemplate.cullingDataID = complexModel.cullingDataID;
         
         drawCallTemplate.instanceCount = 1;
         drawCallTemplate.vertexOffset = static_cast<u32>(numVerticesBeforeAdd);
@@ -984,14 +1010,18 @@ void CModelRenderer::AddInstance(LoadedComplexModel& complexModel, const Terrain
         DrawCall& drawCall = _opaqueDrawCalls.emplace_back();
         DrawCallData& drawCallData = _opaqueDrawCallDatas.emplace_back();
 
+        _opaqueDrawCallDataIndexToLoadedModelIndex[static_cast<u32>(numOpaqueDrawCallsBeforeAdd) + i] = complexModel.objectID;
+
         // Copy data from the templates
         drawCall.firstIndex = drawCallTemplate.firstIndex;
         drawCall.indexCount = drawCallTemplate.indexCount;
         drawCall.instanceCount = drawCallTemplate.instanceCount;
         drawCall.vertexOffset = drawCallTemplate.vertexOffset;
 
+        drawCallData.cullingDataID = drawCallDataTemplate.cullingDataID;
         drawCallData.textureUnitOffset = drawCallDataTemplate.textureUnitOffset;
         drawCallData.numTextureUnits = drawCallDataTemplate.numTextureUnits;
+        drawCallData.renderPriority = drawCallDataTemplate.renderPriority;
         
         // Fill in the data that shouldn't be templated
         drawCall.firstInstance = static_cast<u32>(numOpaqueDrawCallsBeforeAdd + i); // This is used in the shader to retrieve the DrawCallData
@@ -1008,14 +1038,18 @@ void CModelRenderer::AddInstance(LoadedComplexModel& complexModel, const Terrain
         DrawCall& drawCall = _transparentDrawCalls.emplace_back();
         DrawCallData& drawCallData = _transparentDrawCallDatas.emplace_back();
 
+        _transparentDrawCallDataIndexToLoadedModelIndex[static_cast<u32>(numTransparentDrawCallsBeforeAdd) + i] = complexModel.objectID;
+
         // Copy data from the templates
         drawCall.firstIndex = drawCallTemplate.firstIndex;
         drawCall.indexCount = drawCallTemplate.indexCount;
         drawCall.instanceCount = drawCallTemplate.instanceCount;
         drawCall.vertexOffset = drawCallTemplate.vertexOffset;
 
+        drawCallData.cullingDataID = drawCallDataTemplate.cullingDataID;
         drawCallData.textureUnitOffset = drawCallDataTemplate.textureUnitOffset;
         drawCallData.numTextureUnits = drawCallDataTemplate.numTextureUnits;
+        drawCallData.renderPriority = drawCallDataTemplate.renderPriority;
 
         // Fill in the data that shouldn't be templated
         drawCall.firstInstance = static_cast<u32>(numTransparentDrawCallsBeforeAdd + i); // This is used in the shader to retrieve the DrawCallData
@@ -1208,6 +1242,7 @@ void CModelRenderer::CreateBuffers()
             desc.size = sizeof(DrawCall) * _opaqueDrawCalls.size();
             desc.usage = Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
             _opaqueDrawCallBuffer = _renderer->CreateBuffer(desc);
+            desc.name = "CModelOpaqueCullDrawCallBuffer";
             _opaqueCulledDrawCallBuffer = _renderer->CreateBuffer(desc);
 
             // Create staging buffer

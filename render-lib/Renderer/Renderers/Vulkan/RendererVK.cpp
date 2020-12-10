@@ -666,6 +666,14 @@ namespace Renderer
             
             builder->BindImageArray(descriptor.nameHash, imageInfos.data(), static_cast<i32>(imageInfos.size()));
         }
+        else if (descriptor.descriptorType == DescriptorType::DESCRIPTOR_TYPE_IMAGE)
+        {
+            VkDescriptorImageInfo imageInfo = {};
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+            imageInfo.imageView = _imageHandler->GetColorView(descriptor.imageID);
+
+            builder->BindImage(descriptor.nameHash, imageInfo);
+        }
         else if (descriptor.descriptorType == DescriptorType::DESCRIPTOR_TYPE_BUFFER)
         {
             VkDescriptorBufferInfo bufferInfo = {};
@@ -904,6 +912,15 @@ namespace Renderer
         }
 
         vkCmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, 0, 0, nullptr, 1, &bufferBarrier, 0, nullptr);
+    }
+
+    void RendererVK::ImageBarrier(CommandListID commandListID, ImageID image)
+    {
+        VkCommandBuffer commandBuffer = _commandListHandler->GetCommandBuffer(commandListID);
+        const VkImage& vkImage = _imageHandler->GetImage(image);
+        const ImageDesc& imageDesc = _imageHandler->GetImageDesc(image);
+
+        _device->TransitionImageLayout(commandBuffer, vkImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, imageDesc.depth, 1);
     }
 
     void RendererVK::PushConstant(CommandListID commandListID, void* data, u32 offset, u32 size)
