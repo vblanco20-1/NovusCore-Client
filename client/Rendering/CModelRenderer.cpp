@@ -177,6 +177,7 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                 CullConstants* cullConstants = resources.FrameNew<CullConstants>();
                 memcpy(cullConstants, &_cullConstants, sizeof(CullConstants));
                 cullConstants->maxDrawCount = numOpaqueDrawCalls;
+                cullConstants->shouldPrepareSort = false;
 
                 commandList.PushConstant(cullConstants, 0, sizeof(CullConstants));
 
@@ -186,6 +187,10 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                 _cullingDescriptorSet.Bind("_drawCount", _opaqueDrawCountBuffer);
                 _cullingDescriptorSet.Bind("_instances", _instanceBuffer);
                 _cullingDescriptorSet.Bind("_cullingDatas", _cullingDataBuffer);
+
+                // These two are not actually used by the culling shader unless shouldPrepareSort is enabled, but they need to be bound to avoid validation errors...
+                _cullingDescriptorSet.Bind("_sortKeys", _transparentSortKeys);
+                _cullingDescriptorSet.Bind("_sortValues", _transparentSortValues);
 
                 commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_cullingDescriptorSet, frameIndex);
                 commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, globalDescriptorSet, frameIndex);
@@ -272,11 +277,8 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                 _cullingDescriptorSet.Bind("_instances", _instanceBuffer);
                 _cullingDescriptorSet.Bind("_cullingDatas", _cullingDataBuffer);
 
-                if (alphaSortEnabled)
-                {
-                    _cullingDescriptorSet.Bind("_sortKeys", _transparentSortKeys);
-                    _cullingDescriptorSet.Bind("_sortValues", _transparentSortValues);
-                }
+                _cullingDescriptorSet.Bind("_sortKeys", _transparentSortKeys);
+                _cullingDescriptorSet.Bind("_sortValues", _transparentSortValues);
 
                 commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_cullingDescriptorSet, frameIndex);
                 commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, globalDescriptorSet, frameIndex);

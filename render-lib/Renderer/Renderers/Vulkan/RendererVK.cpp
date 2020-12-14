@@ -224,6 +224,7 @@ namespace Renderer
         }
 
         _commandListHandler->ResetCommandBuffers();
+        _bufferHandler->OnFrameStart();
 
         vmaSetCurrentFrameIndex(_device->_allocator, frameIndex);
         vmaGetBudget(_device->_allocator, sBudgets);
@@ -762,8 +763,6 @@ namespace Renderer
         // Add a marker specifying the frameIndex
         Backend::DebugMarkerUtilVK::PushMarker(commandBuffer, Color(1,1,1,1), std::to_string(frameIndex));
         Backend::DebugMarkerUtilVK::PopMarker(commandBuffer);
-
-        _bufferHandler->OnFrameStart();
 
         // Free up any old descriptors
         _device->_descriptorMegaPool->SetFrame(frameIndex);
