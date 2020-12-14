@@ -17,7 +17,6 @@
 #include "Backend/SemaphoreHandlerVK.h"
 #include "Backend/SwapChainVK.h"
 #include "Backend/DebugMarkerUtilVK.h"
-#include "Backend/DescriptorSetBackendVK.h"
 #include "Backend/DescriptorSetBuilderVK.h"
 #include "Backend/FormatConverterVK.h"
 
@@ -89,6 +88,11 @@ namespace Renderer
         return _bufferHandler->CreateBuffer(desc);
     }
 
+    BufferID RendererVK::CreateTemporaryBuffer(BufferDesc& desc, u32 framesLifetime)
+    {
+        return _bufferHandler->CreateTemporaryBuffer(desc, framesLifetime);
+    }
+
     void RendererVK::QueueDestroyBuffer(BufferID buffer)
     {
         _destroyLists[_destroyListIndex].buffers.push_back(buffer);
@@ -147,11 +151,6 @@ namespace Renderer
     TextureID RendererVK::CreateDataTextureIntoArray(DataTextureDesc& desc, TextureArrayID textureArray, u32& arrayIndex)
     {
         return _textureHandler->CreateDataTextureIntoArray(desc, textureArray, arrayIndex);
-    }
-
-    DescriptorSetBackend* RendererVK::CreateDescriptorSetBackend()
-    {
-        return new Backend::DescriptorSetBackendVK();
     }
 
     ModelID RendererVK::LoadModel(ModelDesc& desc)
@@ -603,7 +602,7 @@ namespace Renderer
         return false;
     }
 
-    void RendererVK::BindDescriptor(Backend::DescriptorSetBuilderVK* builder, void* imageInfosArraysVoid, Descriptor& descriptor, u32 frameIndex)
+    void RendererVK::BindDescriptor(Backend::DescriptorSetBuilderVK* builder, void* imageInfosArraysVoid, Descriptor& descriptor)
     {
         std::vector<std::vector<VkDescriptorImageInfo>>& imageInfosArrays = *static_cast<std::vector<std::vector<VkDescriptorImageInfo>>*>(imageInfosArraysVoid);
 
@@ -701,7 +700,7 @@ namespace Renderer
         destroyList.buffers.clear();
     }
 
-    void RendererVK::BindDescriptorSet(CommandListID commandListID, DescriptorSetSlot slot, Descriptor* descriptors, u32 numDescriptors, u32 frameIndex)
+    void RendererVK::BindDescriptorSet(CommandListID commandListID, DescriptorSetSlot slot, Descriptor* descriptors, u32 numDescriptors)
     {
         ZoneScopedNC("RendererVK::BindDescriptorSet", tracy::Color::Red3);
 
@@ -720,7 +719,7 @@ namespace Renderer
             {
                 ZoneScopedNC("BindDescriptor", tracy::Color::Red3);
                 Descriptor& descriptor = descriptors[i];
-                BindDescriptor(builder, &imageInfosArrays, descriptor, frameIndex);
+                BindDescriptor(builder, &imageInfosArrays, descriptor);
             }
 
             VkDescriptorSet descriptorSet = builder->BuildDescriptor(static_cast<i32>(slot), Backend::DescriptorLifetime::PerFrame);
@@ -741,7 +740,7 @@ namespace Renderer
             {
                 ZoneScopedNC("BindDescriptor", tracy::Color::Red3);
                 Descriptor& descriptor = descriptors[i];
-                BindDescriptor(builder, &imageInfosArrays, descriptor, frameIndex);
+                BindDescriptor(builder, &imageInfosArrays, descriptor);
             }
 
             VkDescriptorSet descriptorSet = builder->BuildDescriptor(static_cast<i32>(slot), Backend::DescriptorLifetime::PerFrame);
@@ -763,6 +762,8 @@ namespace Renderer
         // Add a marker specifying the frameIndex
         Backend::DebugMarkerUtilVK::PushMarker(commandBuffer, Color(1,1,1,1), std::to_string(frameIndex));
         Backend::DebugMarkerUtilVK::PopMarker(commandBuffer);
+
+        _bufferHandler->OnFrameStart();
 
         // Free up any old descriptors
         _device->_descriptorMegaPool->SetFrame(frameIndex);
@@ -886,7 +887,7 @@ namespace Renderer
             srcStageMask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             dstStageMask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-            bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT;
             break;
 
         case PipelineBarrierType::ComputeWriteToIndirectArguments:
@@ -903,11 +904,18 @@ namespace Renderer
             bufferBarrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
             break;
 
+        case PipelineBarrierType::ComputeWriteToTransferSrc:
+            srcStageMask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+            dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            bufferBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            break;
+
         case PipelineBarrierType::AllCommands:
             srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
             dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-            bufferBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            bufferBarrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+            bufferBarrier.srcAccessMask = VK_ACCESS_FLAG_BITS_MAX_ENUM;;
+            bufferBarrier.dstAccessMask = VK_ACCESS_FLAG_BITS_MAX_ENUM;;
             break;
         }
 
@@ -1121,7 +1129,9 @@ namespace Renderer
     void* RendererVK::MapBuffer(BufferID buffer)
     {
         void* mappedMemory;
-        if (vmaMapMemory(_device->_allocator, _bufferHandler->GetBufferAllocation(buffer), &mappedMemory) != VK_SUCCESS)
+
+        VkResult result = vmaMapMemory(_device->_allocator, _bufferHandler->GetBufferAllocation(buffer), &mappedMemory);
+        if (result != VK_SUCCESS)
         {
             NC_LOG_ERROR("vmaMapMemory failed!\n");
             return nullptr;

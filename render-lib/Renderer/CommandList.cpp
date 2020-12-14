@@ -188,7 +188,6 @@ namespace Renderer
         memcpy(command->descriptors, descriptors.data(), sizeof(Descriptor) * numDescriptors);
 
         command->numDescriptors = static_cast<u32>(numDescriptors);
-        command->frameIndex = frameIndex;
 
 #if COMMANDLIST_DEBUG_IMMEDIATE_MODE
         Commands::BindDescriptorSet::DISPATCH_FUNCTION(_renderer, _immediateCommandList, command);

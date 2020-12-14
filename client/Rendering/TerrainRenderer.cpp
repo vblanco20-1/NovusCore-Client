@@ -457,11 +457,13 @@ void TerrainRenderer::CreatePermanentResources()
     textureColorArrayDesc.size = 4096;
 
     _terrainColorTextureArray = _renderer->CreateTextureArray(textureColorArrayDesc);
+    _passDescriptorSet.Bind("_terrainColorTextures"_h, _terrainColorTextureArray);
 
     Renderer::TextureArrayDesc textureAlphaArrayDesc;
     textureAlphaArrayDesc.size = Terrain::MAP_CHUNKS_PER_MAP;
 
     _terrainAlphaTextureArray = _renderer->CreateTextureArray(textureAlphaArrayDesc);
+    _passDescriptorSet.Bind("_terrainAlphaTextures"_h, _terrainAlphaTextureArray);
 
     // Create and load a 1x1 pixel RGBA8 unorm texture with zero'ed data so we can use textureArray[0] as "invalid" textures, sampling it will return 0.0f on all channels
     Renderer::DataTextureDesc zeroColorTexture;
@@ -487,6 +489,7 @@ void TerrainRenderer::CreatePermanentResources()
     alphaSamplerDesc.shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_PIXEL;
 
     _alphaSampler = _renderer->CreateSampler(alphaSamplerDesc);
+    _passDescriptorSet.Bind("_alphaSampler"_h, _alphaSampler);
 
     Renderer::SamplerDesc colorSamplerDesc;
     colorSamplerDesc.enabled = true;
@@ -497,15 +500,7 @@ void TerrainRenderer::CreatePermanentResources()
     colorSamplerDesc.shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_PIXEL;
 
     _colorSampler = _renderer->CreateSampler(colorSamplerDesc);
-
-    // Descriptor sets
-    _passDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
-    _passDescriptorSet.Bind("_alphaSampler"_h, _alphaSampler);
     _passDescriptorSet.Bind("_colorSampler"_h, _colorSampler);
-    _passDescriptorSet.Bind("_terrainColorTextures"_h, _terrainColorTextureArray);
-    _passDescriptorSet.Bind("_terrainAlphaTextures"_h, _terrainAlphaTextureArray);
-
-    _drawDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
 
     // Culling constant buffer
     _cullingConstantBuffer = new Renderer::Buffer<CullingConstants>(_renderer, "CullingConstantBuffer", Renderer::BUFFER_USAGE_UNIFORM_BUFFER, Renderer::BufferCPUAccess::WriteOnly);

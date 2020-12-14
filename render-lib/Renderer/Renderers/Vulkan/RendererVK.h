@@ -35,6 +35,7 @@ namespace Renderer
 
         // Creation
         BufferID CreateBuffer(BufferDesc& desc) override;
+        BufferID CreateTemporaryBuffer(BufferDesc& desc, u32 framesLifetime) override;
         void QueueDestroyBuffer(BufferID buffer) override;
 
         ImageID CreateImage(ImageDesc& desc) override;
@@ -53,8 +54,6 @@ namespace Renderer
 
         TextureID CreateDataTexture(DataTextureDesc& desc) override;
         TextureID CreateDataTextureIntoArray(DataTextureDesc& desc, TextureArrayID textureArray, u32& arrayIndex) override;
-
-        DescriptorSetBackend* CreateDescriptorSetBackend() override;
 
         // Loading
         ModelID LoadModel(ModelDesc& desc) override;
@@ -94,7 +93,7 @@ namespace Renderer
         void SetVertexBuffer(CommandListID commandListID, u32 slot, BufferID bufferID) override;
         void SetIndexBuffer(CommandListID commandListID, BufferID bufferID, IndexFormat indexFormat) override;
         void SetBuffer(CommandListID commandListID, u32 slot, BufferID buffer) override;
-        void BindDescriptorSet(CommandListID commandListID, DescriptorSetSlot slot, Descriptor* descriptors, u32 numDescriptors, u32 frameIndex) override;
+        void BindDescriptorSet(CommandListID commandListID, DescriptorSetSlot slot, Descriptor* descriptors, u32 numDescriptors) override;
         void MarkFrameStart(CommandListID commandListID, u32 frameIndex) override;
         void BeginTrace(CommandListID commandListID, const tracy::SourceLocationData* sourceLocation) override;
         void EndTrace(CommandListID commandListID) override;
@@ -126,7 +125,7 @@ namespace Renderer
 
     private:
         bool ReflectDescriptorSet(const std::string& name, u32 nameHash, u32 type, i32& set, const std::vector<Backend::BindInfo>& bindInfos, u32& outBindInfoIndex, VkDescriptorSetLayoutBinding* outDescriptorLayoutBinding);
-        void BindDescriptor(Backend::DescriptorSetBuilderVK* builder, void* imageInfosArraysVoid, Descriptor& descriptor, u32 frameIndex);
+        void BindDescriptor(Backend::DescriptorSetBuilderVK* builder, void* imageInfosArraysVoid, Descriptor& descriptor);
 
         void RecreateSwapChain(Backend::SwapChainVK* swapChain);
 

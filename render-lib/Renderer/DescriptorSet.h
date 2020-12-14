@@ -38,18 +38,12 @@ namespace Renderer
         PER_DRAW
     };
 
-    struct DescriptorSetBackend
-    {
-        
-    };
-
     class DescriptorSet
     {
     public:
         
     public:
         DescriptorSet()
-            : _backend(nullptr)
         {}
 
         void Bind(const std::string& name, SamplerID samplerID);
@@ -68,15 +62,10 @@ namespace Renderer
         void Bind(u32 nameHash, BufferID buffer);
 
         const std::vector<Descriptor>& GetDescriptors() { return _boundDescriptors; }
-        
-        DescriptorSetBackend* GetBackend() { return _backend; }
-        void SetBackend(DescriptorSetBackend* backend) { _backend = backend; }
 
     private:
 
     private:
         std::vector<Descriptor> _boundDescriptors;
-
-        DescriptorSetBackend* _backend = nullptr;
     };
 }

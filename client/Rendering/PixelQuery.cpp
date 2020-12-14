@@ -43,8 +43,6 @@ void PixelQuery::AddPixelQueryPass(Renderer::RenderGraph* renderGraph, Renderer:
         {
             const PixelData& pixelData = results[i];
 
-            NC_LOG_MESSAGE("PixelData (%u, %u, %u)", pixelData.type, pixelData.value, _frameIndex);
-
             // Store Result & Remove Token from _requestTokens
             _results[*tokenItr] = pixelData;
             tokenItr = _requestTokens[_frameIndex].erase(tokenItr);

@@ -165,52 +165,10 @@ private:
         vec4 frustumPlanes[6];
         vec3 cameraPos;
         u32 maxDrawCount;
-    };
-
-    struct SortConstants
-    {
-        vec3 referencePosition;
-        u32 level;
-        u32 levelMask;
-        u32 width;
-        u32 height;
-    };
-
-    struct SortParams
-    {
-        vec3 refPosition;
-        u32 level;
-        u32 levelMask;
-        u32 width;
-        u32 height;
-        u32 dispatchX;
-        u32 dispatchY;
-        u32 dispatchZ;
-    };
-
-    struct TransposeConstants
-    {
-        u32 level;
-        u32 levelMask;
-        u32 width;
-        u32 height;
-    };
-
-    struct TransposeParams
-    {
-        u32 level;
-        u32 levelMask;
-        u32 width;
-        u32 height;
-        u32 dispatchX;
-        u32 dispatchY;
-        u32 dispatchZ;
+        bool shouldPrepareSort = false;
     };
 
 private:
-    void SortDrawCalls(Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList, u32 frameIndex, const SortParams& sortParams);
-    void TransposeDrawCalls(Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList, u32 frameIndex, const TransposeParams& transposeParams);
-
     void CreatePermanentResources();
 
     bool LoadComplexModel(ComplexModelToBeLoaded& complexModelToBeLoaded, LoadedComplexModel& complexModel);
@@ -258,18 +216,21 @@ private:
     Renderer::BufferID _instanceBuffer;
     Renderer::BufferID _cullingDataBuffer;
 
-    Renderer::Buffer<CullConstants>* _opaqueCullConstantBuffer;
     Renderer::BufferID _opaqueDrawCallBuffer;
     Renderer::BufferID _opaqueCulledDrawCallBuffer;
     Renderer::BufferID _opaqueDrawCallDataBuffer;
     Renderer::BufferID _opaqueDrawCountBuffer;
 
-    Renderer::Buffer<CullConstants>* _transparentCullConstantBuffer;
     Renderer::BufferID _transparentDrawCallBuffer;
     Renderer::BufferID _transparentCulledDrawCallBuffer;
-    Renderer::BufferID _transparentCulledDrawCallBuffer2;
+    Renderer::BufferID _transparentSortedCulledDrawCallBuffer;
     Renderer::BufferID _transparentDrawCallDataBuffer;
     Renderer::BufferID _transparentDrawCountBuffer;
+
+    Renderer::BufferID _transparentSortKeys;
+    Renderer::BufferID _transparentSortValues;
+
+    CullConstants _cullConstants;
 
     Renderer::TextureArrayID _cModelTextures;
 

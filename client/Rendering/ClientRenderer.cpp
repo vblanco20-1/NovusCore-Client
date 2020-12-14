@@ -453,20 +453,13 @@ void ClientRenderer::CreatePermanentResources()
     samplerDesc.shaderVisibility = Renderer::ShaderVisibility::SHADER_VISIBILITY_PIXEL;
 
     _linearSampler = _renderer->CreateSampler(samplerDesc);
+    _passDescriptorSet.Bind("_sampler"_h, _linearSampler);
 
     // View Constant Buffer (for camera data)
     _viewConstantBuffer = new Renderer::Buffer<ViewConstantBuffer>(_renderer, "ViewConstantBuffer", Renderer::BUFFER_USAGE_UNIFORM_BUFFER, Renderer::BufferCPUAccess::WriteOnly);
 
     // Light Constant Buffer
     _lightConstantBuffer = new Renderer::Buffer<LightConstantBuffer>(_renderer, "LightConstantBufffer", Renderer::BUFFER_USAGE_UNIFORM_BUFFER, Renderer::BufferCPUAccess::WriteOnly);
-
-    // Create descriptor sets
-    _globalDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
-
-    _passDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
-    _passDescriptorSet.Bind("_sampler"_h, _linearSampler);
-
-    _drawDescriptorSet.SetBackend(_renderer->CreateDescriptorSetBackend());
 
     // Frame allocator, this is a fast allocator for data that is only needed this frame
     _frameAllocator = new Memory::StackAllocator(FRAME_ALLOCATOR_SIZE);

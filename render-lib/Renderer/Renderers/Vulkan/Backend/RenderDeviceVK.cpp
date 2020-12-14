@@ -41,7 +41,8 @@ namespace Renderer
             "VK_KHR_maintenance1",
             "VK_KHR_maintenance3",
             "VK_EXT_descriptor_indexing",
-            "VK_KHR_draw_indirect_count"
+            "VK_KHR_draw_indirect_count",
+            "VK_KHR_shader_subgroup_extended_types"
         };
 
         struct ImguiContext
@@ -397,10 +398,15 @@ namespace Renderer
                 queueCreateInfo.pQueuePriorities = &queuePriority;
                 queueCreateInfos.push_back(queueCreateInfo);
             }
+            
+            VkPhysicalDeviceShaderSubgroupExtendedTypesFeaturesKHR shaderSubgroupFeatures = {};
+            shaderSubgroupFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SUBGROUP_EXTENDED_TYPES_FEATURES_KHR;
+            shaderSubgroupFeatures.shaderSubgroupExtendedTypes = true;
 
             VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptorIndexingFeatures = {};
             descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
             descriptorIndexingFeatures.runtimeDescriptorArray = true;
+            descriptorIndexingFeatures.pNext = &shaderSubgroupFeatures;
 
             VkPhysicalDeviceFeatures2 deviceFeatures = {};
             deviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;

@@ -13,7 +13,6 @@ namespace Renderer
             DescriptorSetSlot slot;
             Descriptor* descriptors;
             u32 numDescriptors;
-            u32 frameIndex;
         };
     }
 }
