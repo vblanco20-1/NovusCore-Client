@@ -1,8 +1,7 @@
 #pragma once
 #include <NovusTypes.h>
-
+#include "../UITypes.h"
 #include "BaseElement.h"
-#include "../ECS/Components/Text.h"
 
 namespace UIScripting
 {
@@ -27,6 +26,9 @@ namespace UIScripting
 
         const f32 GetOutlineWidth() const;
         void SetOutlineWidth(f32 outlineWidth);
+
+        bool IsMultiline();
+        void SetMultiline(bool multiline);
 
         void SetHorizontalAlignment(UI::TextHorizontalAlignment alignment);
         void SetVerticalAlignment(UI::TextVerticalAlignment alignment);

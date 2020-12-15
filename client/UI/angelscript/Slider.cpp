@@ -6,7 +6,6 @@
 #include "../ECS/Components/Transform.h"
 #include "../ECS/Components/TransformEvents.h"
 #include "../ECS/Components/Image.h"
-#include "../ECS/Components/SortKey.h"
 #include "../ECS/Components/Renderable.h"
 #include "../ECS/Components/Slider.h"
 #include "../Utils/TransformUtils.h"
@@ -29,11 +28,9 @@ namespace UIScripting
         registry->emplace<UIComponent::Renderable>(_entityId).renderType = UI::RenderType::Image;
 
         _handle = SliderHandle::CreateSliderHandle(this);
-        UIComponent::Transform* handleTransform = &registry->get<UIComponent::Transform>(_handle->GetEntityId());
-        handleTransform->parent = _entityId;
+        InternalAddChild(_handle);
+        auto handleTransform = &registry->get<UIComponent::Transform>(_handle->GetEntityId());
         handleTransform->localAnchor = vec2(0.5f, 0.5f);
-        registry->get<UIComponent::SortKey>(_handle->GetEntityId()).data.depth++;
-        registry->get<UIComponent::Transform>(_entityId).children.push_back({ _handle->GetEntityId(), _handle->GetType() });
     }
 
     void Slider::RegisterType()
@@ -198,7 +195,7 @@ namespace UIScripting
         slider->currentValue = newValue;
 
         // Update slider position.
-        handleTransform->localPosition = vec2(0.0f, 0.0f);
+        handleTransform->position = vec2(0.0f, 0.0f);
         _handle->SetAnchor(vec2(percent, 0.5f));
         _handle->MarkBoundsDirty();
         _handle->MarkDirty();
@@ -218,7 +215,7 @@ namespace UIScripting
         const UIComponent::Slider* slider = &registry->get<UIComponent::Slider>(_entityId);
         UIComponent::Transform* handleTransform = &registry->get<UIComponent::Transform>(_handle->GetEntityId());
 
-        handleTransform->localPosition = vec2(0.0f, 0.0f);
+        handleTransform->position = vec2(0.0f, 0.0f);
         _handle->SetAnchor(vec2(UIUtils::Slider::GetPercent(slider), 0.5f));
         _handle->MarkBoundsDirty();
         _handle->MarkDirty();

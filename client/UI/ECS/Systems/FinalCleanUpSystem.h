@@ -3,13 +3,7 @@
 
 namespace UISystem
 {
-    struct UIVertex
-    {
-        vec2 pos;
-        vec2 uv;
-    };
-
-    class UpdateElementSystem
+    class FinalCleanUpSystem
     {
     public:
         static void Update(entt::registry& registry);

@@ -1,7 +1,5 @@
 #pragma once
 #include <NovusTypes.h>
-
-#include "../ECS/Components/TransformEvents.h"
 #include "BaseElement.h"
 
 namespace UIScripting
@@ -15,14 +13,19 @@ namespace UIScripting
 
         // TransformEvents Functions
         const bool IsClickable() const;
+        void SetClickable(bool clickable);
         const bool IsDraggable() const;
+        void SetDraggable(bool draggable);
         const bool IsFocusable() const;
-        void SetEventFlag(const UI::TransformEventsFlags flags);
-        void UnsetEventFlag(const UI::TransformEventsFlags flags);
+        void SetFocusable(bool focusable);
+        
         void SetOnClickCallback(asIScriptFunction* callback);
+        
         void SetOnDragStartedCallback(asIScriptFunction* callback);
         void SetOnDragEndedCallback(asIScriptFunction* callback);
-        void SetOnFocusCallback(asIScriptFunction* callback);
+
+        void SetOnFocusGainedCallback(asIScriptFunction* callback);
+        void SetOnFocusLostCallback(asIScriptFunction* callback);
 
         // Renderable Functions
         const std::string& GetTexture() const;

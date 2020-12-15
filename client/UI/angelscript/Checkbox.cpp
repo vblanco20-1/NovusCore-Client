@@ -6,9 +6,9 @@
 #include <GLFW/glfw3.h>
 
 #include "../ECS/Components/Transform.h"
+#include "../ECS/Components/TransformEvents.h"
 #include "../ECS/Components/Renderable.h"
 #include "../ECS/Components/Image.h"
-#include "../ECS/Components/SortKey.h"
 #include "../ECS/Components/Checkbox.h"
 #include "../Utils/EventUtils.h"
 
@@ -27,11 +27,9 @@ namespace UIScripting
         registry->emplace<UIComponent::Renderable>(_entityId).renderType = UI::RenderType::Image;
 
         _checkPanel = Panel::CreatePanel(false);
-        auto checkPanelTransform = &registry->get<UIComponent::Transform>(_checkPanel->GetEntityId());
-        checkPanelTransform->parent = _entityId;
-        checkPanelTransform->SetFlag(UI::TransformFlags::FILL_PARENTSIZE);
-        registry->get<UIComponent::SortKey>(_checkPanel->GetEntityId()).data.depth++;
-        registry->get<UIComponent::Transform>(_entityId).children.push_back({ _checkPanel->GetEntityId(), _checkPanel->GetType() });
+        InternalAddChild(_checkPanel);
+        auto checkTransform = &registry->get<UIComponent::Transform>(_checkPanel->GetEntityId());
+        checkTransform->SetFlag(UI::TransformFlags::FILL_PARENTSIZE);
     }
 
     void Checkbox::RegisterType()
@@ -40,15 +38,19 @@ namespace UIScripting
         r = ScriptEngine::RegisterScriptInheritance<BaseElement, Checkbox>("BaseElement");
         r = ScriptEngine::RegisterScriptFunction("Checkbox@ CreateCheckbox()", asFUNCTION(Checkbox::CreateCheckbox)); assert(r >= 0);
 
-        // TransformEvents Functions
-        r = ScriptEngine::RegisterScriptClassFunction("void SetEventFlag(int8 flags)", asMETHOD(Checkbox, SetEventFlag)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("void UnsetEventFlag(int8 flags)", asMETHOD(Checkbox, UnsetEventFlag)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("bool IsClickable()", asMETHOD(Checkbox, IsClickable)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("bool IsDraggable()", asMETHOD(Checkbox, IsDraggable)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("bool IsFocusable()", asMETHOD(Checkbox, IsFocusable)); assert(r >= 0);
+        // Checkbox Functions
         r = ScriptEngine::RegisterScriptFunctionDef("void CheckboxEventCallback(Checkbox@ checkbox)"); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("bool IsChecked()", asMETHOD(Checkbox, IsChecked)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void SetChecked(bool checked)", asMETHOD(Checkbox, SetChecked)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void OnChecked(CheckboxEventCallback@ cb)", asMETHOD(Checkbox, SetOnCheckedCallback)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void OnUnchecked(CheckboxEventCallback@ cb)", asMETHOD(Checkbox, SetOnUncheckedCallback)); assert(r >= 0);
+
+        // TransformEvents Functions
+        r = ScriptEngine::RegisterScriptClassFunction("bool IsClickable()", asMETHOD(Checkbox, IsClickable)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("bool IsFocusable()", asMETHOD(Checkbox, IsFocusable)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void OnClick(CheckboxEventCallback@ cb)", asMETHOD(Checkbox, SetOnClickCallback)); assert(r >= 0);
-        r = ScriptEngine::RegisterScriptClassFunction("void OnFocused(CheckboxEventCallback@ cb)", asMETHOD(Checkbox, SetOnFocusCallback)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void OnFocusGained(CheckboxEventCallback@ cb)", asMETHOD(Checkbox, SetOnFocusGainedCallback)); assert(r >= 0);
+        r = ScriptEngine::RegisterScriptClassFunction("void OnFocusLost(CheckboxEventCallback@ cb)", asMETHOD(Checkbox, SetOnFocusLostCallback)); assert(r >= 0);
 
         // Rendering Functions
         r = ScriptEngine::RegisterScriptClassFunction("string GetTexture()", asMETHOD(Checkbox, GetTexture)); assert(r >= 0);
@@ -72,9 +74,6 @@ namespace UIScripting
         r = ScriptEngine::RegisterScriptClassFunction("void SetCheckBorderSize(uint topSize, uint rightSize, uint bottomSize, uint leftSize)", asMETHOD(Checkbox, SetCheckBorderSize)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetCheckBorderInset(uint topBorderInset, uint rightBorderInset, uint bottomBorderInset, uint leftBorderInset)", asMETHOD(Checkbox, SetCheckBorderInset)); assert(r >= 0);
         r = ScriptEngine::RegisterScriptClassFunction("void SetCheckSlicing(uint topOffset, uint rightOffset, uint bottomOffset, uint leftOffset)", asMETHOD(Checkbox, SetCheckSlicing)); assert(r >= 0);
-
-        // Checkbox Functions
-        r = ScriptEngine::RegisterScriptClassFunction("void SetChecked(bool checked)", asMETHOD(Checkbox, SetChecked)); assert(r >= 0);
     }
 
     const bool Checkbox::IsClickable() const
@@ -83,26 +82,10 @@ namespace UIScripting
         return events->IsClickable();
 
     }
-    const bool Checkbox::IsDraggable() const
-    {
-        const UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
-        return events->IsDraggable();
-    }
     const bool Checkbox::IsFocusable() const
     {
         const UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
         return events->IsFocusable();
-    }
-
-    void Checkbox::SetEventFlag(const UI::TransformEventsFlags flags)
-    {
-        UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
-        events->SetFlag(flags);
-    }
-    void Checkbox::UnsetEventFlag(const UI::TransformEventsFlags flags)
-    {
-        UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
-        events->UnsetFlag(flags);
     }
 
     void Checkbox::SetOnClickCallback(asIScriptFunction* callback)
@@ -111,10 +94,16 @@ namespace UIScripting
         events->onClickCallback = callback;
         events->SetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_CLICKABLE);
     }
-    void Checkbox::SetOnFocusCallback(asIScriptFunction* callback)
+    void Checkbox::SetOnFocusGainedCallback(asIScriptFunction* callback)
     {
         UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
-        events->onFocusedCallback = callback;
+        events->onFocusGainedCallback = callback;
+        events->SetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
+    }
+    void Checkbox::SetOnFocusLostCallback(asIScriptFunction* callback)
+    {
+        UIComponent::TransformEvents* events = &ServiceLocator::GetUIRegistry()->get<UIComponent::TransformEvents>(_entityId);
+        events->onFocusLostCallback = callback;
         events->SetFlag(UI::TransformEventsFlags::UIEVENTS_FLAG_FOCUSABLE);
     }
 
@@ -228,6 +217,17 @@ namespace UIScripting
         image->style.slicingOffset.right = rightOffset;
         image->style.slicingOffset.bottom = bottomOffset;
         image->style.slicingOffset.left = leftOffset;
+    }
+
+    void Checkbox::SetOnCheckedCallback(asIScriptFunction* callback)
+    {
+        UIComponent::Checkbox* checkBox = &ServiceLocator::GetUIRegistry()->get<UIComponent::Checkbox>(_entityId);
+        checkBox->onChecked = callback;
+    }
+    void Checkbox::SetOnUncheckedCallback(asIScriptFunction* callback)
+    {
+        UIComponent::Checkbox* checkBox = &ServiceLocator::GetUIRegistry()->get<UIComponent::Checkbox>(_entityId);
+        checkBox->onUnchecked = callback;
     }
 
     const bool Checkbox::IsChecked() const

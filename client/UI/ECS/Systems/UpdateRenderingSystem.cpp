@@ -1,24 +1,18 @@
-#include "UpdateElementSystem.h"
+#include "UpdateRenderingSystem.h"
 #include <entity/registry.hpp>
 #include <tracy/Tracy.hpp>
 #include "../../render-lib/Renderer/Descriptors/ModelDesc.h"
 #include "../../render-lib/Renderer/Buffer.h"
 
 #include "../../../Utils/ServiceLocator.h"
+#include "../Components/Singletons/UIDataSingleton.h"
 #include "../Components/Transform.h"
 #include "../Components/Image.h"
 #include "../Components/Text.h"
 #include "../Components/InputField.h"
 #include "../Components/Dirty.h"
-#include "../Components/BoundsDirty.h"
-#include "../Components/Destroy.h"
-#include "../Components/Visible.h"
-#include "../Components/Collidable.h"
-#include "../Components/Singletons/UIDataSingleton.h"
 #include "../../Utils/TransformUtils.h"
-#include "../../Utils/ColllisionUtils.h"
 #include "../../Utils/TextUtils.h"
-#include "../../angelscript/BaseElement.h"
 
 
 namespace UISystem
@@ -59,35 +53,21 @@ namespace UISystem
         lowerRight.uv = vec2(texCoords.right, texCoords.bottom);
     }
 
-    void UpdateElementSystem::Update(entt::registry& registry)
+    void UpdateRenderingSystem::Update(entt::registry& registry)
     {
         Renderer::Renderer* renderer = ServiceLocator::GetRenderer();
         auto& dataSingleton = registry.ctx<UISingleton::UIDataSingleton>();
-        
-        // Destroy elements queued for destruction.
-        auto deleteView = registry.view<UIComponent::Destroy>();
-        deleteView.each([&](entt::entity entityId) {
-                delete dataSingleton.entityToElement[entityId];
-                dataSingleton.entityToElement.erase(entityId);
-            });
-        registry.destroy(deleteView.begin(), deleteView.end());
-
-        auto boundsUpdateView = registry.view<UIComponent::Transform, UIComponent::BoundsDirty>();
-        boundsUpdateView.each([&](entt::entity entityId, UIComponent::Transform& transform)
-            {
-                UIUtils::Collision::UpdateBounds(&registry, entityId, true);
-            });
 
         auto inputFieldView = registry.view<UIComponent::Transform, UIComponent::InputField, UIComponent::Text, UIComponent::Dirty>();
         inputFieldView.each([&](const UIComponent::Transform& transform, const UIComponent::InputField& inputField, UIComponent::Text& text)
-            {
-                text.pushback = UIUtils::Text::CalculatePushback(&text, inputField.writeHeadIndex, 0.2f, transform.size.x, transform.size.y);
-            });
+        {
+            text.pushback = UIUtils::Text::CalculatePushback(&text, inputField.writeHeadIndex, 0.2f, transform.size.x, transform.size.y);
+        });
 
         auto imageView = registry.view<UIComponent::Transform, UIComponent::Image, UIComponent::Dirty>();
         imageView.each([&](UIComponent::Transform& transform, UIComponent::Image& image)
         {
-            ZoneScopedNC("UpdateElementSystem::Update::ImageView", tracy::Color::RoyalBlue);
+            ZoneScopedNC("UpdateRenderingSystem::Update::ImageView", tracy::Color::RoyalBlue);
             if (image.style.texture.length() == 0)
                 return;
 
@@ -145,7 +125,7 @@ namespace UISystem
         auto textView = registry.view<UIComponent::Transform, UIComponent::Text, UIComponent::Dirty>();
         textView.each([&](UIComponent::Transform& transform, UIComponent::Text& text)
         {
-            ZoneScopedNC("UpdateElementSystem::Update::TextView", tracy::Color::SkyBlue);
+            ZoneScopedNC("UpdateRenderingSystem::Update::TextView", tracy::Color::SkyBlue);
             if (text.style.fontPath.length() == 0)
                 return;
 
@@ -153,7 +133,7 @@ namespace UISystem
                 ZoneScopedNC("(Re)load Font", tracy::Color::RoyalBlue);
                 text.font = Renderer::Font::GetFont(renderer, text.style.fontPath, text.style.fontSize);
             }
-            
+
             std::vector<f32> lineWidths;
             std::vector<size_t> lineBreakPoints;
             size_t finalCharacter = UIUtils::Text::CalculateLineWidthsAndBreaks(&text, transform.size.x, transform.size.y, lineWidths, lineBreakPoints);
@@ -196,10 +176,10 @@ namespace UISystem
             if (textLengthWithoutSpaces > 0)
             {
                 vec2 alignment = UIUtils::Text::GetAlignment(&text);
-                vec2 currentPosition = UIUtils::Transform::GetAnchorPosition(&transform, alignment);
+                vec2 currentPosition = UIUtils::Transform::GetAnchorPositionInElement(&transform, alignment);
                 f32 startX = currentPosition.x;
                 currentPosition.x -= lineWidths[0] * alignment.x;
-                currentPosition.y += text.style.fontSize * (1 - alignment.y);
+                currentPosition.y += text.style.fontSize * (1 - alignment.y) * lineWidths.size();
 
                 std::vector<UISystem::UIVertex> vertices;
 
@@ -231,7 +211,7 @@ namespace UISystem
                     const Renderer::FontChar& fontChar = text.font->GetChar(character);
                     const vec2& pos = currentPosition + vec2(fontChar.xOffset, fontChar.yOffset);
                     const vec2& size = vec2(fontChar.width, fontChar.height);
-                    UI::FBox texCoords;
+                    UI::FBox texCoords{ 0.f, 1.f, 1.f, 0.f };
 
                     vertices.clear();
                     CalculateVertices(pos, size, texCoords, vertices);
@@ -258,8 +238,5 @@ namespace UISystem
             text.constantBuffer->Apply(0);
             text.constantBuffer->Apply(1);
         });
-
-        registry.clear<UIComponent::Dirty>();
-        registry.clear<UIComponent::BoundsDirty>();
     }
 }

@@ -1,35 +1,74 @@
 #include "TransformUtils.h"
+
+#include "../../Utils/ServiceLocator.h"
+#include "../../render-lib/Window/Window.h"
+#include "GLFW/glfw3.h"
 #include <tracy/Tracy.hpp>
 #include "entity/registry.hpp"
-#include "../ECS/Components/Dirty.h"
+
+#include "../ECS/Components/Singletons/UIDataSingleton.h"
+#include "../ECS/Components/Relation.h"
 
 namespace UIUtils::Transform
-{   
-    void UpdateChildTransforms(entt::registry* registry, UIComponent::Transform* parent)
+{
+    const hvec2 WindowPositionToUIPosition(const hvec2& WindowPosition)
     {
-        ZoneScoped;
-        for (const UI::UIChild& child : parent->children)
+        i32 width, height;
+        glfwGetWindowSize(ServiceLocator::GetWindow()->GetWindow(), &width, &height);
+        
+        const hvec2 clampedPosition = WindowPosition / hvec2(static_cast<f32>(width), static_cast<f32>(height));
+        const hvec2& uiResolution = ServiceLocator::GetUIRegistry()->ctx<UISingleton::UIDataSingleton>().UIRESOLUTION;
+
+        return clampedPosition * uiResolution;
+    }
+
+    hvec2 GetAnchorPositionOnScreen(hvec2 anchorPosition)
+    {
+        const hvec2& uiResolution = ServiceLocator::GetUIRegistry()->ctx<UISingleton::UIDataSingleton>().UIRESOLUTION;
+        return uiResolution * anchorPosition;
+    }
+
+    void UpdateChildTransforms(entt::registry* registry, entt::entity entity)
+    {
+        auto [transform, relation] = registry->get<UIComponent::Transform, UIComponent::Relation>(entity);
+
+        if (!relation.children.size())
+            return;
+        
+        const hvec2 minAnchorBound = GetMinBounds(&transform) + hvec2(transform.padding.left, transform.padding.top);
+        const hvec2 adjustedSize = transform.size - hvec2(transform.padding.right, transform.padding.bottom);
+
+        for (const UI::UIChild& child : relation.children)
         {
             UIComponent::Transform* childTransform = &registry->get<UIComponent::Transform>(child.entId);
 
-            childTransform->position = UIUtils::Transform::GetAnchorPosition(parent, childTransform->anchor);
+            childTransform->anchorPosition = minAnchorBound + adjustedSize * childTransform->anchor;
             if (childTransform->HasFlag(UI::TransformFlags::FILL_PARENTSIZE))
-                childTransform->size = parent->size;
+                childTransform->size = transform.size;
 
-            UpdateChildTransforms(registry, childTransform);
+            UpdateChildTransforms(registry, child.entId);
         }
     }
 
-    void MarkChildrenDirty(entt::registry* registry, const entt::entity entityId)
+    void UpdateChildPositions(entt::registry* registry, entt::entity entity)
     {
-        ZoneScoped;
-        const auto transform = &registry->get<UIComponent::Transform>(entityId);
-        for (const UI::UIChild& child : transform->children)
-        {
-            if (!registry->has<UIComponent::Dirty>(child.entId))
-                registry->emplace<UIComponent::Dirty>(child.entId);
+        auto [transform, relation] = registry->get<UIComponent::Transform, UIComponent::Relation>(entity);
 
-            MarkChildrenDirty(registry, child.entId);
+        if (!relation.children.size())
+            return;
+
+        const hvec2 minAnchorBound = GetMinBounds(&transform) + hvec2(transform.padding.left, transform.padding.top);
+        const hvec2 adjustedSize = transform.size - hvec2(transform.padding.right, transform.padding.bottom);
+
+        for (const UI::UIChild& child : relation.children)
+        {
+            UIComponent::Transform* childTransform = &registry->get<UIComponent::Transform>(child.entId);
+            childTransform->anchorPosition = minAnchorBound + adjustedSize * childTransform->anchor;
+        }
+
+        for (const UI::UIChild& child : relation.children)
+        {
+            UpdateChildPositions(registry, child.entId);
         }
     }
 }

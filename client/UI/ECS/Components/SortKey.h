@@ -9,12 +9,14 @@ namespace UIComponent
     {
         union
         {
+#pragma pack(push, 1)
             struct
             {
-                entt::entity entId;
+                u32 compoundDepth;
                 u16 depth;
                 UI::DepthLayer depthLayer;
-            } data { entt::null, 0, UI::DepthLayer::MEDIUM };
+            } data { 0, 0, UI::DepthLayer::MEDIUM };
+#pragma pack(pop)
             u64 key;
         };
     };
