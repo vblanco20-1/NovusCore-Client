@@ -55,6 +55,26 @@ namespace Renderer
             samplerInfo.minLod = desc.minLOD;
             samplerInfo.maxLod = desc.maxLOD;
 
+            VkSamplerReductionMode reductionMode;
+
+            VkSamplerReductionModeCreateInfoEXT createInfoReduction = { VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT };
+
+            if (desc.mode != SAMPLER_REDUCTION_NONE)
+            {
+                switch (desc.mode)
+                {
+                case SAMPLER_REDUCTION_MAX: reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX; break;
+                case SAMPLER_REDUCTION_MIN: reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN; break;
+                }
+
+				
+				createInfoReduction.reductionMode = reductionMode;
+
+                samplerInfo.pNext = &createInfoReduction;
+
+            }
+
+
             if (vkCreateSampler(_device->_device, &samplerInfo, nullptr, &sampler.sampler) != VK_SUCCESS)
             {
                 NC_LOG_FATAL("Failed to create sampler!");

@@ -48,7 +48,7 @@ namespace Renderer
 
             void FlushGPU();
 
-        private:
+      //  private:
             void InitOnce();
 
             // InitOnce helper functions
@@ -89,7 +89,7 @@ namespace Renderer
             uvec2 GetMainWindowSize() { return _mainWindowSize; }
 
             static PFN_vkCmdDrawIndexedIndirectCountKHR fnVkCmdDrawIndexedIndirectCountKHR;
-        private:
+        //private:
             uvec2 _mainWindowSize;
 
             static const u32 FRAME_INDEX_COUNT = 2;

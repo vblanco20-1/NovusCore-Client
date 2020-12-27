@@ -120,6 +120,7 @@ namespace Renderer
 
         // Utils
         virtual void FlipFrame(u32 frameIndex) = 0;
+        virtual  void BuildDepthPyramid(CommandList& commandListID, DepthImageID depthSource, ImageID pyramid) =0;
 
         virtual void CopyBuffer(BufferID dstBuffer, u64 dstOffset, BufferID srcBuffer, u64 srcOffset, u64 range) = 0;
         

@@ -85,10 +85,10 @@ public:
 public:
     CModelRenderer(Renderer::Renderer* renderer, DebugRenderer* debugRenderer);
     ~CModelRenderer();
-
+  // Renderer::SamplerID occlusionSampler;
     void Update(f32 deltaTime);
 
-    void AddComplexModelPass(Renderer::RenderGraph* renderGraph, Renderer::DescriptorSet* globalDescriptorSet, Renderer::ImageID colorTarget, Renderer::ImageID objectTarget, Renderer::DepthImageID depthTarget, u8 frameIndex);
+    void AddComplexModelPass(Renderer::RenderGraph* renderGraph, Renderer::DescriptorSet* globalDescriptorSet, Renderer::ImageID colorTarget, Renderer::ImageID objectTarget, Renderer::DepthImageID depthTarget, u8 frameIndex, Renderer::ImageID occlusionPyramid);
 
     void RegisterLoadFromChunk(u16 chunkID, const Terrain::Chunk& chunk, StringTable& stringTable);
     void ExecuteLoad();
@@ -162,10 +162,11 @@ private:
 
     struct CullConstants
     {
-        vec4 frustumPlanes[6];
+        vec4 frustumPlanes[6];       
         vec3 cameraPos;
         u32 maxDrawCount;
-        bool shouldPrepareSort = false;
+        u32 shouldPrepareSort = false;
+        u32 occlusionCull = false;
     };
 
 private:

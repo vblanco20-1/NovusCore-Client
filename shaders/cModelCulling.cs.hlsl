@@ -1,12 +1,14 @@
 #include "globalData.inc.hlsl"
 #include "cModel.inc.hlsl"
+#include "pyramidCulling.inc.hlsl"
 
 struct Constants
 {
 	float4 frustumPlanes[6];
     float3 cameraPosition;   
     uint maxDrawCount;
-    bool shouldPrepareSort;
+    uint shouldPrepareSort;
+    uint occlusionCull;
 };
 
 struct DrawCall
@@ -48,6 +50,9 @@ struct Instance
 [[vk::binding(1, PER_PASS)]] StructuredBuffer<DrawCall> _drawCalls;
 [[vk::binding(2, PER_PASS)]] StructuredBuffer<Instance> _instances;
 [[vk::binding(3, PER_PASS)]] StructuredBuffer<PackedCullingData> _cullingDatas;
+
+[[vk::binding(8, PER_PASS)]] SamplerState _depthSampler;
+[[vk::binding(9, PER_PASS)]] Texture2D<float> _depthPyramid;
 
 // Outputs
 [[vk::binding(4, PER_PASS)]] RWByteAddressBuffer _drawCount;
@@ -120,6 +125,7 @@ bool IsAABBInsideFrustum(float4 frustum[6], AABB aabb)
 
 	return true;
 }
+
 
 #define UINT_MAX 0xFFFFu
 uint64_t CalculateSortKey(DrawCall drawCall, DrawCallData drawCallData, Instance instance)
@@ -198,7 +204,13 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     {
         return;
     }
-    
+    if (_constants.occlusionCull)
+    {
+        if (!IsVisible(aabb.min,aabb.max,_depthPyramid, _depthSampler, _viewData.viewProjectionMatrix))
+        {
+            return;
+        }
+    }
     // Store DrawCall
     uint outIndex;
 	_drawCount.InterlockedAdd(0, 1, outIndex);

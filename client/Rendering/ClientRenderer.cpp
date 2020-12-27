@@ -222,26 +222,7 @@ void ClientRenderer::Render()
 
             commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, &_globalDescriptorSet, _frameIndex);
 
-            // Render depth prepass layer
-            //Renderer::RenderLayer& layer = _renderer->GetRenderLayer(DEPTH_PREPASS_RENDER_LAYER);
-            //
-            //for (auto const& model : layer.GetModels())
-            //{
-            //    auto const& modelID = Renderer::ModelID(model.first);
-            //    auto const& instances = model.second;
-            //
-            //
-            //    for (auto const& instance : instances)
-            //    {
-            //        instance->Apply(_frameIndex);
-            //
-            //        //_drawDescriptorSet.Bind("_modelData", instance->GetConstantBuffer());
-            //        commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_DRAW, &_drawDescriptorSet, _frameIndex);
-            //
-            //        // Draw
-            //        commandList.Draw(modelID);
-            //    }
-            //}
+            
             commandList.EndPipeline(pipeline);
         });
     }
@@ -320,31 +301,38 @@ void ClientRenderer::Render()
             commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, &_globalDescriptorSet, _frameIndex);
             commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, _frameIndex);
 
-            // Render main layer
-            //Renderer::RenderLayer& mainLayer = _renderer->GetRenderLayer(MAIN_RENDER_LAYER);
-            //
-            //for (auto const& model : mainLayer.GetModels())
-            //{
-            //    auto const& modelID = Renderer::ModelID(model.first);
-            //    auto const& instances = model.second;
-            //
-            //    for (auto const& instance : instances)
-            //    {
-            //        _drawDescriptorSet.Bind("_modelData", instance->GetBuffer(_frameIndex));
-            //        commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_DRAW, &_drawDescriptorSet, _frameIndex);
-            //
-            //        // Draw
-            //        commandList.Draw(modelID);
-            //    }
-            //}
+           
             commandList.EndPipeline(pipeline);
         });
     }
 
     _terrainRenderer->AddTerrainPass(&renderGraph, &_globalDescriptorSet, _mainColor, _objectIDs, _mainDepth, _frameIndex);
 
-    _cModelRenderer->AddComplexModelPass(&renderGraph, &_globalDescriptorSet, _mainColor, _objectIDs, _mainDepth, _frameIndex);
 
+
+
+
+
+	_cModelRenderer->AddComplexModelPass(&renderGraph, &_globalDescriptorSet, _mainColor, _objectIDs, _mainDepth, _frameIndex, _depthPyramid);
+	// UI Pass
+	struct PyramidPassData
+	{
+		Renderer::RenderPassResource mainDepth;
+	};
+
+	renderGraph.AddPass<PyramidPassData>("PyramidPass",
+		[=](PyramidPassData& data, Renderer::RenderGraphBuilder& builder) // Setup
+		{
+			data.mainDepth = builder.Read(_mainDepth, Renderer::RenderGraphBuilder::SHADER_STAGE_PIXEL);
+
+			return true; // Return true from setup to enable this pass, return false to disable it
+		},
+		[=](PyramidPassData& data, Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList) // Execute
+		{
+			GPU_SCOPED_PROFILER_ZONE(commandList, ImguiPass);
+
+			_renderer->BuildDepthPyramid(commandList, (Renderer::DepthImageID)(u16)data.mainDepth, _depthPyramid);
+		});
     _pixelQuery->AddPixelQueryPass(&renderGraph, _mainColor, _objectIDs, _mainDepth, _frameIndex);
     
     _debugRenderer->Add3DPass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
@@ -421,6 +409,15 @@ void ClientRenderer::CreatePermanentResources()
     objectIDsDesc.sampleCount = Renderer::SAMPLE_COUNT_1;
 
     _objectIDs = _renderer->CreateImage(objectIDsDesc);
+
+	// depth pyramid ID rendertarget
+	Renderer::ImageDesc pyramidDesc;
+	pyramidDesc.debugName = "DepthPyramid";
+	pyramidDesc.dimensions = vec2(1.0f, 1.0f);
+	pyramidDesc.dimensionType = Renderer::ImageDimensionType::DIMENSION_PYRAMID;
+	pyramidDesc.format = Renderer::IMAGE_FORMAT_R32_FLOAT;
+	pyramidDesc.sampleCount = Renderer::SAMPLE_COUNT_1; 
+	_depthPyramid = _renderer->CreateImage(pyramidDesc);
 
     // Main depth rendertarget
     Renderer::DepthImageDesc mainDepthDesc;

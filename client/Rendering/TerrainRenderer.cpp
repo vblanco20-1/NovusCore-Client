@@ -414,7 +414,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
 
     // Subrenderers
     _mapObjectRenderer->AddMapObjectPass(renderGraph, globalDescriptorSet, colorTarget, objectTarget, depthTarget, frameIndex); 
-    _waterRenderer->AddWaterPass(renderGraph, globalDescriptorSet, colorTarget, depthTarget, frameIndex);
+   // _waterRenderer->AddWaterPass(renderGraph, globalDescriptorSet, colorTarget, depthTarget, frameIndex);
 }
 
 void TerrainRenderer::CreatePermanentResources()
@@ -768,7 +768,7 @@ bool TerrainRenderer::LoadMap(const NDBC::Map* map)
     _complexModelRenderer->ExecuteLoad();
 
     // Load Water
-    _waterRenderer->LoadWater(_loadedChunks);
+    //_waterRenderer->LoadWater(_loadedChunks);
 
     return true;
 }
