@@ -1,10 +1,11 @@
 #include "globalData.inc.hlsl"
-
+#include "pyramidCulling.inc.hlsl"
 struct Constants
 {
 	float4 frustumPlanes[6];
     float3 cameraPosition;   
     uint maxDrawCount;
+    uint occlusionCull;
 };
 
 struct DrawCommand
@@ -64,6 +65,10 @@ struct InstanceData
 [[vk::binding(5, PER_PASS)]] ByteAddressBuffer _instanceData;
 
 [[vk::binding(6, PER_PASS)]] ConstantBuffer<Constants> _constants;
+
+
+[[vk::binding(7, PER_PASS)]] SamplerState _depthSampler;
+[[vk::binding(8, PER_PASS)]] Texture2D<float> _depthPyramid;
 
 CullingData LoadCullingData(uint instanceIndex)
 {
@@ -179,6 +184,13 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     if (!IsAABBInsideFrustum(_constants.frustumPlanes, aabb))
     {
         return;
+    } 
+    if (_constants.occlusionCull)
+    {
+        if (!IsVisible(aabb.min, aabb.max, _depthPyramid, _depthSampler, _viewData.viewProjectionMatrix))
+        {
+            return;
+        }
     }
     
     uint outIndex;

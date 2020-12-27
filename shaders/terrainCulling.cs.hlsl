@@ -1,11 +1,15 @@
 #include "globalData.inc.hlsl"
 #include "terrain.inc.hlsl"
 
+#include "pyramidCulling.inc.hlsl"
+
 #define USE_PACKED_HEIGHT_RANGE 1
 
 struct Constants
 {
 	float4 frustumPlanes[6];
+    float4x4 viewmat;
+    uint occlusionCull;
 };
 
 [[vk::push_constant]] Constants _constants;
@@ -13,6 +17,11 @@ struct Constants
 [[vk::binding(1, PER_PASS)]] ByteAddressBuffer _heightRanges;
 [[vk::binding(2, PER_PASS)]] RWByteAddressBuffer _culledInstances;
 [[vk::binding(3, PER_PASS)]] RWByteAddressBuffer _argumentBuffer;
+
+
+[[vk::binding(4, PER_PASS)]] SamplerState _depthSampler;
+[[vk::binding(5, PER_PASS)]] Texture2D<float> _depthPyramid;
+
 
 float2 ReadHeightRange(uint instanceIndex)
 {
@@ -91,7 +100,13 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     {
         return;
     }
-
+    if (_constants.occlusionCull)
+    {
+        if (!IsVisible(aabb.min, aabb.max, _depthPyramid, _depthSampler, _viewData.viewProjectionMatrix))
+        {
+            return;
+        }
+    }
 	uint outInstanceIndex;
     _argumentBuffer.InterlockedAdd(4, 1, outInstanceIndex);
 
