@@ -747,6 +747,7 @@ bool TerrainRenderer::LoadMap(const NDBC::Map* map)
     else
     {
         RegisterChunksToBeLoaded(currentMap, ivec2(32, 32), 32); // Load everything
+        //RegisterChunksToBeLoaded(currentMap, ivec2(31, 49), 1); // bugged terrain
         //RegisterChunksToBeLoaded(mapSingleton.currentMap, ivec2(31, 49), 1); // Goldshire
         //RegisterChunksToBeLoaded(map, ivec2(40, 32), 8); // Razor Hill
         //RegisterChunksToBeLoaded(map, ivec2(22, 25), 8); // Borean Tundra

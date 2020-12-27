@@ -1479,9 +1479,11 @@ namespace Renderer
 			struct alignas(16) DepthReduceData
 			{
 				glm::vec2 imageSize;
+                uint32_t level;
+                uint32_t dummy;
 			}; 
            
-			DepthReduceData reduceData = { glm::vec2(levelWidth, levelHeight) };
+			DepthReduceData reduceData = { glm::vec2(levelWidth, levelHeight),i,0 };
 
 			vkCmdPushConstants(cmd, pyr->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(reduceData), &reduceData);
 			vkCmdDispatch(cmd, getGroupCount(levelWidth, 32), getGroupCount(levelHeight, 32), 1);

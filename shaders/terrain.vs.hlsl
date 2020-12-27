@@ -86,6 +86,7 @@ Vertex UnpackVertex(const PackedVertex packedVertex)
     return vertex;
 }
 
+
 Vertex LoadVertex(uint chunkID, uint cellID, uint vertexBaseOffset, uint vertexID)
 {
     // Load height
@@ -94,15 +95,13 @@ Vertex LoadVertex(uint chunkID, uint cellID, uint vertexBaseOffset, uint vertexI
 
     Vertex vertex = UnpackVertex(packedVertex);
     
-    // Set remaining vertex parameters which are based on vertexID
-    float2 cellPos = GetCellPosition(chunkID, cellID);
     float2 vertexPos = GetCellSpaceVertexPosition(vertexID);
+   
+    vertex.position.xy = GetGlobalVertexPosition(chunkID, cellID,vertexID);
 
-    vertex.position.x = cellPos.x + vertexPos.x * PATCH_SIDE_SIZE;
-    vertex.position.y = cellPos.y + vertexPos.y * PATCH_SIDE_SIZE;
     vertex.uv = float2(-vertexPos.y, -vertexPos.x); // Negated to go from 3D coordinates to 2D
-
-    return vertex;
+      
+    return vertex; 
 }
 
 CellData LoadCellData(uint globalCellID)

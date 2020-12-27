@@ -62,5 +62,5 @@ bool IsVisible(float3 AABBMin, float3 AABBMax, Texture2D<float> pyramid, Sampler
     float sampleDepth = pyramid.SampleLevel(samplerState, psample, level).x;
 
 
-    return sampleDepth < depth.x;
+    return sampleDepth <= depth.x;
 };

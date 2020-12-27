@@ -415,6 +415,7 @@ namespace Renderer
             deviceFeatures.features.vertexPipelineStoresAndAtomics = VK_TRUE;
             deviceFeatures.features.shaderInt16 = VK_TRUE;
             deviceFeatures.features.shaderInt64 = VK_TRUE;
+            deviceFeatures.features.shaderFloat64 = VK_TRUE;
             deviceFeatures.features.multiDrawIndirect = VK_TRUE;
             deviceFeatures.features.drawIndirectFirstInstance = VK_TRUE;
             deviceFeatures.features.independentBlend = VK_TRUE;
