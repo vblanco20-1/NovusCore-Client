@@ -67,6 +67,7 @@ namespace Renderer
                 case SAMPLER_REDUCTION_MIN: reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN; break;
                 }
 
+                samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 				
 				createInfoReduction.reductionMode = reductionMode;
 

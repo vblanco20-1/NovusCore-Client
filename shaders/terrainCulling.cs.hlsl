@@ -94,21 +94,24 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
 	const uint chunkID = instance.packedChunkCellID >> 16;
 
 	const float2 heightRange = ReadHeightRange(instanceIndex);
-	const AABB aabb = GetCellAABB(chunkID, cellID, heightRange);
-
+	AABB aabb = GetCellAABB(chunkID, cellID, heightRange);
+     
     if (!IsAABBInsideFrustum(_constants.frustumPlanes, aabb))
     {
-        return;
+        return; 
     }
-    if (_constants.occlusionCull)
+    if (_constants.occlusionCull) 
     {
-        if (!IsVisible(aabb.min, aabb.max, _depthPyramid, _depthSampler, _viewData.viewProjectionMatrix))
+        float height = 0; //distance(aabb.min.z, aabb.max.z);
+        aabb.min.z -= height;
+        aabb.max.z += height;
+        if (!IsVisible(aabb.min, aabb.max,_viewData.eye, _depthPyramid, _depthSampler, _viewData.lastViewProjectionMatrix))
         {
             return;
         }
     }
 	uint outInstanceIndex;
     _argumentBuffer.InterlockedAdd(4, 1, outInstanceIndex);
-
+      
     _culledInstances.Store<CellInstance>(outInstanceIndex * 8, instance);
 }

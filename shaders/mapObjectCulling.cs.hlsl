@@ -186,9 +186,9 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         return;
     } 
     if (_constants.occlusionCull)
-    {
-        if (!IsVisible(aabb.min, aabb.max, _depthPyramid, _depthSampler, _viewData.viewProjectionMatrix))
-        {
+    { 
+        if (!IsVisible(aabb.min, aabb.max, _viewData.eye, _depthPyramid, _depthSampler, _viewData.lastViewProjectionMatrix))
+        { 
             return;
         }
     }

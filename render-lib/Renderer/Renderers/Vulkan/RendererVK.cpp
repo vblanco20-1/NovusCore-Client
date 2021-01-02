@@ -1182,8 +1182,6 @@ namespace Renderer
         shaderDesc.path = "Data/shaders/blitDepth.cs.hlsl.spv";
 		VertexShaderID cmpShader = render->LoadShader(shaderDesc);
 
-		
-
 		// Create shader stage infos
 		VkPipelineShaderStageCreateInfo stageInfo = {};
 		stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1200,19 +1198,7 @@ namespace Renderer
 		}
 
 		std::vector<VkDescriptorSetLayoutBinding> bindings;
-#if 0
-		for (Backend::BindInfo& bindInfo : bindInfos)
-		{
-			VkDescriptorSetLayoutBinding layoutBinding = {};
 
-			layoutBinding.binding = bindInfo.binding;
-			layoutBinding.descriptorType = bindInfo.descriptorType;
-			layoutBinding.descriptorCount = bindInfo.count;
-			layoutBinding.stageFlags = bindInfo.stageFlags;
-
-			bindings.push_back(layoutBinding);
-		}
-#else
 		{
 			VkDescriptorSetLayoutBinding layoutBinding = {};
 
@@ -1243,7 +1229,7 @@ namespace Renderer
 
 			bindings.push_back(layoutBinding);
 		}
-#endif
+
 		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.bindingCount = static_cast<u32>(bindings.size());
@@ -1317,7 +1303,6 @@ namespace Renderer
 			NC_LOG_FATAL("Failed to create pipeline ");
 		}
 
-
         SamplerDesc samplerDesc;
         samplerDesc.filter = SAMPLER_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
        
@@ -1330,33 +1315,7 @@ namespace Renderer
 
         sampler = render->CreateSampler(samplerDesc);
         minSampler = render->_samplerHandler->GetSampler(sampler);
-		//VkSamplerCreateInfo createInfo = {};
-		//
-		//auto reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN;
-		//
-		//createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-		//createInfo.magFilter = VK_FILTER_LINEAR;
-		//createInfo.minFilter = VK_FILTER_LINEAR;
-		//createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-		//createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		//createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		//createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		//createInfo.minLod = 0;
-		//createInfo.maxLod = 16.f;
-		//
-		//VkSamplerReductionModeCreateInfoEXT createInfoReduction = { VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT };
-		//
-		//if (reductionMode != VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE_EXT)
-		//{
-		//	createInfoReduction.reductionMode = reductionMode;
-		//
-		//	createInfo.pNext = &createInfoReduction;
-		//}
-		//
-		//if (vkCreateSampler(render->_device->_device, &createInfo, 0, &minSampler) != VK_SUCCESS)
-		//{
-		//    NC_LOG_FATAL("Failed to create sampler ");
-		//}
+
 	}
     VkImageMemoryBarrier image_barrier(VkImage image, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask)
 	{
@@ -1419,12 +1378,6 @@ namespace Renderer
 				sourceTarget.imageView = _imageHandler->GetColorView(image, i-1);
 				sourceTarget.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 			}
-
-			//VkDescriptorSet depthSet;
-			//vkutil::DescriptorBuilder::begin(_descriptorLayoutCache, get_current_frame().dynamicDescriptorAllocator)
-			//	.bind_image(0, &destTarget, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT)
-			//	.bind_image(1, &sourceTarget, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT)
-			//	.build(depthSet);
 
             std::vector<VkWriteDescriptorSet> writes;
             {

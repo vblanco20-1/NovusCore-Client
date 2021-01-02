@@ -157,8 +157,8 @@ namespace Renderer
 				uwidth = static_cast<u32>(width);
 				uheight = static_cast<u32>(height);
 
-				uwidth = (previousPow2(uwidth));
-				uheight = (previousPow2(uheight));
+				uwidth = (previousPow2(uwidth * 2));
+				uheight = (previousPow2(uheight * 2));
 				mips = (getImageMipLevels(uwidth, uheight));
 			}
 
@@ -293,8 +293,8 @@ namespace Renderer
 				uwidth = static_cast<u32>(width);
 				uheight = static_cast<u32>(height);
 
-                uwidth = (previousPow2(uwidth));
-                uheight = (previousPow2(uheight));
+                uwidth = (previousPow2(uwidth*2));
+                uheight = (previousPow2(uheight*2));
                 mips = (getImageMipLevels(uwidth, uheight));
 
                 image.desc.mipLevels = mips;

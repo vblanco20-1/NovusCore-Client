@@ -206,11 +206,11 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
     if (_constants.occlusionCull)
     {
-        if (!IsVisible(aabb.min,aabb.max,_depthPyramid, _depthSampler, _viewData.viewProjectionMatrix))
+        if (!IsVisible(aabb.min, aabb.max, _viewData.eye, _depthPyramid, _depthSampler, _viewData.lastViewProjectionMatrix))
         {
             return;
         }
-    }
+    } 
     // Store DrawCall
     uint outIndex;
 	_drawCount.InterlockedAdd(0, 1, outIndex);

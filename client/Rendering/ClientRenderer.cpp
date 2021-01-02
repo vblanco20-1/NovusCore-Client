@@ -139,7 +139,9 @@ void ClientRenderer::Render()
     _renderer->FlipFrame(_frameIndex);
 
     // Update the view matrix to match the new camera position
+    _viewConstantBuffer->resource.lastViewProjectionMatrix = _viewConstantBuffer->resource.viewProjectionMatrix;
     _viewConstantBuffer->resource.viewProjectionMatrix = camera->GetViewProjectionMatrix();
+    _viewConstantBuffer->resource.eye = camera->GetPosition();
     _viewConstantBuffer->Apply(_frameIndex);
 
     entt::registry* registry = ServiceLocator::GetGameRegistry();
@@ -333,6 +335,7 @@ void ClientRenderer::Render()
 
 			_renderer->BuildDepthPyramid(commandList, (Renderer::DepthImageID)(u16)data.mainDepth, _depthPyramid);
 		});
+
     _pixelQuery->AddPixelQueryPass(&renderGraph, _mainColor, _objectIDs, _mainDepth, _frameIndex);
     
     _debugRenderer->Add3DPass(&renderGraph, &_globalDescriptorSet, _mainColor, _mainDepth, _frameIndex);
