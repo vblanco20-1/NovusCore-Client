@@ -49,21 +49,21 @@ bool IsVisible(float3 AABBMin, float3 AABBMax,float3 eye ,Texture2D<float> pyram
         depth.y = min(clipPoint.z, depth.y);
     }
 
-    //convert max and min into UV space
-    pmin = pmin * float2(0.5f, -0.5f) + float2(0.5f,0.5f);
-    pmax = pmax * float2(0.5f, -0.5f) + float2(0.5f,0.5f);
-
     uint pyrWidth;
     uint pyrHeight;
     pyramid.GetDimensions(pyrWidth, pyrHeight);
 
+    //convert max and min into UV space
+    pmin = pmin * float2(0.5f, -0.5f) + float2(0.5f,0.5f);
+    pmax = pmax * float2(0.5f, -0.5f) + float2(0.5f,0.5f);
+   
     //calculate pixel widths/height
-    float boxWidth = (pmax.x-pmin.x) * pyrWidth;
-    float boxHeight = (pmax.y-pmin.y) * pyrHeight;
+    float boxWidth = abs(pmax.x-pmin.x) * pyrWidth;
+    float boxHeight = abs(pmax.y-pmin.y) * pyrHeight;
 
-    float level = ceil(log2(max(boxWidth, boxHeight)));
+    float level = ceil(log2(max(boxWidth, boxHeight))) +1;
 
-    float2 psample = (pmin + pmax) / 2;
+    float2 psample = lerp(pmin,pmax,0.5);
 
     float sampleDepth = pyramid.SampleLevel(samplerState, psample, level).x;
 
