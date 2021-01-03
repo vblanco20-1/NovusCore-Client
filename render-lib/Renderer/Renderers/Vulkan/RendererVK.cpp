@@ -670,7 +670,7 @@ namespace Renderer
         {
             VkDescriptorImageInfo imageInfo = {};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfo.imageView = _imageHandler->GetColorView(descriptor.imageID);
+            imageInfo.imageView = _imageHandler->GetColorView(descriptor.imageID,descriptor.imageMipLevel);
 
             builder->BindImage(descriptor.nameHash, imageInfo);
         }
@@ -954,20 +954,20 @@ namespace Renderer
 
         {
        
-			GraphicsPipelineID graphicsPipelineID = _commandListHandler->GetBoundGraphicsPipeline(commandListID);
+            GraphicsPipelineID graphicsPipelineID = _commandListHandler->GetBoundGraphicsPipeline(commandListID);
 
-			if (graphicsPipelineID != GraphicsPipelineID::Invalid())
-			{
-				VkPipelineLayout layout = _pipelineHandler->GetPipelineLayout(graphicsPipelineID);
-				vkCmdPushConstants(commandBuffer, layout, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT, offset, size, data);
-			}
+            if (graphicsPipelineID != GraphicsPipelineID::Invalid())
+            {
+                VkPipelineLayout layout = _pipelineHandler->GetPipelineLayout(graphicsPipelineID);
+                vkCmdPushConstants(commandBuffer, layout, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT, offset, size, data);
+            }
 
-			ComputePipelineID computePipelineID = _commandListHandler->GetBoundComputePipeline(commandListID);
-			if (computePipelineID != ComputePipelineID::Invalid())
-			{
-				VkPipelineLayout layout = _pipelineHandler->GetPipelineLayout(computePipelineID);
-				vkCmdPushConstants(commandBuffer, layout, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT, offset, size, data);
-			}
+            ComputePipelineID computePipelineID = _commandListHandler->GetBoundComputePipeline(commandListID);
+            if (computePipelineID != ComputePipelineID::Invalid())
+            {
+                VkPipelineLayout layout = _pipelineHandler->GetPipelineLayout(computePipelineID);
+                vkCmdPushConstants(commandBuffer, layout, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT, offset, size, data);
+            }
         }
     }
 
@@ -1129,19 +1129,19 @@ namespace Renderer
         
     }
     
-	void RendererVK::BuildDepthPyramid(CommandList& commandListID, DepthImageID depthSource, ImageID pyramid)
-	{
+    void RendererVK::BuildDepthPyramid(CommandList& commandListID, DepthImageID depthSource, ImageID pyramid)
+    {
         static PyramidCallDataHack *phack{nullptr};
         if (!phack) phack = new PyramidCallDataHack();
         
-		phack->depth = depthSource;
-		phack->pyramid = pyramid;
-		phack->magic = 1773u;
+        phack->depth = depthSource;
+        phack->pyramid = pyramid;
+        phack->magic = 1773u;
         commandListID.PushConstant(phack, 0, sizeof(PyramidCallDataHack));
         //commandListID.BeginPipeline(_blit)
-	}
+    }
 
-	void RendererVK::CopyBuffer(BufferID dstBuffer, u64 dstOffset, BufferID srcBuffer, u64 srcOffset, u64 range)
+    void RendererVK::CopyBuffer(BufferID dstBuffer, u64 dstOffset, BufferID srcBuffer, u64 srcOffset, u64 range)
     {
         VkBuffer vkDstBuffer = _bufferHandler->GetBuffer(dstBuffer);
         VkBuffer vkSrcBuffer = _bufferHandler->GetBuffer(srcBuffer);
@@ -1163,10 +1163,10 @@ namespace Renderer
 
         VkPipeline downsamplePipeline;
         VkSampler minSampler;
-		VkPipelineLayout pipelineLayout;
+        VkPipelineLayout pipelineLayout;
         VkDescriptorPool pool;
-		VkDescriptorSetLayout descriptorSetLayout;		
-		//VkPipeline pipeline;
+        VkDescriptorSetLayout descriptorSetLayout;		
+        //VkPipeline pipeline;
 
         std::vector<VkDescriptorSet> sets;
         size_t setIdx;
@@ -1174,71 +1174,71 @@ namespace Renderer
         SamplerID sampler;
     };
 
-	void PyramidStructures::build(RendererVK* render)
-	{
+    void PyramidStructures::build(RendererVK* render)
+    {
         auto shaderHandler = render->_shaderHandler;
-		// Load shaders
-		VertexShaderDesc shaderDesc;
+        // Load shaders
+        VertexShaderDesc shaderDesc;
         shaderDesc.path = "Data/shaders/blitDepth.cs.hlsl.spv";
-		VertexShaderID cmpShader = render->LoadShader(shaderDesc);
+        VertexShaderID cmpShader = render->LoadShader(shaderDesc);
 
-		// Create shader stage infos
-		VkPipelineShaderStageCreateInfo stageInfo = {};
-		stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        // Create shader stage infos
+        VkPipelineShaderStageCreateInfo stageInfo = {};
+        stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 
         stageInfo.module = shaderHandler->GetShaderModule(cmpShader);
         stageInfo.pName = "main";
 
-		// Create Descriptor Set Layout from reflected SPIR-V
-		std::vector<Backend::BindInfo> bindInfos;
-		{
-			const Backend::BindReflection& bindReflection = shaderHandler->GetBindReflection(cmpShader);
-			bindInfos.insert(bindInfos.end(), bindReflection.dataBindings.begin(), bindReflection.dataBindings.end());
-		}
+        // Create Descriptor Set Layout from reflected SPIR-V
+        std::vector<Backend::BindInfo> bindInfos;
+        {
+            const Backend::BindReflection& bindReflection = shaderHandler->GetBindReflection(cmpShader);
+            bindInfos.insert(bindInfos.end(), bindReflection.dataBindings.begin(), bindReflection.dataBindings.end());
+        }
 
-		std::vector<VkDescriptorSetLayoutBinding> bindings;
+        std::vector<VkDescriptorSetLayoutBinding> bindings;
 
-		{
-			VkDescriptorSetLayoutBinding layoutBinding = {};
+        {
+            VkDescriptorSetLayoutBinding layoutBinding = {};
 
-			layoutBinding.binding = 0;
-			layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-			layoutBinding.descriptorCount = 1;
-			layoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+            layoutBinding.binding = 0;
+            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+            layoutBinding.descriptorCount = 1;
+            layoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-			bindings.push_back(layoutBinding);
-		}
-		{
-			VkDescriptorSetLayoutBinding layoutBinding = {};
+            bindings.push_back(layoutBinding);
+        }
+        {
+            VkDescriptorSetLayoutBinding layoutBinding = {};
 
-			layoutBinding.binding = 1;
-			layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-			layoutBinding.descriptorCount = 1;
-			layoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+            layoutBinding.binding = 1;
+            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            layoutBinding.descriptorCount = 1;
+            layoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-			bindings.push_back(layoutBinding);
-		}
-		{
-			VkDescriptorSetLayoutBinding layoutBinding = {};
+            bindings.push_back(layoutBinding);
+        }
+        {
+            VkDescriptorSetLayoutBinding layoutBinding = {};
 
-			layoutBinding.binding = 2;
-			layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-			layoutBinding.descriptorCount = 1;
-			layoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+            layoutBinding.binding = 2;
+            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            layoutBinding.descriptorCount = 1;
+            layoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-			bindings.push_back(layoutBinding);
-		}
+            bindings.push_back(layoutBinding);
+        }
 
-		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = static_cast<u32>(bindings.size());
-		layoutInfo.pBindings = bindings.data();
+        VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = static_cast<u32>(bindings.size());
+        layoutInfo.pBindings = bindings.data();
 
-		if (vkCreateDescriptorSetLayout(render->_device->_device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
-		{
-			NC_LOG_FATAL("Failed to create descriptor set layout!");
-		}
+        if (vkCreateDescriptorSetLayout(render->_device->_device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
+        {
+            NC_LOG_FATAL("Failed to create descriptor set layout!");
+        }
 
         std::vector<VkDescriptorPoolSize> psizes;
         psizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,100 });
@@ -1252,10 +1252,10 @@ namespace Renderer
         poolinfo.poolSizeCount = (uint32_t)psizes.size();
         poolinfo.pPoolSizes = psizes.data();
 
-		if (vkCreateDescriptorPool(render->_device->_device, &poolinfo, nullptr, &pool) != VK_SUCCESS)
-		{
-			NC_LOG_FATAL("Failed to create descriptor set layout!");
-		}
+        if (vkCreateDescriptorPool(render->_device->_device, &poolinfo, nullptr, &pool) != VK_SUCCESS)
+        {
+            NC_LOG_FATAL("Failed to create descriptor set layout!");
+        }
 
         for (int i = 0; i < 100; i++)
         {
@@ -1281,27 +1281,27 @@ namespace Renderer
         range.size = 16;
         range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 1;
-		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-		pipelineLayoutInfo.pushConstantRangeCount = 1; // Optional
-		pipelineLayoutInfo.pPushConstantRanges = &range; // Optional
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = 1;
+        pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+        pipelineLayoutInfo.pushConstantRangeCount = 1; // Optional
+        pipelineLayoutInfo.pPushConstantRanges = &range; // Optional
         
-		if (vkCreatePipelineLayout(render->_device->_device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
-		{
-			NC_LOG_FATAL("Failed to create pipeline layout!");
-		}
+        if (vkCreatePipelineLayout(render->_device->_device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
+        {
+            NC_LOG_FATAL("Failed to create pipeline layout!");
+        }
 
         VkComputePipelineCreateInfo pipInfo{};
         pipInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
         pipInfo.layout = pipelineLayout;
         pipInfo.stage = stageInfo;
        
-		if (vkCreateComputePipelines(render->_device->_device,VK_NULL_HANDLE,1,&pipInfo, nullptr, &downsamplePipeline) != VK_SUCCESS)
-		{
-			NC_LOG_FATAL("Failed to create pipeline ");
-		}
+        if (vkCreateComputePipelines(render->_device->_device,VK_NULL_HANDLE,1,&pipInfo, nullptr, &downsamplePipeline) != VK_SUCCESS)
+        {
+            NC_LOG_FATAL("Failed to create pipeline ");
+        }
 
         SamplerDesc samplerDesc;
         samplerDesc.filter = SAMPLER_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
@@ -1316,29 +1316,29 @@ namespace Renderer
         sampler = render->CreateSampler(samplerDesc);
         minSampler = render->_samplerHandler->GetSampler(sampler);
 
-	}
+    }
     VkImageMemoryBarrier image_barrier(VkImage image, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask)
-	{
-		VkImageMemoryBarrier result = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+    {
+        VkImageMemoryBarrier result = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 
-		result.srcAccessMask = srcAccessMask;
-		result.dstAccessMask = dstAccessMask;
-		result.oldLayout = oldLayout;
-		result.newLayout = newLayout;
-		result.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		result.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		result.image = image;
-		result.subresourceRange.aspectMask = aspectMask;
-		result.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-		result.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        result.srcAccessMask = srcAccessMask;
+        result.dstAccessMask = dstAccessMask;
+        result.oldLayout = oldLayout;
+        result.newLayout = newLayout;
+        result.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        result.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        result.image = image;
+        result.subresourceRange.aspectMask = aspectMask;
+        result.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+        result.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-		return result;
-	}
+        return result;
+    }
 
-	inline uint32_t getGroupCount(uint32_t threadCount, uint32_t localSize)
-	{
-		return (threadCount + localSize - 1) / localSize;
-	}
+    inline uint32_t getGroupCount(uint32_t threadCount, uint32_t localSize)
+    {
+        return (threadCount + localSize - 1) / localSize;
+    }
     void RendererVK::BuildPyramid(CommandListID commandListID, DepthImageID depthSource, ImageID image)
     {
         static PyramidStructures* pyr{ nullptr };
@@ -1351,33 +1351,32 @@ namespace Renderer
         VkCommandBuffer cmd = _commandListHandler->GetCommandBuffer(commandListID);
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pyr->downsamplePipeline);
 
+        VkImageMemoryBarrier depthReadBarriers[] =
+        {
+            image_barrier(_imageHandler->GetImage(depthSource), VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT),
+        };
 
-		VkImageMemoryBarrier depthReadBarriers[] =
-		{
-			image_barrier(_imageHandler->GetImage(depthSource), VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT),
-		};
-
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, depthReadBarriers);
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, depthReadBarriers);
 
 
-		for (uint32_t i = 0; i < _imageHandler->GetImageDesc(image).mipLevels; ++i)
-		{
-			VkDescriptorImageInfo destTarget;
-			destTarget.sampler = pyr->minSampler;
-			destTarget.imageView = _imageHandler->GetColorView(image,i);
-			destTarget.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        for (uint32_t i = 0; i < _imageHandler->GetImageDesc(image).mipLevels; ++i)
+        {
+            VkDescriptorImageInfo destTarget;
+            destTarget.sampler = pyr->minSampler;
+            destTarget.imageView = _imageHandler->GetColorView(image,i);
+            destTarget.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-			VkDescriptorImageInfo sourceTarget;
-			sourceTarget.sampler = pyr->minSampler;
-			if (i == 0)
-			{
-				sourceTarget.imageView = _imageHandler->GetDepthView(depthSource);
-				sourceTarget.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			}
-			else {
-				sourceTarget.imageView = _imageHandler->GetColorView(image, i-1);
-				sourceTarget.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-			}
+            VkDescriptorImageInfo sourceTarget;
+            sourceTarget.sampler = pyr->minSampler;
+            if (i == 0)
+            {
+                sourceTarget.imageView = _imageHandler->GetDepthView(depthSource);
+                sourceTarget.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            }
+            else {
+                sourceTarget.imageView = _imageHandler->GetColorView(image, i-1);
+                sourceTarget.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+            }
 
             std::vector<VkWriteDescriptorSet> writes;
             {
@@ -1393,67 +1392,66 @@ namespace Renderer
 
                 writes.push_back(write0);
             }
-			{
-				VkWriteDescriptorSet write1{};
-				write1.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				write1.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-				write1.dstBinding = 1;
-				write1.dstSet = pyr->sets[pyr->setIdx];
-				write1.descriptorCount = 1;
-				
-				write1.pImageInfo = &sourceTarget;
-
-				writes.push_back(write1);
-			} 
             {
-				VkWriteDescriptorSet write1{};
-				write1.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				write1.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-				write1.dstBinding = 2;
-				write1.dstSet = pyr->sets[pyr->setIdx];
-				write1.descriptorCount = 1;
+                VkWriteDescriptorSet write1{};
+                write1.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                write1.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+                write1.dstBinding = 1;
+                write1.dstSet = pyr->sets[pyr->setIdx];
+                write1.descriptorCount = 1;
+                
+                write1.pImageInfo = &sourceTarget;
 
-				write1.pImageInfo = &destTarget;
+                writes.push_back(write1);
+            } 
+            {
+                VkWriteDescriptorSet write1{};
+                write1.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                write1.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                write1.dstBinding = 2;
+                write1.dstSet = pyr->sets[pyr->setIdx];
+                write1.descriptorCount = 1;
 
-				writes.push_back(write1);
-			}
+                write1.pImageInfo = &destTarget;
+
+                writes.push_back(write1);
+            }
             vkUpdateDescriptorSets(_device->_device,(uint32_t) writes.size(), writes.data(), 0, nullptr);
 
-
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pyr->pipelineLayout, 0, 1, &pyr->sets[pyr->setIdx], 0, nullptr);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pyr->pipelineLayout, 0, 1, &pyr->sets[pyr->setIdx], 0, nullptr);
 
             pyr->setIdx = (pyr->setIdx+1) % pyr->sets.size();
             
-			uint32_t levelWidth = _imageHandler->GetDimension(image).x >> i;
-			uint32_t levelHeight = _imageHandler->GetDimension(image).y >> i;
-			if (levelHeight < 1) levelHeight = 1;
-			if (levelWidth < 1) levelWidth = 1;
+            uint32_t levelWidth = _imageHandler->GetDimension(image).x >> i;
+            uint32_t levelHeight = _imageHandler->GetDimension(image).y >> i;
+            if (levelHeight < 1) levelHeight = 1;
+            if (levelWidth < 1) levelWidth = 1;
 
-			struct alignas(16) DepthReduceData
-			{
-				glm::vec2 imageSize;
+            struct alignas(16) DepthReduceData
+            {
+                glm::vec2 imageSize;
                 uint32_t level;
                 uint32_t dummy;
-			}; 
+            }; 
            
-			DepthReduceData reduceData = { glm::vec2(levelWidth, levelHeight),i,0 };
+            DepthReduceData reduceData = { glm::vec2(levelWidth, levelHeight),i,0 };
 
-			vkCmdPushConstants(cmd, pyr->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(reduceData), &reduceData);
-			vkCmdDispatch(cmd, getGroupCount(levelWidth, 32), getGroupCount(levelHeight, 32), 1);
+            vkCmdPushConstants(cmd, pyr->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(reduceData), &reduceData);
+            vkCmdDispatch(cmd, getGroupCount(levelWidth, 32), getGroupCount(levelHeight, 32), 1);
 
 
-			VkImageMemoryBarrier reduceBarrier = image_barrier(_imageHandler->GetImage(image), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+            VkImageMemoryBarrier reduceBarrier = image_barrier(_imageHandler->GetImage(image), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
 
-			vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &reduceBarrier);
-		}
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &reduceBarrier);
+        }
 
-		VkImageMemoryBarrier depthWriteBarrier = image_barrier(_imageHandler->GetImage(depthSource), VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+        VkImageMemoryBarrier depthWriteBarrier = image_barrier(_imageHandler->GetImage(depthSource), VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &depthWriteBarrier);
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &depthWriteBarrier);
 
-	}
+    }
 
-	void* RendererVK::MapBuffer(BufferID buffer)
+    void* RendererVK::MapBuffer(BufferID buffer)
     {
         void* mappedMemory;
 

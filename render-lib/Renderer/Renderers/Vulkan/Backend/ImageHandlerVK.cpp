@@ -8,29 +8,29 @@
 namespace Renderer
 {
     namespace Backend
-	{
-		uint32_t previousPow2(uint32_t v)
-		{
-			uint32_t r = 1;
+    {
+        uint32_t previousPow2(uint32_t v)
+        {
+            uint32_t r = 1;
 
-			while (r * 2 < v)
-				r *= 2;
+            while (r * 2 < v)
+                r *= 2;
 
-			return r;
-		}
-		uint32_t getImageMipLevels(uint32_t width, uint32_t height)
-		{
-			uint32_t result = 1;
+            return r;
+        }
+        uint32_t getImageMipLevels(uint32_t width, uint32_t height)
+        {
+            uint32_t result = 1;
 
-			while (width > 1 || height > 1)
-			{
-				result++;
-				width /= 2;
-				height /= 2;
-			}
+            while (width > 1 || height > 1)
+            {
+                result++;
+                width /= 2;
+                height /= 2;
+            }
 
-			return result;
-		}
+            return result;
+        }
         void ImageHandlerVK::Init(RenderDeviceVK* device)
         {
             _device = device;
@@ -127,45 +127,45 @@ namespace Renderer
         }
 
 
-		uvec2 ImageHandlerVK::GetDimension(const ImageID id)
-		{
+        uvec2 ImageHandlerVK::GetDimension(const ImageID id)
+        {
             auto desc = GetImageDesc(id);
 
-			f32 width = desc.dimensions.x;
-			f32 height = desc.dimensions.y;
-			u32 mips = desc.mipLevels;
+            f32 width = desc.dimensions.x;
+            f32 height = desc.dimensions.y;
+            u32 mips = desc.mipLevels;
 
-			u32 uwidth = static_cast<u32>(width);;
-			u32 uheight = static_cast<u32>(height);
+            u32 uwidth = static_cast<u32>(width);;
+            u32 uheight = static_cast<u32>(height);
 
-			// If the supplied dimensions is a % of window size
-			if (desc.dimensionType == ImageDimensionType::DIMENSION_SCALE)
-			{
-				uvec2 windowSize = _device->GetMainWindowSize();
-				width *= windowSize.x;
-				height *= windowSize.y;
+            // If the supplied dimensions is a % of window size
+            if (desc.dimensionType == ImageDimensionType::DIMENSION_SCALE)
+            {
+                uvec2 windowSize = _device->GetMainWindowSize();
+                width *= windowSize.x;
+                height *= windowSize.y;
 
-				uwidth = static_cast<u32>(width);
-				uheight = static_cast<u32>(height);
-			}
-			else if (desc.dimensionType == ImageDimensionType::DIMENSION_PYRAMID)
-			{
-				uvec2 windowSize = _device->GetMainWindowSize();
-				width *= windowSize.x;
-				height *= windowSize.y;
+                uwidth = static_cast<u32>(width);
+                uheight = static_cast<u32>(height);
+            }
+            else if (desc.dimensionType == ImageDimensionType::DIMENSION_PYRAMID)
+            {
+                uvec2 windowSize = _device->GetMainWindowSize();
+                width *= windowSize.x;
+                height *= windowSize.y;
 
-				uwidth = static_cast<u32>(width);
-				uheight = static_cast<u32>(height);
+                uwidth = static_cast<u32>(width);
+                uheight = static_cast<u32>(height);
 
-				uwidth = (previousPow2(uwidth * 2));
-				uheight = (previousPow2(uheight * 2));
-				mips = (getImageMipLevels(uwidth, uheight));
-			}
+                uwidth = (previousPow2(uwidth * 2));
+                uheight = (previousPow2(uheight * 2));
+                mips = (getImageMipLevels(uwidth, uheight));
+            }
 
             return { uwidth,uheight };
-		}
+        }
 
-		VkImage ImageHandlerVK::GetImage(const ImageID id)
+        VkImage ImageHandlerVK::GetImage(const ImageID id)
         {
             using type = type_safe::underlying_type<ImageID>;
 
@@ -184,15 +184,19 @@ namespace Renderer
         }
 
 
-		VkImageView ImageHandlerVK::GetColorView(const ImageID id, u32 mipLevel)
-		{
+        VkImageView ImageHandlerVK::GetColorView(const ImageID id, u32 mipLevel)
+        {
             VkImageView view = VK_NULL_HANDLE;
 
-			using type = type_safe::underlying_type<ImageID>;
+            using type = type_safe::underlying_type<ImageID>;
 
-			// Lets make sure this id exists
-			
-			type tid = static_cast<type>(id);
+            if (mipLevel == 0)
+            {
+                return GetColorView(id, mipLevel);
+            }
+
+            // Lets make sure this id exists
+            type tid = static_cast<type>(id);
 
             auto img = _extraViews.find(tid);
             if (img != _extraViews.end())
@@ -207,27 +211,9 @@ namespace Renderer
             }
 
             return view;
-		}
+        }
 
-
-		//uint32_t ImageHandlerVK::GetMips(const ImageID id)
-		//{
-		//	using type = type_safe::underlying_type<DepthImageID>;
-        //
-		//	// Lets make sure this id exists
-        //
-		//	type tid = static_cast<type>(id);
-        //
-		//	auto img = _extraViews.find(tid);
-		//	if (img != _extraViews.end())
-		//	{
-		//		return img->second.
-		//	}
-        //
-		//	return 1;
-		//}
-
-		VkImage ImageHandlerVK::GetImage(const DepthImageID id)
+        VkImage ImageHandlerVK::GetImage(const DepthImageID id)
         {
             using type = type_safe::underlying_type<DepthImageID>;
 
@@ -245,7 +231,7 @@ namespace Renderer
             return _depthImages[static_cast<type>(id)].depthView;
         }
 
-		
+        
         void ImageHandlerVK::CreateImage(Image& image)
         {
             // Create image
@@ -271,8 +257,8 @@ namespace Renderer
             f32 height = image.desc.dimensions.y;
             u32 mips = image.desc.mipLevels;
 
-			u32 uwidth = static_cast<u32>(width);;
-			u32 uheight = static_cast<u32>(height);
+            u32 uwidth = static_cast<u32>(width);;
+            u32 uheight = static_cast<u32>(height);
 
             // If the supplied dimensions is a % of window size
             if (image.desc.dimensionType == ImageDimensionType::DIMENSION_SCALE)
@@ -281,17 +267,17 @@ namespace Renderer
                 width *= windowSize.x;
                 height *= windowSize.y;
 
-				uwidth = static_cast<u32>(width);
-				uheight = static_cast<u32>(height);
+                uwidth = static_cast<u32>(width);
+                uheight = static_cast<u32>(height);
             }
             else if (image.desc.dimensionType == ImageDimensionType::DIMENSION_PYRAMID)
             {
-				uvec2 windowSize = _device->GetMainWindowSize();
-				width *= windowSize.x;
-				height *= windowSize.y;
+                uvec2 windowSize = _device->GetMainWindowSize();
+                width *= windowSize.x;
+                height *= windowSize.y;
 
-				uwidth = static_cast<u32>(width);
-				uheight = static_cast<u32>(height);
+                uwidth = static_cast<u32>(width);
+                uheight = static_cast<u32>(height);
 
                 uwidth = (previousPow2(uwidth*2));
                 uheight = (previousPow2(uheight*2));
@@ -360,10 +346,10 @@ namespace Renderer
                     pyramidLevelInfo.subresourceRange.levelCount = 1;
 
                     VkImageView newView;
-					if (vkCreateImageView(_device->_device, &pyramidLevelInfo, nullptr, &newView) != VK_SUCCESS)
-					{
-						NC_LOG_FATAL("Failed to create color image view!");
-					}
+                    if (vkCreateImageView(_device->_device, &pyramidLevelInfo, nullptr, &newView) != VK_SUCCESS)
+                    {
+                        NC_LOG_FATAL("Failed to create color image view!");
+                    }
                     ExtraViews v;
                     v.view = newView;
                     v.mip = i;

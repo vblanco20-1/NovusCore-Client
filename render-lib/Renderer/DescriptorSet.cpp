@@ -79,13 +79,13 @@ namespace Renderer
         boundDescriptor.textureArrayID = textureArrayID;
     }
 
-    void DescriptorSet::Bind(const std::string& name, ImageID imageID)
+    void DescriptorSet::Bind(const std::string& name, ImageID imageID, uint32_t mipLevel)
     {
         u32 nameHash = StringUtils::fnv1a_32(name.c_str(), name.size());
-        Bind(nameHash, imageID);
+        Bind(nameHash, imageID,mipLevel);
     }
 
-    void DescriptorSet::Bind(u32 nameHash, ImageID imageID)
+    void DescriptorSet::Bind(u32 nameHash, ImageID imageID, uint32_t mipLevel)
     {
         for (u32 i = 0; i < _boundDescriptors.size(); i++)
         {
@@ -102,6 +102,7 @@ namespace Renderer
         boundDescriptor.nameHash = nameHash;
         boundDescriptor.descriptorType = DESCRIPTOR_TYPE_IMAGE;
         boundDescriptor.imageID = imageID;
+        boundDescriptor.imageMipLevel = mipLevel;
     }
 
     void DescriptorSet::Bind(const std::string& name, BufferID buffer)

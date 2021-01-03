@@ -21,7 +21,7 @@ namespace Renderer
     struct Descriptor
     {
         u32 nameHash;
-
+        u32 imageMipLevel;
         DescriptorType descriptorType;
 
         TextureID textureID;
@@ -55,8 +55,9 @@ namespace Renderer
         void Bind(const std::string& name, TextureArrayID textureArrayID);
         void Bind(u32 nameHash, TextureArrayID textureArrayID);
 
-        void Bind(const std::string& name, ImageID imageID);
-        void Bind(u32 nameHash, ImageID imageID);
+        void Bind(const std::string& name, ImageID imageID, uint32_t mipLevel = 0 );
+        void Bind(u32 nameHash, ImageID imageID, uint32_t mipLevel = 0);
+
 
         void Bind(const std::string& name, BufferID buffer);
         void Bind(u32 nameHash, BufferID buffer);
