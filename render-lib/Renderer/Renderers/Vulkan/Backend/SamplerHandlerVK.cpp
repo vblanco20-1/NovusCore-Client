@@ -68,8 +68,7 @@ namespace Renderer
                 }
 
                 samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-				
-				createInfoReduction.reductionMode = reductionMode;
+                createInfoReduction.reductionMode = reductionMode;
 
                 samplerInfo.pNext = &createInfoReduction;
 

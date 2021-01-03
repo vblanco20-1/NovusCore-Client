@@ -12,6 +12,15 @@ static float3 axis[8] =
     float3(1,1,1),
 };
 
+float3 transform_to_clip(float3 worldPos, float4x4 viewMat)
+{
+    float4 worldPoint = float4(worldPos.x, worldPos.y, worldPos.z, 1.0);
+    float4 clipPoint = mul(worldPoint, viewMat);
+    clipPoint /= clipPoint.w;
+
+    return clipPoint.xyz;
+}
+
 bool IsVisible(float3 AABBMin, float3 AABBMax,float3 eye ,Texture2D<float> pyramid, SamplerState samplerState, float4x4 viewMat)
 {
     if (eye.x < AABBMax.x && eye.x > AABBMin.x)
@@ -25,9 +34,11 @@ bool IsVisible(float3 AABBMin, float3 AABBMax,float3 eye ,Texture2D<float> pyram
         }
     }
 
-    float2 pmin = float2(10000, 10000);
-    float2 pmax = float2(-10000, -10000);
-    float2 depth = float2(-1000, 10000);// x max, y min
+    float3 center = transform_to_clip(lerp(AABBMin,AABBMax,0.5), viewMat);
+
+    float2 pmin = center.xy;
+    float2 pmax = center.xy;
+    float2 depth = center.z;// x max, y min
 
     for (int i = 0; i < 8; i++)
     {
@@ -35,9 +46,8 @@ bool IsVisible(float3 AABBMin, float3 AABBMax,float3 eye ,Texture2D<float> pyram
         float pY = lerp(AABBMin.y, AABBMax.y, axis[i].y);
         float pZ = lerp(AABBMin.z, AABBMax.z, axis[i].z);
 
-        float4 worldPoint = float4(pX, pY, pZ, 1.0);
-        float4 clipPoint = mul(worldPoint, viewMat);
-        clipPoint /= clipPoint.w;
+        
+        float3 clipPoint = transform_to_clip(float3(pX,pY,pZ), viewMat);
 
         pmin.x = min(clipPoint.x, pmin.x);
         pmin.y = min(clipPoint.y, pmin.y);
@@ -58,10 +68,10 @@ bool IsVisible(float3 AABBMin, float3 AABBMax,float3 eye ,Texture2D<float> pyram
     pmax = pmax * float2(0.5f, -0.5f) + float2(0.5f,0.5f);
    
     //calculate pixel widths/height
-    float boxWidth = abs(pmax.x-pmin.x) * pyrWidth;
-    float boxHeight = abs(pmax.y-pmin.y) * pyrHeight;
+    float boxWidth = abs(pmax.x-pmin.x) * (float)pyrWidth;
+    float boxHeight = abs(pmax.y-pmin.y) * (float)pyrHeight;
 
-    float level = ceil(log2(max(boxWidth, boxHeight))) +1;
+    float level = ceil(log2(max(boxWidth, boxHeight)));
 
     float2 psample = lerp(pmin,pmax,0.5);
 
