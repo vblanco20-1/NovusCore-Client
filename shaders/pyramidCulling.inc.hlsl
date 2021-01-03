@@ -24,17 +24,10 @@ bool IsVisible(float3 AABBMin, float3 AABBMax,float3 eye ,Texture2D<float> pyram
             }
         }
     }
-    //float3 aabbCenter = lerp(AABBMin, AABBMax, 0.5);
-    //
-    //float radius = length(AABBMax - aabbCenter);
-    //
-    //float3 viewEyeSphereDirection = eye - aabbCenter;
 
     float2 pmin = float2(10000, 10000);
     float2 pmax = float2(-10000, -10000);
     float2 depth = float2(-1000, 10000);// x max, y min
-
-    //transform the 8 vertices to clip space, accumulate
 
     for (int i = 0; i < 8; i++)
     {
@@ -56,13 +49,6 @@ bool IsVisible(float3 AABBMin, float3 AABBMax,float3 eye ,Texture2D<float> pyram
         depth.y = min(clipPoint.z, depth.y);
     }
 
-    
-    //float3 aabbCenter = lerp(AABBMin, AABBMax, 0.5);
-    //float4 abCen = mul(float4(aabbCenter,1), viewMat);
-   // abCen /= abCen.w;
-
-    //abCen = (abCen + 1.f) * 0.5f;
-
     //convert max and min into UV space
     pmin = pmin * float2(0.5f, -0.5f) + float2(0.5f,0.5f);
     pmax = pmax * float2(0.5f, -0.5f) + float2(0.5f,0.5f);
@@ -75,12 +61,11 @@ bool IsVisible(float3 AABBMin, float3 AABBMax,float3 eye ,Texture2D<float> pyram
     float boxWidth = (pmax.x-pmin.x) * pyrWidth;
     float boxHeight = (pmax.y-pmin.y) * pyrHeight;
 
-    float level = max(floor(log2(max(boxWidth, boxHeight))),5.0);
+    float level = ceil(log2(max(boxWidth, boxHeight)));
 
     float2 psample = (pmin + pmax) / 2;
 
     float sampleDepth = pyramid.SampleLevel(samplerState, psample, level).x;
-
 
     return sampleDepth <= depth.x;
 };
