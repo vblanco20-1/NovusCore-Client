@@ -407,7 +407,6 @@ void ClientRenderer::Render()
 
             commandList.EndPipeline(pipeline);
             commandList.PopMarker();
-#endif
 
         });
 
