@@ -21,6 +21,8 @@
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/implot.h"
 
+#include "Renderer/Renderers/Vulkan/RendererVK.h"
+
 AutoCVar_Int CVAR_LightLockEnabled("lights.lock", "lock the light", 0, CVarFlags::EditCheckbox);
 AutoCVar_Int CVAR_LightUseDefaultEnabled("lights.useDefault", "Use the map's default light", 0, CVarFlags::EditCheckbox);
 
@@ -120,7 +122,10 @@ void ClientRenderer::Update(f32 deltaTime)
     _debugRenderer->DrawLine3D(vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 100.0f, 0.0f), 0xff00ff00);
     _debugRenderer->DrawLine3D(vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 0.0f, 100.0f), 0xffff0000);
 }
-
+inline uint32_t getGroupCount(uint32_t threadCount, uint32_t localSize)
+{
+    return (threadCount + localSize - 1) / localSize;
+}
 void ClientRenderer::Render()
 {
     ZoneScopedNC("ClientRenderer::Render", tracy::Color::Red2)
@@ -315,26 +320,96 @@ void ClientRenderer::Render()
 
 
 
-	_cModelRenderer->AddComplexModelPass(&renderGraph, &_globalDescriptorSet, _mainColor, _objectIDs, _mainDepth, _frameIndex, _depthPyramid);
-	// UI Pass
-	struct PyramidPassData
-	{
-		Renderer::RenderPassResource mainDepth;
-	};
+    _cModelRenderer->AddComplexModelPass(&renderGraph, &_globalDescriptorSet, _mainColor, _objectIDs, _mainDepth, _frameIndex, _depthPyramid);
+    // UI Pass
+    struct PyramidPassData
+    {
+        Renderer::RenderPassResource mainDepth;
+    };
 
-	renderGraph.AddPass<PyramidPassData>("PyramidPass",
-		[=](PyramidPassData& data, Renderer::RenderGraphBuilder& builder) // Setup
-		{
-			data.mainDepth = builder.Read(_mainDepth, Renderer::RenderGraphBuilder::SHADER_STAGE_PIXEL);
+    renderGraph.AddPass<PyramidPassData>("PyramidPass",
+        [=](PyramidPassData& data, Renderer::RenderGraphBuilder& builder) // Setup
+        {
+            data.mainDepth = builder.Read(_mainDepth, Renderer::RenderGraphBuilder::SHADER_STAGE_PIXEL);
 
-			return true; // Return true from setup to enable this pass, return false to disable it
-		},
-		[=](PyramidPassData& data, Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList) // Execute
-		{
-			GPU_SCOPED_PROFILER_ZONE(commandList, ImguiPass);
+            return true; // Return true from setup to enable this pass, return false to disable it
+        },
+        [=](PyramidPassData& data, Renderer::RenderGraphResources& resources, Renderer::CommandList& commandList) // Execute
+        {
+            GPU_SCOPED_PROFILER_ZONE(commandList, ImguiPass);
 
-			_renderer->BuildDepthPyramid(commandList, (Renderer::DepthImageID)(u16)data.mainDepth, _depthPyramid);
-		});
+            Renderer::ComputePipelineDesc queryPipelineDesc;
+            resources.InitializePipelineDesc(queryPipelineDesc);
+
+            Renderer::ComputeShaderDesc shaderDesc;
+            shaderDesc.path = "Data/shaders/blitDepth.cs.hlsl.spv";
+            queryPipelineDesc.computeShader = _renderer->LoadShader(shaderDesc);
+
+            // Do culling
+            Renderer::ComputePipelineID pipeline = _renderer->CreatePipeline(queryPipelineDesc);
+            commandList.BeginPipeline(pipeline);
+
+            commandList.PushMarker("Depth Pyramid ", Color::White);
+           
+            Renderer::ImageDesc pyramidInfo = _renderer->GetImageDesc(_depthPyramid);
+            Renderer::DepthImageDesc depthInfo = _renderer->GetDepthImageDesc((Renderer::DepthImageID)(u16)data.mainDepth);
+            uvec2 pyramidSize = _renderer->GetImageDimension(_depthPyramid);
+
+            Renderer::SamplerDesc samplerDesc;
+            samplerDesc.filter = Renderer::SAMPLER_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
+
+            samplerDesc.addressU = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
+            samplerDesc.addressV = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
+            samplerDesc.addressW = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
+            samplerDesc.minLOD = 0.f;
+            samplerDesc.maxLOD = 16.f;
+            samplerDesc.mode = Renderer::SAMPLER_REDUCTION_MIN;
+
+            Renderer::SamplerID occlusionSampler = _renderer->CreateSampler(samplerDesc);
+
+            for (uint32_t i = 0; i < pyramidInfo.mipLevels; ++i)
+            {
+                Renderer::DescriptorSet Set;
+                Set.Bind("_sampler", occlusionSampler);
+                Set.BindStorage("_target", _depthPyramid, i);
+                if (i == 0)
+                {
+                    Set.Bind("_source", (Renderer::ImageID)(u16)_mainDepth,(u32)-1);
+                }
+                else {
+                    Set.Bind("_source", _depthPyramid,i-1);
+                }
+
+                uint32_t levelWidth = pyramidSize.x >> i;
+                uint32_t levelHeight = pyramidSize.y >> i;
+                if (levelHeight < 1) levelHeight = 1;
+                if (levelWidth < 1) levelWidth = 1;
+
+                struct alignas(16) DepthReduceData
+                {
+                    glm::vec2 imageSize;
+                    uint32_t level;
+                    uint32_t dummy;
+                };
+                
+                DepthReduceData* reduceData = resources.FrameNew<DepthReduceData>();
+                reduceData->imageSize = glm::vec2(levelWidth, levelHeight);
+                reduceData->level = i;
+                   
+
+                commandList.PushConstant(reduceData, 0, sizeof(DepthReduceData));
+
+                commandList.BindDescriptorSet(Renderer::GLOBAL, &Set, _frameIndex);
+                commandList.Dispatch(getGroupCount(levelWidth, 32), getGroupCount(levelHeight, 32), 1);
+
+                commandList.ImageBarrier(_depthPyramid);
+            }
+
+            commandList.EndPipeline(pipeline);
+            commandList.PopMarker();
+#endif
+
+        });
 
     _pixelQuery->AddPixelQueryPass(&renderGraph, _mainColor, _objectIDs, _mainDepth, _frameIndex);
     
@@ -413,14 +488,14 @@ void ClientRenderer::CreatePermanentResources()
 
     _objectIDs = _renderer->CreateImage(objectIDsDesc);
 
-	// depth pyramid ID rendertarget
-	Renderer::ImageDesc pyramidDesc;
-	pyramidDesc.debugName = "DepthPyramid";
-	pyramidDesc.dimensions = vec2(1.0f, 1.0f);
-	pyramidDesc.dimensionType = Renderer::ImageDimensionType::DIMENSION_PYRAMID;
-	pyramidDesc.format = Renderer::IMAGE_FORMAT_R32_FLOAT;
-	pyramidDesc.sampleCount = Renderer::SAMPLE_COUNT_1; 
-	_depthPyramid = _renderer->CreateImage(pyramidDesc);
+    // depth pyramid ID rendertarget
+    Renderer::ImageDesc pyramidDesc;
+    pyramidDesc.debugName = "DepthPyramid";
+    pyramidDesc.dimensions = vec2(1.0f, 1.0f);
+    pyramidDesc.dimensionType = Renderer::ImageDimensionType::DIMENSION_PYRAMID;
+    pyramidDesc.format = Renderer::IMAGE_FORMAT_R32_FLOAT;
+    pyramidDesc.sampleCount = Renderer::SAMPLE_COUNT_1; 
+    _depthPyramid = _renderer->CreateImage(pyramidDesc);
 
     // Main depth rendertarget
     Renderer::DepthImageDesc mainDepthDesc;

@@ -129,4 +129,26 @@ namespace Renderer
         boundDescriptor.descriptorType = DESCRIPTOR_TYPE_BUFFER;
         boundDescriptor.bufferID = buffer;
     }
+
+    void DescriptorSet::BindStorage(const std::string& name, ImageID imageID, uint32_t mipLevel /*= 0*/)
+    {
+        u32 nameHash = StringUtils::fnv1a_32(name.c_str(), name.size());
+
+        for (u32 i = 0; i < _boundDescriptors.size(); i++)
+        {
+            if (nameHash == _boundDescriptors[i].nameHash)
+            {
+                _boundDescriptors[i].descriptorType = DescriptorType::DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                _boundDescriptors[i].imageID = imageID;
+                return;
+            }
+        }
+
+        u32 newIndex = static_cast<u32>(_boundDescriptors.size());
+        Descriptor& boundDescriptor = _boundDescriptors.emplace_back();
+        boundDescriptor.nameHash = nameHash;
+        boundDescriptor.descriptorType = DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        boundDescriptor.imageID = imageID;
+        boundDescriptor.imageMipLevel = mipLevel;
+    }
 }

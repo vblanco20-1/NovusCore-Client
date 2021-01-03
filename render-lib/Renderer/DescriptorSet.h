@@ -15,6 +15,7 @@ namespace Renderer
         DESCRIPTOR_TYPE_TEXTURE,
         DESCRIPTOR_TYPE_TEXTURE_ARRAY,
         DESCRIPTOR_TYPE_IMAGE,
+        DESCRIPTOR_TYPE_STORAGE_IMAGE,
         DESCRIPTOR_TYPE_BUFFER,
     };
 
@@ -58,6 +59,7 @@ namespace Renderer
         void Bind(const std::string& name, ImageID imageID, uint32_t mipLevel = 0 );
         void Bind(u32 nameHash, ImageID imageID, uint32_t mipLevel = 0);
 
+        void BindStorage(const std::string& name, ImageID imageID, uint32_t mipLevel = 0);
 
         void Bind(const std::string& name, BufferID buffer);
         void Bind(u32 nameHash, BufferID buffer);

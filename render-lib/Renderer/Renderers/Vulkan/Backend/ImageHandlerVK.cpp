@@ -183,7 +183,6 @@ namespace Renderer
             return _images[static_cast<type>(id)].colorView;
         }
 
-
         VkImageView ImageHandlerVK::GetColorView(const ImageID id, u32 mipLevel)
         {
             VkImageView view = VK_NULL_HANDLE;
@@ -194,7 +193,10 @@ namespace Renderer
             {
                 return GetColorView(id);
             }
-
+            else if (mipLevel == (u32)-1)
+            {
+                return GetDepthView((DepthImageID)(u16)id);
+            }
             // Lets make sure this id exists
             type tid = static_cast<type>(id);
 
