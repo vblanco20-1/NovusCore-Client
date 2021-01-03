@@ -192,7 +192,7 @@ namespace Renderer
 
             if (mipLevel == 0)
             {
-                return GetColorView(id, mipLevel);
+                return GetColorView(id);
             }
 
             // Lets make sure this id exists
