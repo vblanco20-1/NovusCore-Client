@@ -74,6 +74,7 @@ namespace Renderer
             int RateDeviceSuitability(VkPhysicalDevice device);
             QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
             bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
+            bool CheckDeviceFeatureSupport(VkPhysicalDevice device, VkPhysicalDeviceFeatures2& requestedFeatures);
 
             void CheckValidationLayerSupport();
             std::vector<const char*> GetRequiredExtensions();

@@ -128,7 +128,7 @@ void WaterRenderer::AddWaterPass(Renderer::RenderGraph* renderGraph, Renderer::D
         commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_passDescriptorSet, frameIndex);
 
         {
-            commandList.PushConstant(&_constants, 0, sizeof(Constants));
+            //commandList.PushConstant(&_constants, 0, sizeof(Constants));
             commandList.SetIndexBuffer(_indexBuffer, Renderer::IndexFormat::UInt16);
 
             u32 numDrawCalls = static_cast<u32>(_drawCalls.size());

@@ -137,9 +137,9 @@ void MapObjectRenderer::AddMapObjectPass(Renderer::RenderGraph* renderGraph, Ren
                 }
 
                 _cullingDescriptorSet.Bind("_constants", _cullingConstantBuffer->GetBuffer(frameIndex));
-                _cullingDescriptorSet.Bind("_argumentBuffer", _argumentBuffer);
-                _cullingDescriptorSet.Bind("_culledArgumentBuffer", _culledArgumentBuffer);
-                _cullingDescriptorSet.Bind("_drawCountBuffer", _drawCountBuffer);
+                _cullingDescriptorSet.Bind("_drawCommands", _argumentBuffer);
+                _cullingDescriptorSet.Bind("_culledDrawCommands", _culledArgumentBuffer);
+                _cullingDescriptorSet.Bind("_drawCount", _drawCountBuffer);
                 commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_cullingDescriptorSet, frameIndex);
                 commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, globalDescriptorSet, frameIndex);
 
@@ -770,8 +770,8 @@ void MapObjectRenderer::CreateBuffers()
         // Copy from staging buffer to buffer
         _renderer->CopyBuffer(_instanceLookupBuffer, 0, stagingBuffer, 0, desc.size);
 
-        _passDescriptorSet.Bind("_instanceLookup", _instanceLookupBuffer);
-        _cullingDescriptorSet.Bind("_instanceLookup", _instanceLookupBuffer);
+        _passDescriptorSet.Bind("_packedInstanceLookup", _instanceLookupBuffer);
+        _cullingDescriptorSet.Bind("_packedInstanceLookup", _instanceLookupBuffer);
     }
     
     // Create Indirect Argument buffer
@@ -891,7 +891,7 @@ void MapObjectRenderer::CreateBuffers()
         // Copy from staging buffer to buffer
         _renderer->CopyBuffer(_vertexBuffer, 0, stagingBuffer, 0, desc.size);
 
-        _passDescriptorSet.Bind("_vertices", _vertexBuffer);
+        _passDescriptorSet.Bind("_packedVertices", _vertexBuffer);
     }
 
     // Create Index buffer
@@ -986,7 +986,7 @@ void MapObjectRenderer::CreateBuffers()
         // Copy from staging buffer to buffer
         _renderer->CopyBuffer(_materialBuffer, 0, stagingBuffer, 0, desc.size);
 
-        _passDescriptorSet.Bind("_materialData", _materialBuffer);
+        _passDescriptorSet.Bind("_packedMaterialData", _materialBuffer);
     }
 
     // Create MaterialParam buffer
@@ -1018,7 +1018,7 @@ void MapObjectRenderer::CreateBuffers()
         // Copy from staging buffer to buffer
         _renderer->CopyBuffer(_materialParametersBuffer, 0, stagingBuffer, 0, desc.size);
 
-        _passDescriptorSet.Bind("_materialParams", _materialParametersBuffer);
+        _passDescriptorSet.Bind("_packedMaterialParams", _materialParametersBuffer);
     }
 
     // Create CullingData buffer
@@ -1050,6 +1050,6 @@ void MapObjectRenderer::CreateBuffers()
         // Copy from staging buffer to buffer
         _renderer->CopyBuffer(_cullingDataBuffer, 0, stagingBuffer, 0, desc.size);
 
-        _cullingDescriptorSet.Bind("_cullingData", _cullingDataBuffer);
+        _cullingDescriptorSet.Bind("_packedCullingData", _cullingDataBuffer);
     }
 }

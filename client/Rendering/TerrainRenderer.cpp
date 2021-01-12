@@ -319,7 +319,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
                 _cullingPassDescriptorSet.Bind("_instances", _instanceBuffer);
                 _cullingPassDescriptorSet.Bind("_heightRanges", _cellHeightRangeBuffer);
                 _cullingPassDescriptorSet.Bind("_culledInstances", _culledInstanceBuffer);
-                _cullingPassDescriptorSet.Bind("_argumentBuffer", _argumentBuffer);
+                _cullingPassDescriptorSet.Bind("_drawCount", _argumentBuffer);
 
                 commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_cullingPassDescriptorSet, frameIndex);
 
@@ -380,9 +380,8 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
             commandList.SetIndexBuffer(_cellIndexBuffer, Renderer::IndexFormat::UInt16);
 
             // Bind viewbuffer
-            _passDescriptorSet.Bind("_vertices"_h, _vertexBuffer);
-            _passDescriptorSet.Bind("_cellData"_h, _cellBuffer);
-            _passDescriptorSet.Bind("_cellDataVS"_h, _cellBuffer);
+            _passDescriptorSet.Bind("_packedVertices"_h, _vertexBuffer);
+            _passDescriptorSet.Bind("_packedCellData"_h, _cellBuffer);
             _passDescriptorSet.Bind("_chunkData"_h, _chunkBuffer);
 
             // Bind descriptorset

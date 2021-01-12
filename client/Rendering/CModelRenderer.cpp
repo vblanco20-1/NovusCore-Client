@@ -180,7 +180,7 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
 
                 commandList.PushConstant(cullConstants, 0, sizeof(CullConstants));
 
-                _cullingDescriptorSet.Bind("_drawCallDatas", _opaqueDrawCallDataBuffer);
+                _cullingDescriptorSet.Bind("_packedDrawCallDatas", _opaqueDrawCallDataBuffer);
                 _cullingDescriptorSet.Bind("_drawCalls", _opaqueDrawCallBuffer);
                 _cullingDescriptorSet.Bind("_culledDrawCalls", _opaqueCulledDrawCallBuffer);
                 _cullingDescriptorSet.Bind("_drawCount", _opaqueDrawCountBuffer);
@@ -214,8 +214,8 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
 
             commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, globalDescriptorSet, frameIndex);
 
-            _passDescriptorSet.Bind("_drawCallDatas", _opaqueDrawCallDataBuffer);
-            _passDescriptorSet.Bind("_vertices", _vertexBuffer);
+            _passDescriptorSet.Bind("_packedDrawCallDatas", _opaqueDrawCallDataBuffer);
+            _passDescriptorSet.Bind("_packedVertices", _vertexBuffer);
             _passDescriptorSet.Bind("_textures", _cModelTextures);
             _passDescriptorSet.Bind("_textureUnits", _textureUnitBuffer);
             _passDescriptorSet.Bind("_instances", _instanceBuffer);
@@ -269,7 +269,7 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
 
                 commandList.PushConstant(cullConstants, 0, sizeof(CullConstants));
 
-                _cullingDescriptorSet.Bind("_drawCallDatas", _transparentDrawCallDataBuffer);
+                _cullingDescriptorSet.Bind("_packedDrawCallDatas", _transparentDrawCallDataBuffer);
                 _cullingDescriptorSet.Bind("_drawCalls", _transparentDrawCallBuffer);
                 _cullingDescriptorSet.Bind("_culledDrawCalls", _transparentCulledDrawCallBuffer);
                 _cullingDescriptorSet.Bind("_drawCount", _transparentDrawCountBuffer);
@@ -399,8 +399,8 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
 
             commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, globalDescriptorSet, frameIndex);
 
-            _passDescriptorSet.Bind("_drawCallDatas", _transparentDrawCallDataBuffer);
-            _passDescriptorSet.Bind("_vertices", _vertexBuffer);
+            _passDescriptorSet.Bind("_packedDrawCallDatas", _transparentDrawCallDataBuffer);
+            _passDescriptorSet.Bind("_packedVertices", _vertexBuffer);
             _passDescriptorSet.Bind("_textures", _cModelTextures);
             _passDescriptorSet.Bind("_textureUnits", _textureUnitBuffer);
             _passDescriptorSet.Bind("_instances", _instanceBuffer);
