@@ -83,6 +83,35 @@ void CModelRenderer::Update(f32 deltaTime)
             _debugRenderer->DrawAABB3D(transformedMin, transformedMax, 0xff00ffff);
         }
     }
+
+    // Read back from the culling counters
+    u32 numOpaqueDrawCalls = static_cast<u32>(_opaqueDrawCalls.size());
+    u32 numTransparentDrawCalls = static_cast<u32>(_transparentDrawCalls.size());
+
+    _numOpaqueSurvivingDrawCalls = numOpaqueDrawCalls;
+    _numTransparentSurvivingDrawCalls = numTransparentDrawCalls;
+
+    const bool cullingEnabled = CVAR_ComplexModelCullingEnabled.Get();
+    if (cullingEnabled)
+    {
+        {
+            u32* count = static_cast<u32*>(_renderer->MapBuffer(_opaqueDrawCountReadBackBuffer));
+            if (count != nullptr)
+            {
+                _numOpaqueSurvivingDrawCalls = *count;
+            }
+            _renderer->UnmapBuffer(_opaqueDrawCountReadBackBuffer);
+        }
+
+        {
+            u32* count = static_cast<u32*>(_renderer->MapBuffer(_transparentDrawCountReadBackBuffer));
+            if (count != nullptr)
+            {
+                _numTransparentSurvivingDrawCalls = *count;
+            }
+            _renderer->UnmapBuffer(_transparentDrawCountReadBackBuffer);
+        }
+    }
 }
 
 void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Renderer::DescriptorSet* globalDescriptorSet, Renderer::ImageID colorTarget, Renderer::ImageID objectTarget, Renderer::DepthImageID depthTarget, u8 frameIndex)
@@ -98,6 +127,7 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
     const bool alphaSortEnabled = CVAR_ComplexModelSortingEnabled.Get();
     const bool lockFrustum = CVAR_ComplexModelLockCullingFrustum.Get();
 
+    // Read back from the culling counters
     renderGraph->AddPass<CModelPassData>("CModel Pass",
         [=](CModelPassData& data, Renderer::RenderGraphBuilder& builder)
     {
@@ -231,6 +261,12 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
             commandList.DrawIndexedIndirectCount(argumentBuffer, 0, _opaqueDrawCountBuffer, 0, numOpaqueDrawCalls);
 
             commandList.EndPipeline(pipeline);
+
+            // Copy from our draw count buffer to the readback buffer
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _opaqueDrawCountBuffer);
+            commandList.CopyBuffer(_opaqueDrawCountReadBackBuffer, 0, _opaqueDrawCountBuffer, 0, 4);
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _opaqueDrawCountReadBackBuffer);
+
             commandList.PopMarker();
         }
 
@@ -359,7 +395,6 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                     commandList.PopMarker();
                 }
 
-
                 commandList.PopMarker();
             }
 
@@ -422,6 +457,12 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
             }
 
             commandList.EndPipeline(pipeline);
+
+            // Copy from our draw count buffer to the readback buffer
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _transparentDrawCountBuffer);
+            commandList.CopyBuffer(_transparentDrawCountReadBackBuffer, 0, _transparentDrawCountBuffer, 0, 4);
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _transparentDrawCountBuffer);
+
             commandList.PopMarker();
         }
     });
@@ -534,8 +575,13 @@ void CModelRenderer::CreatePermanentResources()
         Renderer::BufferDesc desc;
         desc.name = "CModelOpaqueDrawCountBuffer";
         desc.size = sizeof(u32);
-        desc.usage = Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.usage = Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION | Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
         _opaqueDrawCountBuffer = _renderer->CreateBuffer(desc);
+
+        desc.name = "CModelOpaqueDrawCountRBBuffer";
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.cpuAccess = Renderer::BufferCPUAccess::ReadOnly;
+        _opaqueDrawCountReadBackBuffer = _renderer->CreateBuffer(desc);
     }
 
     // Create TransparentDrawCountBuffer
@@ -543,8 +589,13 @@ void CModelRenderer::CreatePermanentResources()
         Renderer::BufferDesc desc;
         desc.name = "CModelTransparentDrawCountBuffer";
         desc.size = sizeof(u32);
-        desc.usage = Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.usage = Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION | Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
         _transparentDrawCountBuffer = _renderer->CreateBuffer(desc);
+
+        desc.name = "CModelTransparentDrawCountRBBuffer";
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.cpuAccess = Renderer::BufferCPUAccess::ReadOnly;
+        _transparentDrawCountReadBackBuffer = _renderer->CreateBuffer(desc);
     }
 
     /*ComplexModelToBeLoaded& modelToBeLoaded = _complexModelsToBeLoaded.emplace_back();

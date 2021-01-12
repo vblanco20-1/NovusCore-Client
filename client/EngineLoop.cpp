@@ -592,14 +592,83 @@ void EngineLoop::DrawEngineStats(EngineStatsSingleton* stats)
                 ImGui::EndTabItem();
             }
 
-            if (ImGui::BeginTabItem("Frame Timings"))
+            if (ImGui::BeginTabItem("Performance"))
             {
+                const std::string rightHeaderText = "Survived / Total (%%)";
+
+                f32 textWidth = ImGui::CalcTextSize(rightHeaderText.c_str()).x;
+                f32 windowWidth = ImGui::GetWindowContentRegionWidth();
+
+                f32 textPos = windowWidth - textWidth;
+
                 ImGui::Spacing();
+                ImGui::Text("Surviving Drawcalls");
+                ImGui::SameLine(textPos);
+                ImGui::Text(rightHeaderText.c_str());
+                ImGui::Separator();
+
+                TerrainRenderer* terrainRenderer = _clientRenderer->GetTerrainRenderer();
+                MapObjectRenderer* mapObjectRenderer = terrainRenderer->GetMapObjectRenderer();
+                CModelRenderer* cModelRenderer = _clientRenderer->GetCModelRenderer();
+
+                u32 totalDrawCalls = 0;
+                u32 totalDrawCallsSurvived = 0;
+
+                // Terrain
+                {
+                    u32 drawCalls = terrainRenderer->GetNumDrawCalls();
+                    u32 drawCallsSurvived = terrainRenderer->GetNumSurvivingDrawCalls();
+
+                    DrawCullingStatsEntry("Terrain", drawCalls, drawCallsSurvived);
+
+                    totalDrawCalls += drawCalls;
+                    totalDrawCallsSurvived += drawCallsSurvived;
+                }
+
+                // MapObjects
+                {
+                    u32 drawCalls = mapObjectRenderer->GetNumDrawCalls();
+                    u32 drawCallsSurvived = mapObjectRenderer->GetNumSurvivingDrawCalls();
+
+                    DrawCullingStatsEntry("MapObjects", drawCalls, drawCallsSurvived);
+
+                    totalDrawCalls += drawCalls;
+                    totalDrawCallsSurvived += drawCallsSurvived;
+                }
+
+                // Opaque CModels
+                {
+                    u32 drawCalls = cModelRenderer->GetNumOpaqueDrawCalls();
+                    u32 drawCallsSurvived = cModelRenderer->GetNumOpaqueSurvivingDrawCalls();
+
+                    DrawCullingStatsEntry("CModels (O)", drawCalls, drawCallsSurvived);
+
+                    totalDrawCalls += drawCalls;
+                    totalDrawCallsSurvived += drawCallsSurvived;
+                }
+                
+                // Transparent CModels
+                {
+                    u32 drawCalls = cModelRenderer->GetNumTransparentDrawCalls();
+                    u32 drawCallsSurvived = cModelRenderer->GetNumTransparentSurvivingDrawCalls();
+
+                    DrawCullingStatsEntry("CModels (T)", drawCalls, drawCallsSurvived);
+
+                    totalDrawCalls += drawCalls;
+                    totalDrawCallsSurvived += drawCallsSurvived;
+                }
+
+                DrawCullingStatsEntry("Total", totalDrawCalls, totalDrawCallsSurvived);
+
+                ImGui::Spacing();
+                ImGui::Spacing();
+                ImGui::Text("Frametimes");
+                ImGui::Separator();
 
                 // Draw Timing Graph
                 {
-                    ImGui::Text("update time (ms) : %f", average.simulationFrameTime * 1000);
-                    ImGui::Text("render time CPU (ms): %f", average.renderFrameTime * 1000);
+                    ImGui::Text("Update Time (ms) : %f", average.simulationFrameTime * 1000);
+                    ImGui::Text("Render Time CPU (ms): %f", average.renderFrameTime * 1000);
 
                     //read the frame buffer to gather timings for the histograms
                     std::vector<float> updateTimes;
@@ -929,4 +998,22 @@ void EngineLoop::DrawImguiMenuBar()
         }
         ImGui::EndMainMenuBar();
     }
+}
+
+void EngineLoop::DrawCullingStatsEntry(std::string_view name, u32 drawCalls, u32 survivedDrawCalls)
+{
+    f32 percent = static_cast<f32>(survivedDrawCalls) / static_cast<f32>(drawCalls) * 100.0f;
+
+    char str[50];
+    i32 strLength = StringUtils::FormatString(str, sizeof(str), "%u / %u (%.0f%%)", survivedDrawCalls, drawCalls, percent);
+
+    f32 textWidth = ImGui::CalcTextSize(str).x;
+    f32 windowWidth = ImGui::GetWindowContentRegionWidth();
+
+    f32 textPos = windowWidth - textWidth;
+
+    ImGui::Separator();
+    ImGui::Text("%.*s:", name.length(), name.data());
+    ImGui::SameLine(textPos);
+    ImGui::Text("%u / %u (%.0f%%)", survivedDrawCalls, drawCalls, percent);
 }

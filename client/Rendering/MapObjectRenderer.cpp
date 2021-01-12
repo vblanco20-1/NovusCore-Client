@@ -75,6 +75,21 @@ void MapObjectRenderer::Update(f32 deltaTime)
             _debugRenderer->DrawAABB3D(transformedMin, transformedMax, 0xff00ffff);
         }
     }
+
+    // Read back from the culling counter
+    u32 numDrawCalls = static_cast<u32>(_drawParameters.size());
+    _numSurvivingDrawCalls = numDrawCalls;
+
+    const bool cullingEnabled = CVAR_MapObjectCullingEnabled.Get();
+    if (cullingEnabled)
+    {
+        u32* count = static_cast<u32*>(_renderer->MapBuffer(_drawCountReadBackBuffer));
+        if (count != nullptr)
+        {
+            _numSurvivingDrawCalls = *count;
+        }
+        _renderer->UnmapBuffer(_drawCountReadBackBuffer);
+    }
 }
 
 void MapObjectRenderer::AddMapObjectPass(Renderer::RenderGraph* renderGraph, Renderer::DescriptorSet* globalDescriptorSet, Renderer::ImageID colorTarget, Renderer::ImageID objectTarget, Renderer::DepthImageID depthTarget, u8 frameIndex)
@@ -204,6 +219,10 @@ void MapObjectRenderer::AddMapObjectPass(Renderer::RenderGraph* renderGraph, Ren
             commandList.DrawIndexedIndirectCount(argumentBuffer, 0, _drawCountBuffer, 0, drawCount);
 
             commandList.EndPipeline(pipeline);
+
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _drawCountBuffer);
+            commandList.CopyBuffer(_drawCountReadBackBuffer, 0, _drawCountBuffer, 0, 4);
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _drawCountReadBackBuffer);
         });
     }
 }
@@ -840,26 +859,12 @@ void MapObjectRenderer::CreateBuffers()
         Renderer::BufferDesc desc;
         desc.name = "MapObjectCullingCounter";
         desc.size = sizeof(u32);
-        desc.usage = Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.usage = Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION | Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
         _drawCountBuffer = _renderer->CreateBuffer(desc);
 
-        // Create staging buffer
-        desc.name = "MapObjectCullingCounterStaging";
-        desc.usage = Renderer::BufferUsage::BUFFER_USAGE_TRANSFER_SOURCE;
-        desc.cpuAccess = Renderer::BufferCPUAccess::WriteOnly;
-
-        Renderer::BufferID stagingBuffer = _renderer->CreateBuffer(desc);
-
-        // Upload to staging buffer
-        u32 drawCount = static_cast<u32>(_drawParameters.size());
-        void* dst = _renderer->MapBuffer(stagingBuffer);
-        memset(dst, drawCount, desc.size);
-        _renderer->UnmapBuffer(stagingBuffer);
-
-        // Queue destroy staging buffer
-        _renderer->QueueDestroyBuffer(stagingBuffer);
-        // Copy from staging buffer to buffer
-        _renderer->CopyBuffer(_drawCountBuffer, 0, stagingBuffer, 0, desc.size);
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.cpuAccess = Renderer::BufferCPUAccess::ReadOnly;
+        _drawCountReadBackBuffer = _renderer->CreateBuffer(desc);
     }
 
     // Create Vertex buffer

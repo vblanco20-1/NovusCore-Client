@@ -94,6 +94,7 @@ private:
     void DrawUIStats();
     void DrawMemoryStats();
     void DrawImguiMenuBar();
+    void DrawCullingStatsEntry(std::string_view name, u32 drawCalls, u32 survivedDrawCalls);
 
 private:
     bool _isInitialized = false;

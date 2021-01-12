@@ -113,9 +113,33 @@ void TerrainRenderer::Update(f32 deltaTime)
         DebugRenderCellTriangles(camera);
     }
 
-    if (CVAR_CullingEnabled.Get() && !CVAR_GPUCullingEnabled.Get())
+    const bool cullingEnabled = CVAR_CullingEnabled.Get();
+    const bool gpuCullEnabled = CVAR_GPUCullingEnabled.Get();
+
+    if (cullingEnabled && !gpuCullEnabled)
     {
         CPUCulling(camera);
+    }
+
+    // Read back from culling counters
+    u32 numDrawCalls = Terrain::MAP_CELLS_PER_CHUNK * static_cast<u32>(_loadedChunks.size());
+    _numSurvivingDrawCalls = numDrawCalls;
+
+    if (cullingEnabled)
+    {
+        if (gpuCullEnabled)
+        {
+            u32* count = static_cast<u32*>(_renderer->MapBuffer(_drawCountReadBackBuffer));
+            if (count != nullptr)
+            {
+                _numSurvivingDrawCalls = *count;
+            }
+            _renderer->UnmapBuffer(_drawCountReadBackBuffer);
+        }
+        else
+        {
+            _numSurvivingDrawCalls = static_cast<u32>(_culledInstances.size());
+        }
     }
 
     // Subrenderers
@@ -392,6 +416,7 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
                 if (gpuCullEnabled)
                 {
                     commandList.DrawIndexedIndirect(_argumentBuffer, 0, 1);
+                    
                 }
                 else
                 {
@@ -408,6 +433,15 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
             }
 
             commandList.EndPipeline(pipeline);
+            if (cullingEnabled)
+            {
+                if (gpuCullEnabled)
+                {
+                    commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _argumentBuffer);
+                    commandList.CopyBuffer(_drawCountReadBackBuffer, 0, _argumentBuffer, 4, 4);
+                    commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _drawCountReadBackBuffer);
+                }
+            }
         });
     }
 
@@ -483,8 +517,13 @@ void TerrainRenderer::CreatePermanentResources()
         Renderer::BufferDesc desc;
         desc.name = "TerrainArgumentBuffer";
         desc.size = sizeof(VkDrawIndexedIndirectCommand);
-        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION | Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
         _argumentBuffer = _renderer->CreateBuffer(desc);
+
+        desc.size = sizeof(u32);
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.cpuAccess = Renderer::BufferCPUAccess::ReadOnly;
+        _drawCountReadBackBuffer = _renderer->CreateBuffer(desc);
     }
 
     // Upload cell index buffer

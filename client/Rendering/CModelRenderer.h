@@ -116,6 +116,11 @@ public:
 
         return modelIndex;
     }
+    
+    u32 GetNumOpaqueDrawCalls() { return static_cast<u32>(_opaqueDrawCalls.size()); }
+    u32 GetNumOpaqueSurvivingDrawCalls() { return _numOpaqueSurvivingDrawCalls; }
+    u32 GetNumTransparentDrawCalls() { return static_cast<u32>(_transparentDrawCalls.size()); }
+    u32 GetNumTransparentSurvivingDrawCalls() { return _numTransparentSurvivingDrawCalls; }
 
 private:
     struct ComplexModelToBeLoaded
@@ -220,12 +225,14 @@ private:
     Renderer::BufferID _opaqueCulledDrawCallBuffer;
     Renderer::BufferID _opaqueDrawCallDataBuffer;
     Renderer::BufferID _opaqueDrawCountBuffer;
+    Renderer::BufferID _opaqueDrawCountReadBackBuffer;
 
     Renderer::BufferID _transparentDrawCallBuffer;
     Renderer::BufferID _transparentCulledDrawCallBuffer;
     Renderer::BufferID _transparentSortedCulledDrawCallBuffer;
     Renderer::BufferID _transparentDrawCallDataBuffer;
     Renderer::BufferID _transparentDrawCountBuffer;
+    Renderer::BufferID _transparentDrawCountReadBackBuffer;
 
     Renderer::BufferID _transparentSortKeys;
     Renderer::BufferID _transparentSortValues;
@@ -233,6 +240,9 @@ private:
     CullConstants _cullConstants;
 
     Renderer::TextureArrayID _cModelTextures;
+
+    u32 _numOpaqueSurvivingDrawCalls;
+    u32 _numTransparentSurvivingDrawCalls;
 
     DebugRenderer* _debugRenderer;
 };

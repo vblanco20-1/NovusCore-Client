@@ -1523,7 +1523,7 @@ namespace Renderer
 
             if (didError)
             {
-                for (std::string errorMessage : errorMessages)
+                for (const std::string& errorMessage : errorMessages)
                 {
                     NC_LOG_ERROR(errorMessage);
                 }

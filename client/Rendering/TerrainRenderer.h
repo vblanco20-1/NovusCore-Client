@@ -87,6 +87,9 @@ public:
 
     const std::vector<Geometry::AABoundingBox>& GetBoundingBoxes() { return _cellBoundingBoxes; }
     MapObjectRenderer* GetMapObjectRenderer() { return _mapObjectRenderer; }
+
+    u32 GetNumDrawCalls() { return Terrain::MAP_CELLS_PER_CHUNK * static_cast<u32>(_loadedChunks.size()); }
+    u32 GetNumSurvivingDrawCalls() { return _numSurvivingDrawCalls; }
 private:
     void CreatePermanentResources();
 
@@ -104,20 +107,21 @@ private:
     
     CullingConstants _cullingConstants;
 
-    Renderer::BufferID _argumentBuffer = Renderer::BufferID::Invalid();
-    Renderer::BufferID _instanceBuffer = Renderer::BufferID::Invalid();
-    Renderer::BufferID _culledInstanceBuffer = Renderer::BufferID::Invalid();
-    Renderer::BufferID _cellHeightRangeBuffer = Renderer::BufferID::Invalid();
+    Renderer::BufferID _instanceBuffer;
+    Renderer::BufferID _culledInstanceBuffer;
+    Renderer::BufferID _cellHeightRangeBuffer;
+    Renderer::BufferID _argumentBuffer;
+    Renderer::BufferID _drawCountReadBackBuffer;
 
-    Renderer::BufferID _chunkBuffer = Renderer::BufferID::Invalid();
-    Renderer::BufferID _cellBuffer = Renderer::BufferID::Invalid();
+    Renderer::BufferID _chunkBuffer;
+    Renderer::BufferID _cellBuffer;
 
-    Renderer::BufferID _vertexBuffer = Renderer::BufferID::Invalid();
+    Renderer::BufferID _vertexBuffer;
 
-    Renderer::BufferID _cellIndexBuffer = Renderer::BufferID::Invalid();
+    Renderer::BufferID _cellIndexBuffer;
     
-    Renderer::TextureArrayID _terrainColorTextureArray = Renderer::TextureArrayID::Invalid();
-    Renderer::TextureArrayID _terrainAlphaTextureArray = Renderer::TextureArrayID::Invalid();
+    Renderer::TextureArrayID _terrainColorTextureArray;
+    Renderer::TextureArrayID _terrainAlphaTextureArray;
 
     Renderer::SamplerID _alphaSampler;
     Renderer::SamplerID _colorSampler;
@@ -133,6 +137,8 @@ private:
     std::vector<CellInstance> _culledInstances;
 
     std::vector<ChunkToBeLoaded> _chunksToBeLoaded;
+
+    u32 _numSurvivingDrawCalls;
     
     // Subrenderers
     MapObjectRenderer* _mapObjectRenderer = nullptr;
