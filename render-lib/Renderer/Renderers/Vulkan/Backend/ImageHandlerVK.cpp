@@ -9,18 +9,18 @@ namespace Renderer
 {
     namespace Backend
     {
-        uint32_t previousPow2(uint32_t v)
+        u32 PreviousPow2(u32 v)
         {
-            uint32_t r = 1;
+            u32 r = 1;
 
             while (r * 2 < v)
                 r *= 2;
 
             return r;
         }
-        uint32_t getImageMipLevels(uint32_t width, uint32_t height)
+        u32 GetImageMipLevels(u32 width, u32 height)
         {
-            uint32_t result = 1;
+            u32 result = 1;
 
             while (width > 1 || height > 1)
             {
@@ -157,9 +157,9 @@ namespace Renderer
                 uwidth = static_cast<u32>(width);
                 uheight = static_cast<u32>(height);
 
-                uwidth = (previousPow2(uwidth));
-                uheight = (previousPow2(uheight));
-                mips = (getImageMipLevels(uwidth, uheight));
+                uwidth = (PreviousPow2(uwidth));
+                uheight = (PreviousPow2(uheight));
+                mips = (GetImageMipLevels(uwidth, uheight));
             }
 
             return { uwidth,uheight };
@@ -277,9 +277,9 @@ namespace Renderer
                 uwidth = static_cast<u32>(width);
                 uheight = static_cast<u32>(height);
 
-                uwidth = (previousPow2(uwidth));
-                uheight = (previousPow2(uheight));
-                mips = (getImageMipLevels(uwidth, uheight));
+                uwidth = (PreviousPow2(uwidth));
+                uheight = (PreviousPow2(uheight));
+                mips = (GetImageMipLevels(uwidth, uheight));
 
                 image.desc.mipLevels = mips;
             }

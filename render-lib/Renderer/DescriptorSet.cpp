@@ -1,5 +1,5 @@
 #include "DescriptorSet.h"
-#include <Utils/StringUtils.h>
+
 
 namespace Renderer
 {
@@ -79,13 +79,13 @@ namespace Renderer
         boundDescriptor.textureArrayID = textureArrayID;
     }
 
-    void DescriptorSet::Bind(const std::string& name, ImageID imageID, uint32_t mipLevel)
+    void DescriptorSet::Bind(const std::string& name, ImageID imageID, u32 mipLevel)
     {
         u32 nameHash = StringUtils::fnv1a_32(name.c_str(), name.size());
         Bind(nameHash, imageID,mipLevel);
     }
 
-    void DescriptorSet::Bind(u32 nameHash, ImageID imageID, uint32_t mipLevel)
+    void DescriptorSet::Bind(u32 nameHash, ImageID imageID, u32 mipLevel)
     {
         for (u32 i = 0; i < _boundDescriptors.size(); i++)
         {
@@ -131,13 +131,7 @@ namespace Renderer
         boundDescriptor.bufferID = buffer;
     }
 
-
-    void DescriptorSet::Bind(const std::string& name, DepthImageID imageID)
-    {
-        u32 nameHash = StringUtils::fnv1a_32(name.c_str(), name.size());
-        Bind(nameHash, imageID);
-    }
-    void DescriptorSet::Bind(u32 nameHash, DepthImageID imageID)
+    void DescriptorSet::Bind(StringUtils::StringHash nameHash, DepthImageID imageID)
     {
 
         for (u32 i = 0; i < _boundDescriptors.size(); i++)
@@ -158,10 +152,8 @@ namespace Renderer
     }
 
 
-    void DescriptorSet::BindStorage(const std::string& name, ImageID imageID, uint32_t mipLevel /*= 0*/)
+    void DescriptorSet::BindStorage(StringUtils::StringHash nameHash, ImageID imageID, u32 mipLevel /*= 0*/)
     {
-        u32 nameHash = StringUtils::fnv1a_32(name.c_str(), name.size());
-
         for (u32 i = 0; i < _boundDescriptors.size(); i++)
         {
             if (nameHash == _boundDescriptors[i].nameHash)

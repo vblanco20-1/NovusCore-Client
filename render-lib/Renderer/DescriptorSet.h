@@ -6,7 +6,8 @@
 #include "Descriptors/ImageDesc.h"
 #include "Descriptors/DepthImageDesc.h"
 #include "Descriptors/TextureArrayDesc.h"
-#include <robin_hood.h>
+
+#include <Utils/StringUtils.h>
 
 namespace Renderer
 {
@@ -59,13 +60,12 @@ namespace Renderer
         void Bind(const std::string& name, TextureArrayID textureArrayID);
         void Bind(u32 nameHash, TextureArrayID textureArrayID);
 
-        void Bind(const std::string& name, ImageID imageID, uint32_t mipLevel = 0 );
-        void Bind(u32 nameHash, ImageID imageID, uint32_t mipLevel = 0);
+        void Bind(const std::string& name, ImageID imageID, u32 mipLevel = 0 );
+        void Bind(u32 nameHash, ImageID imageID, u32 mipLevel = 0);
 
-        void Bind(const std::string& name, DepthImageID imageID);
-        void Bind(u32 nameHash, DepthImageID imageID);
+        void Bind(StringUtils::StringHash nameHash, DepthImageID imageID);
 
-        void BindStorage(const std::string& name, ImageID imageID, uint32_t mipLevel = 0);
+        void BindStorage(StringUtils::StringHash nameHash, ImageID imageID, u32 mipLevel = 0);
 
         void Bind(const std::string& name, BufferID buffer);
         void Bind(u32 nameHash, BufferID buffer);
