@@ -193,10 +193,6 @@ namespace Renderer
             {
                 return GetColorView(id);
             }
-            else if (mipLevel == (u32)-1)
-            {
-                return GetDepthView((DepthImageID)(u16)id);
-            }
             // Lets make sure this id exists
             type tid = static_cast<type>(id);
 

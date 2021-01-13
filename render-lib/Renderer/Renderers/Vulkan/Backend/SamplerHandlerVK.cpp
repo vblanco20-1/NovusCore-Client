@@ -69,9 +69,10 @@ namespace Renderer
 
                 samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
                 createInfoReduction.reductionMode = reductionMode;
-
+                //reduction mode has to override compare enable. Maybe log this?
+                samplerInfo.compareEnable = VK_FALSE;
+                //hook pnext
                 samplerInfo.pNext = &createInfoReduction;
-
             }
 
 

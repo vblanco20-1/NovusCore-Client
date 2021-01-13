@@ -691,6 +691,14 @@ namespace Renderer
 
             builder->BindImage(descriptor.nameHash, imageInfo);
         }
+        else if (descriptor.descriptorType == DescriptorType::DESCRIPTOR_TYPE_DEPTH_IMAGE)
+        {
+            VkDescriptorImageInfo imageInfo = {};
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+            imageInfo.imageView = _imageHandler->GetDepthView(descriptor.depthImageID);
+
+            builder->BindImage(descriptor.nameHash, imageInfo);
+        }
         else if (descriptor.descriptorType == DescriptorType::DESCRIPTOR_TYPE_STORAGE_IMAGE)
         {
             VkDescriptorImageInfo imageInfo = {};

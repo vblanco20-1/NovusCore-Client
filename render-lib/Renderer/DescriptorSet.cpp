@@ -131,6 +131,33 @@ namespace Renderer
         boundDescriptor.bufferID = buffer;
     }
 
+
+    void DescriptorSet::Bind(const std::string& name, DepthImageID imageID)
+    {
+        u32 nameHash = StringUtils::fnv1a_32(name.c_str(), name.size());
+        Bind(nameHash, imageID);
+    }
+    void DescriptorSet::Bind(u32 nameHash, DepthImageID imageID)
+    {
+
+        for (u32 i = 0; i < _boundDescriptors.size(); i++)
+        {
+            if (nameHash == _boundDescriptors[i].nameHash)
+            {
+                _boundDescriptors[i].descriptorType = DescriptorType::DESCRIPTOR_TYPE_DEPTH_IMAGE;
+                _boundDescriptors[i].depthImageID = imageID;
+                return;
+            }
+        }
+
+        u32 newIndex = static_cast<u32>(_boundDescriptors.size());
+        Descriptor& boundDescriptor = _boundDescriptors.emplace_back();
+        boundDescriptor.nameHash = nameHash;
+        boundDescriptor.descriptorType = DESCRIPTOR_TYPE_DEPTH_IMAGE;
+        boundDescriptor.depthImageID = imageID;
+    }
+
+
     void DescriptorSet::BindStorage(const std::string& name, ImageID imageID, uint32_t mipLevel /*= 0*/)
     {
         u32 nameHash = StringUtils::fnv1a_32(name.c_str(), name.size());

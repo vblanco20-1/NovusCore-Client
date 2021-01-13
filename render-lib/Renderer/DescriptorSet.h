@@ -4,6 +4,7 @@
 #include "Descriptors/SamplerDesc.h"
 #include "Descriptors/TextureDesc.h"
 #include "Descriptors/ImageDesc.h"
+#include "Descriptors/DepthImageDesc.h"
 #include "Descriptors/TextureArrayDesc.h"
 #include <robin_hood.h>
 
@@ -15,6 +16,7 @@ namespace Renderer
         DESCRIPTOR_TYPE_TEXTURE,
         DESCRIPTOR_TYPE_TEXTURE_ARRAY,
         DESCRIPTOR_TYPE_IMAGE,
+        DESCRIPTOR_TYPE_DEPTH_IMAGE,
         DESCRIPTOR_TYPE_STORAGE_IMAGE,
         DESCRIPTOR_TYPE_BUFFER,
     };
@@ -27,6 +29,7 @@ namespace Renderer
 
         TextureID textureID;
         ImageID imageID;
+        DepthImageID depthImageID;
         SamplerID samplerID;
         TextureArrayID textureArrayID;
         BufferID bufferID;
@@ -58,6 +61,9 @@ namespace Renderer
 
         void Bind(const std::string& name, ImageID imageID, uint32_t mipLevel = 0 );
         void Bind(u32 nameHash, ImageID imageID, uint32_t mipLevel = 0);
+
+        void Bind(const std::string& name, DepthImageID imageID);
+        void Bind(u32 nameHash, DepthImageID imageID);
 
         void BindStorage(const std::string& name, ImageID imageID, uint32_t mipLevel = 0);
 

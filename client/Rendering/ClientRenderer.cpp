@@ -331,7 +331,6 @@ void ClientRenderer::Render()
             GPU_SCOPED_PROFILER_ZONE(commandList, ImguiPass);
 
             DepthPyramidUtils::BuildPyramid(_renderer,resources, commandList,_frameIndex, _mainDepth, _depthPyramid);
-
         });
 
     _pixelQuery->AddPixelQueryPass(&renderGraph, _mainColor, _objectIDs, _mainDepth, _frameIndex);
