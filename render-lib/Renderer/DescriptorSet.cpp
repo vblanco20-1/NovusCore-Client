@@ -93,6 +93,7 @@ namespace Renderer
             {
                 _boundDescriptors[i].descriptorType = DescriptorType::DESCRIPTOR_TYPE_IMAGE;
                 _boundDescriptors[i].imageID = imageID;
+                _boundDescriptors[i].imageMipLevel = mipLevel;
                 return;
             }
         }
@@ -140,6 +141,7 @@ namespace Renderer
             {
                 _boundDescriptors[i].descriptorType = DescriptorType::DESCRIPTOR_TYPE_STORAGE_IMAGE;
                 _boundDescriptors[i].imageID = imageID;
+                _boundDescriptors[i].imageMipLevel = mipLevel;
                 return;
             }
         }
