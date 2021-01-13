@@ -314,12 +314,6 @@ void ClientRenderer::Render()
     }
 
     _terrainRenderer->AddTerrainPass(&renderGraph, &_globalDescriptorSet, _mainColor, _objectIDs, _mainDepth, _depthPyramid, _frameIndex);
-
-
-
-
-
-
     _cModelRenderer->AddComplexModelPass(&renderGraph, &_globalDescriptorSet, _mainColor, _objectIDs, _mainDepth, _frameIndex, _depthPyramid);
     // UI Pass
     struct PyramidPassData

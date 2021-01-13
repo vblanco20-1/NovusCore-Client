@@ -189,15 +189,15 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                 _cullingDescriptorSet.Bind("_instances", _instanceBuffer);
                 _cullingDescriptorSet.Bind("_cullingDatas", _cullingDataBuffer);
 
-				Renderer::SamplerDesc samplerDesc;
-				samplerDesc.filter = Renderer::SAMPLER_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
+                Renderer::SamplerDesc samplerDesc;
+                samplerDesc.filter = Renderer::SAMPLER_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
 
-				samplerDesc.addressU = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
-				samplerDesc.addressV = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
-				samplerDesc.addressW = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
-				samplerDesc.minLOD = 0.f;
-				samplerDesc.maxLOD = 16.f;
-				samplerDesc.mode = Renderer::SAMPLER_REDUCTION_MIN;
+                samplerDesc.addressU = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
+                samplerDesc.addressV = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
+                samplerDesc.addressW = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
+                samplerDesc.minLOD = 0.f;
+                samplerDesc.maxLOD = 16.f;
+                samplerDesc.mode = Renderer::SAMPLER_REDUCTION_MIN;
 
                 Renderer::SamplerID occlusionSampler = _renderer->CreateSampler(samplerDesc);
 

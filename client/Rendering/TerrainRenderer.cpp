@@ -324,23 +324,23 @@ void TerrainRenderer::AddTerrainPass(Renderer::RenderGraph* renderGraph, Rendere
                 _cullingPassDescriptorSet.Bind("_culledInstances", _culledInstanceBuffer);
                 _cullingPassDescriptorSet.Bind("_argumentBuffer", _argumentBuffer);
 
-				Renderer::SamplerDesc samplerDesc;
-				samplerDesc.filter = Renderer::SAMPLER_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
+                Renderer::SamplerDesc samplerDesc;
+                samplerDesc.filter = Renderer::SAMPLER_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
 
-				samplerDesc.addressU = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
-				samplerDesc.addressV = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
-				samplerDesc.addressW = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
-				samplerDesc.minLOD = 0.f;
-				samplerDesc.maxLOD = 16.f;
-				samplerDesc.mode = Renderer::SAMPLER_REDUCTION_MIN;
+                samplerDesc.addressU = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
+                samplerDesc.addressV = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
+                samplerDesc.addressW = Renderer::TEXTURE_ADDRESS_MODE_CLAMP;
+                samplerDesc.minLOD = 0.f;
+                samplerDesc.maxLOD = 16.f;
+                samplerDesc.mode = Renderer::SAMPLER_REDUCTION_MIN;
 
-				Renderer::SamplerID occlusionSampler = _renderer->CreateSampler(samplerDesc);
+                Renderer::SamplerID occlusionSampler = _renderer->CreateSampler(samplerDesc);
 
                 _cullingPassDescriptorSet.Bind("_depthSampler", occlusionSampler);
                 _cullingPassDescriptorSet.Bind("_depthPyramid", depthPyramid);
 
-				// Bind descriptorset
-				commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, globalDescriptorSet, frameIndex);
+                // Bind descriptorset
+                commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, globalDescriptorSet, frameIndex);
                 commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_cullingPassDescriptorSet, frameIndex);
 
                 const u32 cellCount = (u32)_loadedChunks.size() * Terrain::MAP_CELLS_PER_CHUNK;

@@ -354,12 +354,12 @@ namespace Renderer
         TEXTURE_ADDRESS_MODE_MIRROR_ONCE
     };
 
-	enum SamplerReductionMode
-	{
-		SAMPLER_REDUCTION_NONE,
+    enum SamplerReductionMode
+    {
+        SAMPLER_REDUCTION_NONE,
         SAMPLER_REDUCTION_MAX,
         SAMPLER_REDUCTION_MIN
-	};
+    };
 
     enum StaticBorderColor
     {

@@ -105,8 +105,6 @@ namespace Renderer
         void PushConstant(CommandListID commandListID, void* data, u32 offset, u32 size) override;
         void FillBuffer(CommandListID commandListID, BufferID dstBuffer, u64 dstOffset, u64 size, u32 data) override;
 
-        void BuildPyramid(CommandListID commandListID, DepthImageID depthSource, ImageID image);
-
         // Non-commandlist based present functions
         void Present(Window* window, ImageID image, GPUSemaphoreID semaphoreID = GPUSemaphoreID::Invalid()) override;
         void Present(Window* window, DepthImageID image, GPUSemaphoreID semaphoreID = GPUSemaphoreID::Invalid()) override;
@@ -130,13 +128,13 @@ namespace Renderer
         void InitImgui() override;
         void DrawImgui(CommandListID commandListID) override;
 
-   // private:
+    private:
         bool ReflectDescriptorSet(const std::string& name, u32 nameHash, u32 type, i32& set, const std::vector<Backend::BindInfo>& bindInfos, u32& outBindInfoIndex, VkDescriptorSetLayoutBinding* outDescriptorLayoutBinding);
         void BindDescriptor(Backend::DescriptorSetBuilderVK* builder, void* imageInfosArraysVoid, Descriptor& descriptor);
 
         void RecreateSwapChain(Backend::SwapChainVK* swapChain);
 
-    //private:
+    private:
         Backend::RenderDeviceVK* _device = nullptr;
         Backend::BufferHandlerVK* _bufferHandler = nullptr;
         Backend::ImageHandlerVK* _imageHandler = nullptr;

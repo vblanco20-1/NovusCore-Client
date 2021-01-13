@@ -192,9 +192,9 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
             return;
         }
     }
-    
+
     uint outIndex;
-	_drawCountBuffer.InterlockedAdd(0, 1, outIndex);
+    _drawCountBuffer.InterlockedAdd(0, 1, outIndex);
     
-	_culledArgumentBuffer.Store<DrawCommand>(outIndex * 20, command); // 20 = sizeof(DrawCommand)
+    _culledArgumentBuffer.Store<DrawCommand>(outIndex * 20, command); // 20 = sizeof(DrawCommand)
 }
