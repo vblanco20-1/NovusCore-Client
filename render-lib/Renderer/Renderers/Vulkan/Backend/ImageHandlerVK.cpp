@@ -126,7 +126,6 @@ namespace Renderer
             return _depthImages[static_cast<type>(id)].desc;
         }
 
-
         uvec2 ImageHandlerVK::GetDimension(const ImageID id)
         {
             auto desc = GetImageDesc(id);
@@ -229,7 +228,6 @@ namespace Renderer
             return _depthImages[static_cast<type>(id)].depthView;
         }
 
-        
         void ImageHandlerVK::CreateImage(Image& image)
         {
             // Create image
@@ -356,7 +354,6 @@ namespace Renderer
 
                 _extraViews[(static_cast<u16>(_images.size()))] = std::move(views);
             }
-
 
             if (vkCreateImageView(_device->_device, &colorViewInfo, nullptr, &image.colorView) != VK_SUCCESS)
             {

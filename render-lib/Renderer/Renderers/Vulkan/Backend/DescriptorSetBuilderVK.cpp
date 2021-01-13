@@ -221,7 +221,6 @@ namespace Renderer
             newWrite.dstBinding = binding;
             newWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
             newWrite.imageInfo = imageInfo;
-            
 
             _imageWrites.push_back(newWrite);
         }

@@ -151,7 +151,6 @@ namespace Renderer
         boundDescriptor.depthImageID = imageID;
     }
 
-
     void DescriptorSet::BindStorage(StringUtils::StringHash nameHash, ImageID imageID, u32 mipLevel /*= 0*/)
     {
         for (u32 i = 0; i < _boundDescriptors.size(); i++)

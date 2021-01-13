@@ -75,7 +75,6 @@ namespace Renderer
                 samplerInfo.pNext = &createInfoReduction;
             }
 
-
             if (vkCreateSampler(_device->_device, &samplerInfo, nullptr, &sampler.sampler) != VK_SUCCESS)
             {
                 NC_LOG_FATAL("Failed to create sampler!");

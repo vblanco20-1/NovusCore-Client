@@ -30,9 +30,8 @@ namespace Renderer
             VkImageView GetColorView(const ImageID id);
             VkImageView GetColorView(const ImageID id, u32 mipLevel);
 
-            uint32_t GetMips(const ImageID id);
+            u32 GetMips(const ImageID id);
             uvec2 GetDimension(const ImageID id);
-
 
             VkImage GetImage(const DepthImageID id);
             VkImageView GetDepthView(const DepthImageID id);
@@ -69,7 +68,6 @@ namespace Renderer
                 VkImageView view;
                 u32 mip;
             };
-
 
            std::unordered_map<u16, std::vector<ExtraViews>> _extraViews;
         };
