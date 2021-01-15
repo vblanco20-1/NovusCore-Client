@@ -353,7 +353,7 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                 memcpy(cullConstants, &_cullConstants, sizeof(CullConstants));
                 cullConstants->maxDrawCount = numTransparentDrawCalls;
                 cullConstants->shouldPrepareSort = alphaSortEnabled;
-
+                cullConstants->occlusionCull = CVAR_ComplexModelOcclusionCullEnabled.Get();
                 commandList.PushConstant(cullConstants, 0, sizeof(CullConstants));
 
                 _cullingDescriptorSet.Bind("_packedDrawCallDatas", _transparentDrawCallDataBuffer);

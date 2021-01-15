@@ -55,8 +55,8 @@ struct InstanceData
 [[vk::binding(7, PER_PASS)]] ConstantBuffer<Constants> _constants;
 
 
-[[vk::binding(7, PER_PASS)]] SamplerState _depthSampler;
-[[vk::binding(8, PER_PASS)]] Texture2D<float> _depthPyramid;
+[[vk::binding(8, PER_PASS)]] SamplerState _depthSampler;
+[[vk::binding(9, PER_PASS)]] Texture2D<float> _depthPyramid;
 
 CullingData LoadCullingData(uint instanceIndex)
 {
