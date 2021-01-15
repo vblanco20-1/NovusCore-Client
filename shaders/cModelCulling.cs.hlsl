@@ -51,14 +51,15 @@ struct Instance
 [[vk::binding(2, PER_PASS)]] StructuredBuffer<Instance> _instances;
 [[vk::binding(3, PER_PASS)]] StructuredBuffer<PackedCullingData> _cullingDatas;
 
-[[vk::binding(8, PER_PASS)]] SamplerState _depthSampler;
-[[vk::binding(9, PER_PASS)]] Texture2D<float> _depthPyramid;
+[[vk::binding(9, PER_PASS)]] SamplerState _depthSampler;
+[[vk::binding(10, PER_PASS)]] Texture2D<float> _depthPyramid;
 
 // Outputs
 [[vk::binding(4, PER_PASS)]] RWByteAddressBuffer _drawCount;
-[[vk::binding(5, PER_PASS)]] RWStructuredBuffer<DrawCall> _culledDrawCalls;
-[[vk::binding(6, PER_PASS)]] RWStructuredBuffer<uint64_t> _sortKeys; // OPTIONAL, only needed if _constants.shouldPrepareSort
-[[vk::binding(7, PER_PASS)]] RWStructuredBuffer<uint> _sortValues; // OPTIONAL, only needed if _constants.shouldPrepareSort
+[[vk::binding(5, PER_PASS)]] RWByteAddressBuffer _triangleCount;
+[[vk::binding(6, PER_PASS)]] RWStructuredBuffer<DrawCall> _culledDrawCalls;
+[[vk::binding(7, PER_PASS)]] RWStructuredBuffer<uint64_t> _sortKeys; // OPTIONAL, only needed if _constants.shouldPrepareSort
+[[vk::binding(8, PER_PASS)]] RWStructuredBuffer<uint> _sortValues; // OPTIONAL, only needed if _constants.shouldPrepareSort
 
 CullingData LoadCullingData(uint instanceIndex)
 {
@@ -149,9 +150,9 @@ uint64_t CalculateSortKey(DrawCall drawCall, DrawCallData drawCallData, Instance
         };
     */
     
-    uint64_t renderPriority = drawCallData.renderPriority;
-    uint64_t invDistanceFromCameraUint = UINT_MAX - (uint)(distanceFromCamera / distanceAccuracy);
-    uint64_t localInstanceID = drawCall.firstInstance % 65535;
+    uint renderPriority = drawCallData.renderPriority;
+    uint invDistanceFromCameraUint = UINT_MAX - (uint)(distanceFromCamera / distanceAccuracy);
+    uint localInstanceID = drawCall.firstInstance % 65535;
     
     uint64_t sortKey = 0;
     
@@ -211,6 +212,10 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
             return;
         }
     } 
+    // Update triangle count
+    uint outTriangles;
+    _triangleCount.InterlockedAdd(0, drawCall.indexCount/3, outTriangles);
+    
     // Store DrawCall
     uint outIndex;
 	_drawCount.InterlockedAdd(0, 1, outIndex);

@@ -13,10 +13,10 @@ struct Constants
 };
 
 [[vk::push_constant]] Constants _constants;
-[[vk::binding(0, PER_PASS)]] ByteAddressBuffer _instances;
-[[vk::binding(1, PER_PASS)]] ByteAddressBuffer _heightRanges;
-[[vk::binding(2, PER_PASS)]] RWByteAddressBuffer _culledInstances;
-[[vk::binding(3, PER_PASS)]] RWByteAddressBuffer _argumentBuffer;
+[[vk::binding(0, PER_PASS)]] StructuredBuffer<CellInstance> _instances;
+[[vk::binding(1, PER_PASS)]] StructuredBuffer<uint> _heightRanges;
+[[vk::binding(2, PER_PASS)]] RWStructuredBuffer<CellInstance> _culledInstances;
+[[vk::binding(3, PER_PASS)]] RWByteAddressBuffer _drawCount;
 
 
 [[vk::binding(4, PER_PASS)]] SamplerState _depthSampler; 
@@ -26,10 +26,10 @@ struct Constants
 float2 ReadHeightRange(uint instanceIndex)
 {
 #if USE_PACKED_HEIGHT_RANGE
-    const uint packed = _heightRanges.Load(instanceIndex * 4);
-    const float min = f16tof32(packed >> 16);
-    const float max = f16tof32(packed);
-    return float2(min, max);
+	const uint packed = _heightRanges[instanceIndex];
+	const float min = f16tof32(packed >> 16);
+	const float max = f16tof32(packed);
+	return float2(min, max);
 #else
     const float2 minmax = asfloat(_heightRanges.Load2(instanceIndex * 8));
     return minmax;
@@ -87,8 +87,8 @@ bool IsAABBInsideFrustum(float4 frustum[6], AABB aabb)
 [numthreads(32, 1, 1)]
 void main(uint3 dispatchThreadId : SV_DispatchThreadID)
 {
-    const uint instanceIndex = dispatchThreadId.x;
-    CellInstance instance = _instances.Load<CellInstance>(instanceIndex * 8);
+	const uint instanceIndex = dispatchThreadId.x;
+	CellInstance instance = _instances[instanceIndex];
 
     const uint cellID = instance.packedChunkCellID & 0xffff;
     const uint chunkID = instance.packedChunkCellID >> 16;
@@ -108,7 +108,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         }
     }
     uint outInstanceIndex;
-    _argumentBuffer.InterlockedAdd(4, 1, outInstanceIndex);
+    _drawCount.InterlockedAdd(4, 1, outInstanceIndex);
       
-    _culledInstances.Store<CellInstance>(outInstanceIndex * 8, instance);
+    _culledInstances[outInstanceIndex] = instance;
 }

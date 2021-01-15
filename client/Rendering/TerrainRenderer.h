@@ -24,6 +24,7 @@ namespace Terrain
 
     constexpr u32 NUM_VERTICES_PER_CHUNK = Terrain::MAP_CELL_TOTAL_GRID_SIZE * Terrain::MAP_CELLS_PER_CHUNK;
     constexpr u32 NUM_INDICES_PER_CELL = 768;
+    constexpr u32 NUM_TRIANGLES_PER_CELL = NUM_INDICES_PER_CELL / 3;
 }
 
 namespace Renderer
@@ -89,6 +90,14 @@ public:
 
     const std::vector<Geometry::AABoundingBox>& GetBoundingBoxes() { return _cellBoundingBoxes; }
     MapObjectRenderer* GetMapObjectRenderer() { return _mapObjectRenderer; }
+
+    // Drawcall stats
+    u32 GetNumDrawCalls() { return Terrain::MAP_CELLS_PER_CHUNK * static_cast<u32>(_loadedChunks.size()); }
+    u32 GetNumSurvivingDrawCalls() { return _numSurvivingDrawCalls; }
+
+    // Triangle stats
+    u32 GetNumTriangles() { return Terrain::MAP_CELLS_PER_CHUNK * static_cast<u32>(_loadedChunks.size()) * Terrain::NUM_TRIANGLES_PER_CELL; }
+    u32 GetNumSurvivingTriangles() { return _numSurvivingDrawCalls * Terrain::NUM_TRIANGLES_PER_CELL; }
 private:
     void CreatePermanentResources();
 
@@ -106,20 +115,21 @@ private:
     
     CullingConstants _cullingConstants;
 
-    Renderer::BufferID _argumentBuffer = Renderer::BufferID::Invalid();
-    Renderer::BufferID _instanceBuffer = Renderer::BufferID::Invalid();
-    Renderer::BufferID _culledInstanceBuffer = Renderer::BufferID::Invalid();
-    Renderer::BufferID _cellHeightRangeBuffer = Renderer::BufferID::Invalid();
+    Renderer::BufferID _instanceBuffer;
+    Renderer::BufferID _culledInstanceBuffer;
+    Renderer::BufferID _cellHeightRangeBuffer;
+    Renderer::BufferID _argumentBuffer;
+    Renderer::BufferID _drawCountReadBackBuffer;
 
-    Renderer::BufferID _chunkBuffer = Renderer::BufferID::Invalid();
-    Renderer::BufferID _cellBuffer = Renderer::BufferID::Invalid();
+    Renderer::BufferID _chunkBuffer;
+    Renderer::BufferID _cellBuffer;
 
-    Renderer::BufferID _vertexBuffer = Renderer::BufferID::Invalid();
+    Renderer::BufferID _vertexBuffer;
 
-    Renderer::BufferID _cellIndexBuffer = Renderer::BufferID::Invalid();
+    Renderer::BufferID _cellIndexBuffer;
     
-    Renderer::TextureArrayID _terrainColorTextureArray = Renderer::TextureArrayID::Invalid();
-    Renderer::TextureArrayID _terrainAlphaTextureArray = Renderer::TextureArrayID::Invalid();
+    Renderer::TextureArrayID _terrainColorTextureArray;
+    Renderer::TextureArrayID _terrainAlphaTextureArray;
 
     Renderer::SamplerID _alphaSampler;
     Renderer::SamplerID _colorSampler;
@@ -135,6 +145,8 @@ private:
     std::vector<CellInstance> _culledInstances;
 
     std::vector<ChunkToBeLoaded> _chunksToBeLoaded;
+
+    u32 _numSurvivingDrawCalls;
     
     // Subrenderers
     MapObjectRenderer* _mapObjectRenderer = nullptr;

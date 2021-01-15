@@ -901,6 +901,13 @@ namespace Renderer
             bufferBarrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
             break;
 
+        case PipelineBarrierType::TransferDestToTransferSrc:
+            srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            bufferBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            bufferBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            break;
+
         case PipelineBarrierType::ComputeWriteToVertexShaderRead:
             srcStageMask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             dstStageMask = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
@@ -1174,6 +1181,11 @@ namespace Renderer
     void RendererVK::UnmapBuffer(BufferID buffer)
     {
         vmaUnmapMemory(_device->_allocator, _bufferHandler->GetBufferAllocation(buffer));
+    }
+
+    const std::string& RendererVK::GetGPUName()
+    {
+        return _device->GetGPUName();
     }
 
     size_t RendererVK::GetVRAMUsage()

@@ -378,6 +378,11 @@ void ClientRenderer::InitImgui()
     _renderer->InitImgui();
 }
 
+const std::string& ClientRenderer::GetGPUName()
+{
+    return _renderer->GetGPUName();
+}
+
 size_t ClientRenderer::GetVRAMUsage()
 {
     return _renderer->GetVRAMUsage();

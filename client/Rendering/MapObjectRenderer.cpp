@@ -77,6 +77,35 @@ void MapObjectRenderer::Update(f32 deltaTime)
             _debugRenderer->DrawAABB3D(transformedMin, transformedMax, 0xff00ffff);
         }
     }
+
+    // Read back from the culling counter
+    u32 numDrawCalls = static_cast<u32>(_drawParameters.size());
+    _numSurvivingDrawCalls = numDrawCalls;
+    _numSurvivingTriangles = _numTriangles;
+
+    const bool cullingEnabled = CVAR_MapObjectCullingEnabled.Get();
+    if (cullingEnabled)
+    {
+        // Drawcalls
+        {
+            u32* count = static_cast<u32*>(_renderer->MapBuffer(_drawCountReadBackBuffer));
+            if (count != nullptr)
+            {
+                _numSurvivingDrawCalls = *count;
+            }
+            _renderer->UnmapBuffer(_drawCountReadBackBuffer);
+        }
+        
+        // Triangles
+        {
+            u32* count = static_cast<u32*>(_renderer->MapBuffer(_triangleCountReadBackBuffer));
+            if (count != nullptr)
+            {
+                _numSurvivingTriangles = *count;
+            }
+            _renderer->UnmapBuffer(_triangleCountReadBackBuffer);
+        }
+    }
 }
 
 void MapObjectRenderer::AddMapObjectPass(Renderer::RenderGraph* renderGraph, Renderer::DescriptorSet* globalDescriptorSet, Renderer::ImageID colorTarget, Renderer::ImageID objectTarget, Renderer::DepthImageID depthTarget, Renderer::ImageID depthPyramid, u8 frameIndex)
@@ -113,9 +142,12 @@ void MapObjectRenderer::AddMapObjectPass(Renderer::RenderGraph* renderGraph, Ren
             // -- Cull MapObjects --
             if (cullingEnabled)
             {
-                // Reset the counter
+                // Reset the counters
                 commandList.FillBuffer(_drawCountBuffer, 0, 4, 0);
+                commandList.FillBuffer(_triangleCountBuffer, 0, 4, 0);
+
                 commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToComputeShaderRW, _drawCountBuffer);
+                commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToComputeShaderRW, _triangleCountBuffer);
 
                 // Do culling
                 Renderer::ComputePipelineDesc pipelineDesc;
@@ -140,9 +172,10 @@ void MapObjectRenderer::AddMapObjectPass(Renderer::RenderGraph* renderGraph, Ren
                 }
 
                 _cullingDescriptorSet.Bind("_constants", _cullingConstantBuffer->GetBuffer(frameIndex));
-                _cullingDescriptorSet.Bind("_argumentBuffer", _argumentBuffer);
-                _cullingDescriptorSet.Bind("_culledArgumentBuffer", _culledArgumentBuffer);
-                _cullingDescriptorSet.Bind("_drawCountBuffer", _drawCountBuffer);
+                _cullingDescriptorSet.Bind("_drawCommands", _argumentBuffer);
+                _cullingDescriptorSet.Bind("_culledDrawCommands", _culledArgumentBuffer);
+                _cullingDescriptorSet.Bind("_drawCount", _drawCountBuffer);
+                _cullingDescriptorSet.Bind("_triangleCount", _triangleCountBuffer);
 
                 Renderer::SamplerDesc samplerDesc;
                 samplerDesc.filter = Renderer::SAMPLER_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
@@ -223,6 +256,14 @@ void MapObjectRenderer::AddMapObjectPass(Renderer::RenderGraph* renderGraph, Ren
             commandList.DrawIndexedIndirectCount(argumentBuffer, 0, _drawCountBuffer, 0, drawCount);
 
             commandList.EndPipeline(pipeline);
+
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _drawCountBuffer);
+            commandList.CopyBuffer(_drawCountReadBackBuffer, 0, _drawCountBuffer, 0, 4);
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _drawCountReadBackBuffer);
+
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _triangleCountBuffer);
+            commandList.CopyBuffer(_triangleCountReadBackBuffer, 0, _triangleCountBuffer, 0, 4);
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _triangleCountReadBackBuffer);
         });
     }
 }
@@ -301,6 +342,14 @@ void MapObjectRenderer::ExecuteLoad()
 
     CreateBuffers();
     _mapObjectsToBeLoaded.clear();
+
+    // Calculate triangles
+    _numTriangles = 0;
+
+    for (const DrawParameters& drawParameters : _drawParameters)
+    {
+        _numTriangles += drawParameters.indexCount / 3;
+    }
 }
 
 void MapObjectRenderer::Clear()
@@ -789,8 +838,8 @@ void MapObjectRenderer::CreateBuffers()
         // Copy from staging buffer to buffer
         _renderer->CopyBuffer(_instanceLookupBuffer, 0, stagingBuffer, 0, desc.size);
 
-        _passDescriptorSet.Bind("_instanceLookup", _instanceLookupBuffer);
-        _cullingDescriptorSet.Bind("_instanceLookup", _instanceLookupBuffer);
+        _passDescriptorSet.Bind("_packedInstanceLookup", _instanceLookupBuffer);
+        _cullingDescriptorSet.Bind("_packedInstanceLookup", _instanceLookupBuffer);
     }
     
     // Create Indirect Argument buffer
@@ -857,28 +906,28 @@ void MapObjectRenderer::CreateBuffers()
     if (_drawCountBuffer == Renderer::BufferID::Invalid())
     {
         Renderer::BufferDesc desc;
-        desc.name = "MapObjectCullingCounter";
+        desc.name = "MapObjectDrawCount";
         desc.size = sizeof(u32);
-        desc.usage = Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.usage = Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION | Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
         _drawCountBuffer = _renderer->CreateBuffer(desc);
 
-        // Create staging buffer
-        desc.name = "MapObjectCullingCounterStaging";
-        desc.usage = Renderer::BufferUsage::BUFFER_USAGE_TRANSFER_SOURCE;
-        desc.cpuAccess = Renderer::BufferCPUAccess::WriteOnly;
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.cpuAccess = Renderer::BufferCPUAccess::ReadOnly;
+        _drawCountReadBackBuffer = _renderer->CreateBuffer(desc);
+    }
 
-        Renderer::BufferID stagingBuffer = _renderer->CreateBuffer(desc);
+    // Create triangle count buffer
+    if (_triangleCountBuffer == Renderer::BufferID::Invalid())
+    {
+        Renderer::BufferDesc desc;
+        desc.name = "MapObjectTriangleCount";
+        desc.size = sizeof(u32);
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION | Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
+        _triangleCountBuffer = _renderer->CreateBuffer(desc);
 
-        // Upload to staging buffer
-        u32 drawCount = static_cast<u32>(_drawParameters.size());
-        void* dst = _renderer->MapBuffer(stagingBuffer);
-        memset(dst, drawCount, desc.size);
-        _renderer->UnmapBuffer(stagingBuffer);
-
-        // Queue destroy staging buffer
-        _renderer->QueueDestroyBuffer(stagingBuffer);
-        // Copy from staging buffer to buffer
-        _renderer->CopyBuffer(_drawCountBuffer, 0, stagingBuffer, 0, desc.size);
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.cpuAccess = Renderer::BufferCPUAccess::ReadOnly;
+        _triangleCountReadBackBuffer = _renderer->CreateBuffer(desc);
     }
 
     // Create Vertex buffer
@@ -910,7 +959,7 @@ void MapObjectRenderer::CreateBuffers()
         // Copy from staging buffer to buffer
         _renderer->CopyBuffer(_vertexBuffer, 0, stagingBuffer, 0, desc.size);
 
-        _passDescriptorSet.Bind("_vertices", _vertexBuffer);
+        _passDescriptorSet.Bind("_packedVertices", _vertexBuffer);
     }
 
     // Create Index buffer
@@ -1005,7 +1054,7 @@ void MapObjectRenderer::CreateBuffers()
         // Copy from staging buffer to buffer
         _renderer->CopyBuffer(_materialBuffer, 0, stagingBuffer, 0, desc.size);
 
-        _passDescriptorSet.Bind("_materialData", _materialBuffer);
+        _passDescriptorSet.Bind("_packedMaterialData", _materialBuffer);
     }
 
     // Create MaterialParam buffer
@@ -1037,7 +1086,7 @@ void MapObjectRenderer::CreateBuffers()
         // Copy from staging buffer to buffer
         _renderer->CopyBuffer(_materialParametersBuffer, 0, stagingBuffer, 0, desc.size);
 
-        _passDescriptorSet.Bind("_materialParams", _materialParametersBuffer);
+        _passDescriptorSet.Bind("_packedMaterialParams", _materialParametersBuffer);
     }
 
     // Create CullingData buffer
@@ -1069,6 +1118,6 @@ void MapObjectRenderer::CreateBuffers()
         // Copy from staging buffer to buffer
         _renderer->CopyBuffer(_cullingDataBuffer, 0, stagingBuffer, 0, desc.size);
 
-        _cullingDescriptorSet.Bind("_cullingData", _cullingDataBuffer);
+        _cullingDescriptorSet.Bind("_packedCullingData", _cullingDataBuffer);
     }
 }

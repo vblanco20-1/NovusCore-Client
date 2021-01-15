@@ -122,6 +122,8 @@ namespace Renderer
         void* MapBuffer(BufferID buffer) override;
         void UnmapBuffer(BufferID buffer) override;
 
+        const std::string& GetGPUName() override;
+
         size_t GetVRAMUsage() override;
         size_t GetVRAMBudget() override;
 

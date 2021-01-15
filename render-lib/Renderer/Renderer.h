@@ -131,6 +131,8 @@ namespace Renderer
         virtual void* MapBuffer(BufferID buffer) = 0;
         virtual void UnmapBuffer(BufferID buffer) = 0;
 
+        virtual const std::string& GetGPUName() = 0;
+
         virtual size_t GetVRAMUsage() = 0;
         virtual size_t GetVRAMBudget() = 0;
 

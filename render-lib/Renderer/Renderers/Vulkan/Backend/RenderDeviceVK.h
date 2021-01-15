@@ -48,6 +48,8 @@ namespace Renderer
 
             void FlushGPU();
 
+            const std::string& GetGPUName() { return _gpuName; }
+
         private:
             void InitOnce();
 
@@ -74,6 +76,7 @@ namespace Renderer
             int RateDeviceSuitability(VkPhysicalDevice device);
             QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
             bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
+            bool CheckDeviceFeatureSupport(VkPhysicalDevice device, VkPhysicalDeviceFeatures2& requestedFeatures);
 
             void CheckValidationLayerSupport();
             std::vector<const char*> GetRequiredExtensions();
@@ -98,7 +101,8 @@ namespace Renderer
 
             VkInstance _instance;
             VkDebugUtilsMessengerEXT _debugMessenger;
-
+            
+            std::string _gpuName;
             VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
             VkDevice _device = VK_NULL_HANDLE;
             VkCommandPool _commandPool = VK_NULL_HANDLE;

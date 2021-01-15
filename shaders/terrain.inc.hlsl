@@ -17,7 +17,7 @@ struct PackedCellData
     uint packedDiffuseIDs1;
     uint packedDiffuseIDs2;
     uint packedHoles;
-};
+}; // 12 bytes
 
 struct CellData
 {
@@ -92,6 +92,7 @@ float2 GetGlobalVertexPosition(uint chunkID, uint cellID, uint vertexID)
     return float2(-finalPos.y, -finalPos.x);
 }
 
+
 AABB GetCellAABB(uint chunkID, uint cellID, float2 heightRange)
 {
     float2 pos = GetCellPosition(chunkID, cellID);
@@ -146,7 +147,7 @@ bool IsHoleVertex(uint vertexId, uint hole)
             return true;
         }
     }
-    
+
     if (shiftedHole & 0b0100)
     {
         if (blockVertexId == 13 || blockVertexId == 14 || blockVertexId == 30 || blockVertexId == 31)
@@ -154,7 +155,7 @@ bool IsHoleVertex(uint vertexId, uint hole)
             return true;
         }
     }
-    
+
     if (shiftedHole & 0b1000)
     {
         if (blockVertexId == 15 || blockVertexId == 16 || blockVertexId == 32 || blockVertexId == 33)
@@ -166,3 +167,24 @@ bool IsHoleVertex(uint vertexId, uint hole)
     return false;
 }
 
+#if !SHADER_CS
+[[vk::binding(0, PER_PASS)]] StructuredBuffer<PackedCellData> _packedCellData;
+
+CellData LoadCellData(uint globalCellID)
+{
+    const PackedCellData rawCellData = _packedCellData[globalCellID];
+
+    CellData cellData;
+
+    // Unpack diffuse IDs
+    cellData.diffuseIDs.x = (rawCellData.packedDiffuseIDs1 >> 0)  & 0xffff;
+    cellData.diffuseIDs.y = (rawCellData.packedDiffuseIDs1 >> 16)  & 0xffff;
+    cellData.diffuseIDs.z = (rawCellData.packedDiffuseIDs2 >> 0) & 0xffff;
+    cellData.diffuseIDs.w = (rawCellData.packedDiffuseIDs2 >> 16) & 0xffff;
+
+    // Unpack holes
+    cellData.holes = rawCellData.packedHoles & 0xffff;
+
+    return cellData;
+}
+#endif
