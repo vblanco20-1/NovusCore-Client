@@ -51,6 +51,8 @@ public:
     DebugRenderer* GetDebugRenderer() { return _debugRenderer; }
     PixelQuery* GetPixelQuery() { return _pixelQuery; }
 
+    const std::string& GetGPUName();
+
     size_t GetVRAMUsage();
     size_t GetVRAMBudget();
 

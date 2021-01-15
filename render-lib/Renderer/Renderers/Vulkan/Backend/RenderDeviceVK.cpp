@@ -374,6 +374,12 @@ namespace Renderer
             if (candidates.rbegin()->first > 0)
             {
                 _physicalDevice = candidates.rbegin()->second;
+
+                // Get the name of the GPU
+                VkPhysicalDeviceProperties deviceProperties;
+                vkGetPhysicalDeviceProperties(_physicalDevice, &deviceProperties);
+
+                _gpuName = deviceProperties.deviceName;
             }
             else
             {

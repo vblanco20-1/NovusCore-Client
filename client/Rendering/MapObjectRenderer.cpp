@@ -79,16 +79,30 @@ void MapObjectRenderer::Update(f32 deltaTime)
     // Read back from the culling counter
     u32 numDrawCalls = static_cast<u32>(_drawParameters.size());
     _numSurvivingDrawCalls = numDrawCalls;
+    _numSurvivingTriangles = _numTriangles;
 
     const bool cullingEnabled = CVAR_MapObjectCullingEnabled.Get();
     if (cullingEnabled)
     {
-        u32* count = static_cast<u32*>(_renderer->MapBuffer(_drawCountReadBackBuffer));
-        if (count != nullptr)
+        // Drawcalls
         {
-            _numSurvivingDrawCalls = *count;
+            u32* count = static_cast<u32*>(_renderer->MapBuffer(_drawCountReadBackBuffer));
+            if (count != nullptr)
+            {
+                _numSurvivingDrawCalls = *count;
+            }
+            _renderer->UnmapBuffer(_drawCountReadBackBuffer);
         }
-        _renderer->UnmapBuffer(_drawCountReadBackBuffer);
+        
+        // Triangles
+        {
+            u32* count = static_cast<u32*>(_renderer->MapBuffer(_triangleCountReadBackBuffer));
+            if (count != nullptr)
+            {
+                _numSurvivingTriangles = *count;
+            }
+            _renderer->UnmapBuffer(_triangleCountReadBackBuffer);
+        }
     }
 }
 
@@ -126,9 +140,12 @@ void MapObjectRenderer::AddMapObjectPass(Renderer::RenderGraph* renderGraph, Ren
             // -- Cull MapObjects --
             if (cullingEnabled)
             {
-                // Reset the counter
+                // Reset the counters
                 commandList.FillBuffer(_drawCountBuffer, 0, 4, 0);
+                commandList.FillBuffer(_triangleCountBuffer, 0, 4, 0);
+
                 commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToComputeShaderRW, _drawCountBuffer);
+                commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToComputeShaderRW, _triangleCountBuffer);
 
                 // Do culling
                 Renderer::ComputePipelineDesc pipelineDesc;
@@ -155,6 +172,7 @@ void MapObjectRenderer::AddMapObjectPass(Renderer::RenderGraph* renderGraph, Ren
                 _cullingDescriptorSet.Bind("_drawCommands", _argumentBuffer);
                 _cullingDescriptorSet.Bind("_culledDrawCommands", _culledArgumentBuffer);
                 _cullingDescriptorSet.Bind("_drawCount", _drawCountBuffer);
+                _cullingDescriptorSet.Bind("_triangleCount", _triangleCountBuffer);
                 commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::PER_PASS, &_cullingDescriptorSet, frameIndex);
                 commandList.BindDescriptorSet(Renderer::DescriptorSetSlot::GLOBAL, globalDescriptorSet, frameIndex);
 
@@ -223,6 +241,10 @@ void MapObjectRenderer::AddMapObjectPass(Renderer::RenderGraph* renderGraph, Ren
             commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _drawCountBuffer);
             commandList.CopyBuffer(_drawCountReadBackBuffer, 0, _drawCountBuffer, 0, 4);
             commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _drawCountReadBackBuffer);
+
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _triangleCountBuffer);
+            commandList.CopyBuffer(_triangleCountReadBackBuffer, 0, _triangleCountBuffer, 0, 4);
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _triangleCountReadBackBuffer);
         });
     }
 }
@@ -301,6 +323,14 @@ void MapObjectRenderer::ExecuteLoad()
 
     CreateBuffers();
     _mapObjectsToBeLoaded.clear();
+
+    // Calculate triangles
+    _numTriangles = 0;
+
+    for (const DrawParameters& drawParameters : _drawParameters)
+    {
+        _numTriangles += drawParameters.indexCount / 3;
+    }
 }
 
 void MapObjectRenderer::Clear()
@@ -857,7 +887,7 @@ void MapObjectRenderer::CreateBuffers()
     if (_drawCountBuffer == Renderer::BufferID::Invalid())
     {
         Renderer::BufferDesc desc;
-        desc.name = "MapObjectCullingCounter";
+        desc.name = "MapObjectDrawCount";
         desc.size = sizeof(u32);
         desc.usage = Renderer::BUFFER_USAGE_INDIRECT_ARGUMENT_BUFFER | Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION | Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
         _drawCountBuffer = _renderer->CreateBuffer(desc);
@@ -865,6 +895,20 @@ void MapObjectRenderer::CreateBuffers()
         desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
         desc.cpuAccess = Renderer::BufferCPUAccess::ReadOnly;
         _drawCountReadBackBuffer = _renderer->CreateBuffer(desc);
+    }
+
+    // Create triangle count buffer
+    if (_triangleCountBuffer == Renderer::BufferID::Invalid())
+    {
+        Renderer::BufferDesc desc;
+        desc.name = "MapObjectTriangleCount";
+        desc.size = sizeof(u32);
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION | Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
+        _triangleCountBuffer = _renderer->CreateBuffer(desc);
+
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
+        desc.cpuAccess = Renderer::BufferCPUAccess::ReadOnly;
+        _triangleCountReadBackBuffer = _renderer->CreateBuffer(desc);
     }
 
     // Create Vertex buffer

@@ -51,9 +51,10 @@ struct Instance
 
 // Outputs
 [[vk::binding(4, PER_PASS)]] RWByteAddressBuffer _drawCount;
-[[vk::binding(5, PER_PASS)]] RWStructuredBuffer<DrawCall> _culledDrawCalls;
-[[vk::binding(6, PER_PASS)]] RWStructuredBuffer<uint64_t> _sortKeys; // OPTIONAL, only needed if _constants.shouldPrepareSort
-[[vk::binding(7, PER_PASS)]] RWStructuredBuffer<uint> _sortValues; // OPTIONAL, only needed if _constants.shouldPrepareSort
+[[vk::binding(5, PER_PASS)]] RWByteAddressBuffer _triangleCount;
+[[vk::binding(6, PER_PASS)]] RWStructuredBuffer<DrawCall> _culledDrawCalls;
+[[vk::binding(7, PER_PASS)]] RWStructuredBuffer<uint64_t> _sortKeys; // OPTIONAL, only needed if _constants.shouldPrepareSort
+[[vk::binding(8, PER_PASS)]] RWStructuredBuffer<uint> _sortValues; // OPTIONAL, only needed if _constants.shouldPrepareSort
 
 CullingData LoadCullingData(uint instanceIndex)
 {
@@ -198,6 +199,10 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     {
         return;
     }
+    
+    // Update triangle count
+    uint outTriangles;
+    _triangleCount.InterlockedAdd(0, drawCall.indexCount/3, outTriangles);
     
     // Store DrawCall
     uint outIndex;

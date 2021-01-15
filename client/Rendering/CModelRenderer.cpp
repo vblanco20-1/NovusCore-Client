@@ -91,9 +91,13 @@ void CModelRenderer::Update(f32 deltaTime)
     _numOpaqueSurvivingDrawCalls = numOpaqueDrawCalls;
     _numTransparentSurvivingDrawCalls = numTransparentDrawCalls;
 
+    _numOpaqueSurvivingTriangles = _numOpaqueTriangles;
+    _numTransparentSurvivingTriangles = _numTransparentTriangles;
+
     const bool cullingEnabled = CVAR_ComplexModelCullingEnabled.Get();
     if (cullingEnabled)
     {
+        // Drawcalls
         {
             u32* count = static_cast<u32*>(_renderer->MapBuffer(_opaqueDrawCountReadBackBuffer));
             if (count != nullptr)
@@ -110,6 +114,25 @@ void CModelRenderer::Update(f32 deltaTime)
                 _numTransparentSurvivingDrawCalls = *count;
             }
             _renderer->UnmapBuffer(_transparentDrawCountReadBackBuffer);
+        }
+
+        // Triangles
+        {
+            u32* count = static_cast<u32*>(_renderer->MapBuffer(_opaqueTriangleCountReadBackBuffer));
+            if (count != nullptr)
+            {
+                _numOpaqueSurvivingTriangles = *count;
+            }
+            _renderer->UnmapBuffer(_opaqueTriangleCountReadBackBuffer);
+        }
+
+        {
+            u32* count = static_cast<u32*>(_renderer->MapBuffer(_transparentTriangleCountReadBackBuffer));
+            if (count != nullptr)
+            {
+                _numTransparentSurvivingTriangles = *count;
+            }
+            _renderer->UnmapBuffer(_transparentTriangleCountReadBackBuffer);
         }
     }
 }
@@ -194,9 +217,12 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
             // Cull
             if (cullingEnabled)
             {
-                // Reset the counter
+                // Reset the counters
                 commandList.FillBuffer(_opaqueDrawCountBuffer, 0, 4, 0);
+                commandList.FillBuffer(_opaqueTriangleCountBuffer, 0, 4, 0);
+  
                 commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToComputeShaderRW, _opaqueDrawCountBuffer);
+                commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToComputeShaderRW, _opaqueTriangleCountBuffer);
 
                 // Do culling
                 Renderer::ComputePipelineID pipeline = _renderer->CreatePipeline(cullingPipelineDesc);
@@ -214,6 +240,7 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                 _cullingDescriptorSet.Bind("_drawCalls", _opaqueDrawCallBuffer);
                 _cullingDescriptorSet.Bind("_culledDrawCalls", _opaqueCulledDrawCallBuffer);
                 _cullingDescriptorSet.Bind("_drawCount", _opaqueDrawCountBuffer);
+                _cullingDescriptorSet.Bind("_triangleCount", _opaqueTriangleCountBuffer);
                 _cullingDescriptorSet.Bind("_instances", _instanceBuffer);
                 _cullingDescriptorSet.Bind("_cullingDatas", _cullingDataBuffer);
 
@@ -256,7 +283,7 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
             commandList.PushConstant(constants, 0, sizeof(Constants));
 
             commandList.SetIndexBuffer(_indexBuffer, Renderer::IndexFormat::UInt16);
-
+            
             Renderer::BufferID argumentBuffer = (cullingEnabled) ? _opaqueCulledDrawCallBuffer : _opaqueDrawCallBuffer;
             commandList.DrawIndexedIndirectCount(argumentBuffer, 0, _opaqueDrawCountBuffer, 0, numOpaqueDrawCalls);
 
@@ -266,6 +293,10 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
             commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _opaqueDrawCountBuffer);
             commandList.CopyBuffer(_opaqueDrawCountReadBackBuffer, 0, _opaqueDrawCountBuffer, 0, 4);
             commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _opaqueDrawCountReadBackBuffer);
+
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::ComputeWriteToTransferSrc, _opaqueTriangleCountBuffer);
+            commandList.CopyBuffer(_opaqueTriangleCountReadBackBuffer, 0, _opaqueTriangleCountBuffer, 0, 4);
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::ComputeWriteToTransferSrc, _opaqueTriangleCountReadBackBuffer);
 
             commandList.PopMarker();
         }
@@ -285,9 +316,12 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
             {
                 commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToComputeShaderRW, _transparentCulledDrawCallBuffer);
 
-                // Reset the counter
+                // Reset the counters
                 commandList.FillBuffer(_transparentDrawCountBuffer, 0, 4, 0);
+                commandList.FillBuffer(_transparentTriangleCountBuffer, 0, 4, 0);
+
                 commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToComputeShaderRW, _transparentDrawCountBuffer);
+                commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToComputeShaderRW, _transparentTriangleCountBuffer);
 
                 // Do culling
                 Renderer::ComputeShaderDesc shaderDesc;
@@ -309,6 +343,7 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                 _cullingDescriptorSet.Bind("_drawCalls", _transparentDrawCallBuffer);
                 _cullingDescriptorSet.Bind("_culledDrawCalls", _transparentCulledDrawCallBuffer);
                 _cullingDescriptorSet.Bind("_drawCount", _transparentDrawCountBuffer);
+                _cullingDescriptorSet.Bind("_triangleCount", _transparentTriangleCountBuffer);
                 _cullingDescriptorSet.Bind("_instances", _instanceBuffer);
                 _cullingDescriptorSet.Bind("_cullingDatas", _cullingDataBuffer);
 
@@ -391,6 +426,7 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
                     commandList.EndPipeline(pipeline);
 
                     commandList.PipelineBarrier(Renderer::PipelineBarrierType::ComputeWriteToComputeShaderRead, _transparentSortedCulledDrawCallBuffer);
+                    commandList.PipelineBarrier(Renderer::PipelineBarrierType::ComputeWriteToTransferSrc, _transparentTriangleCountReadBackBuffer);
 
                     commandList.PopMarker();
                 }
@@ -463,6 +499,10 @@ void CModelRenderer::AddComplexModelPass(Renderer::RenderGraph* renderGraph, Ren
             commandList.CopyBuffer(_transparentDrawCountReadBackBuffer, 0, _transparentDrawCountBuffer, 0, 4);
             commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _transparentDrawCountBuffer);
 
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _transparentTriangleCountBuffer);
+            commandList.CopyBuffer(_transparentTriangleCountReadBackBuffer, 0, _transparentTriangleCountBuffer, 0, 4);
+            commandList.PipelineBarrier(Renderer::PipelineBarrierType::TransferDestToTransferSrc, _transparentTriangleCountReadBackBuffer);
+
             commandList.PopMarker();
         }
     });
@@ -513,7 +553,6 @@ void CModelRenderer::ExecuteLoad()
             modelID = it->second;
         }
 
-
         // Add Placement Details (This is used to go from a placement to LoadedMapObject or InstanceData
         Terrain::PlacementDetails& placementDetails = _complexModelPlacementDetails.emplace_back();
         placementDetails.loadedIndex = modelID;
@@ -525,6 +564,19 @@ void CModelRenderer::ExecuteLoad()
 
     CreateBuffers();
     _complexModelsToBeLoaded.clear();
+
+    // Calculate triangles
+    _numOpaqueTriangles = 0;
+    _numTransparentTriangles = 0;
+
+    for (const DrawCall& drawCall : _opaqueDrawCalls)
+    {
+        _numOpaqueTriangles += drawCall.indexCount / 3;
+    }
+    for (const DrawCall& drawCall : _transparentDrawCalls)
+    {
+        _numTransparentTriangles += drawCall.indexCount / 3;
+    }
 }
 
 void CModelRenderer::Clear()
@@ -596,6 +648,30 @@ void CModelRenderer::CreatePermanentResources()
         desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION;
         desc.cpuAccess = Renderer::BufferCPUAccess::ReadOnly;
         _transparentDrawCountReadBackBuffer = _renderer->CreateBuffer(desc);
+    }
+
+    // Create OpaqueTriangleCountReadBackBuffer
+    {
+        Renderer::BufferDesc desc;
+        desc.name = "CModelOpaqueTriangleCountBuffer";
+        desc.size = sizeof(u32);
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION | Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
+        _opaqueTriangleCountBuffer = _renderer->CreateBuffer(desc);
+
+        desc.cpuAccess = Renderer::BufferCPUAccess::ReadOnly;
+        _opaqueTriangleCountReadBackBuffer = _renderer->CreateBuffer(desc);
+    }
+
+    // Create TransparentTriangleCountReadBackBuffer
+    {
+        Renderer::BufferDesc desc;
+        desc.name = "CModelTransparentTriangleCountBuffer";
+        desc.size = sizeof(u32);
+        desc.usage = Renderer::BUFFER_USAGE_STORAGE_BUFFER | Renderer::BUFFER_USAGE_TRANSFER_DESTINATION | Renderer::BUFFER_USAGE_TRANSFER_SOURCE;
+        _transparentTriangleCountBuffer = _renderer->CreateBuffer(desc);
+
+        desc.cpuAccess = Renderer::BufferCPUAccess::ReadOnly;
+        _transparentTriangleCountReadBackBuffer = _renderer->CreateBuffer(desc);
     }
 
     /*ComplexModelToBeLoaded& modelToBeLoaded = _complexModelsToBeLoaded.emplace_back();

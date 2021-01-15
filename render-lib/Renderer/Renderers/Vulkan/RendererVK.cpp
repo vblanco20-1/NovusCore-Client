@@ -1150,6 +1150,11 @@ namespace Renderer
         vmaUnmapMemory(_device->_allocator, _bufferHandler->GetBufferAllocation(buffer));
     }
 
+    const std::string& RendererVK::GetGPUName()
+    {
+        return _device->GetGPUName();
+    }
+
     size_t RendererVK::GetVRAMUsage()
     {
         size_t usage = sBudgets[0].usage;

@@ -45,11 +45,12 @@ struct InstanceData
 [[vk::binding(1, PER_PASS)]] StructuredBuffer<DrawCommand> _drawCommands;
 [[vk::binding(2, PER_PASS)]] RWStructuredBuffer<DrawCommand> _culledDrawCommands;
 [[vk::binding(3, PER_PASS)]] RWByteAddressBuffer _drawCount;
+[[vk::binding(4, PER_PASS)]] RWByteAddressBuffer _triangleCount;
 
-[[vk::binding(4, PER_PASS)]] StructuredBuffer<PackedCullingData> _packedCullingData;
-[[vk::binding(5, PER_PASS)]] StructuredBuffer<InstanceData> _instanceData;
+[[vk::binding(5, PER_PASS)]] StructuredBuffer<PackedCullingData> _packedCullingData;
+[[vk::binding(6, PER_PASS)]] StructuredBuffer<InstanceData> _instanceData;
 
-[[vk::binding(6, PER_PASS)]] ConstantBuffer<Constants> _constants;
+[[vk::binding(7, PER_PASS)]] ConstantBuffer<Constants> _constants;
 
 CullingData LoadCullingData(uint instanceIndex)
 {
@@ -157,6 +158,9 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     {
         return;
     }
+    
+    uint outTriangles;
+    _triangleCount.InterlockedAdd(0, command.indexCount/3, outTriangles);
     
     uint outIndex;
 	_drawCount.InterlockedAdd(0, 1, outIndex);

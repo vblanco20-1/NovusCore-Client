@@ -160,8 +160,13 @@ public:
     u32 GetNumLoadedMapObjects() { return static_cast<u32>(_loadedMapObjects.size()); }
     u32 GetNumMapObjectPlacements() { return static_cast<u32>(_instances.size()); }
 
+    // Drawcall stats
     u32 GetNumDrawCalls() { return static_cast<u32>(_drawParameters.size()); }
     u32 GetNumSurvivingDrawCalls() { return _numSurvivingDrawCalls; }
+
+    // Triangle stats
+    u32 GetNumTriangles() { return _numTriangles; }
+    u32 GetNumSurvivingTriangles() { return _numSurvivingTriangles; }
 
 private:
     void CreatePermanentResources();
@@ -229,6 +234,8 @@ private:
     Renderer::BufferID _culledArgumentBuffer;
     Renderer::BufferID _drawCountBuffer;
     Renderer::BufferID _drawCountReadBackBuffer;
+    Renderer::BufferID _triangleCountBuffer;
+    Renderer::BufferID _triangleCountReadBackBuffer;
 
     Renderer::BufferID _vertexBuffer;
     Renderer::BufferID _indexBuffer;
@@ -245,6 +252,8 @@ private:
     std::vector<Terrain::PlacementDetails> _mapObjectPlacementDetails;
 
     u32 _numSurvivingDrawCalls;
+    u32 _numTriangles;
+    u32 _numSurvivingTriangles;
 
     std::vector<MapObjectToBeLoaded> _mapObjectsToBeLoaded;
 };
